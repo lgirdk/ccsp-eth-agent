@@ -238,7 +238,9 @@ int main(int argc, char* argv[])
    
 CcspTraceInfo(("\nWithin the main function\n"));
 
-    rdk_logger_init(DEBUG_INI_NAME);
+#ifdef FEATURE_SUPPORT_RDKLOG
+    RDK_LOGGER_INIT();
+#endif
 
     for (idx = 1; idx < argc; idx++)
     {
