@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+ If not stated otherwise in this file or this component's Licenses.txt file the
+ following copyright and licenses apply:
+
+ Copyright 2018 RDK Management
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+ http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+<dataModelInfo>
+  <version>1</version>
+  <moduleName>CcspEthAgent</moduleName>
+  <author/>
+  <description/>
+  <library/>
+  <objects>
+    <object>
+    <name>DeviceInfo</name>
+    <objectType>object</objectType>
+    <objects>
+      <object>
+        <name>X_RDKCENTRAL-COM_xOpsDeviceMgmt</name>
+        <objectType>object</objectType>
+    <objects>
+      <object>
+        <name>Logging</name>
+        <objectType>object</objectType>
+        <functions>
+          <func_GetParamBoolValue>EthLogging_GetParamBoolValue</func_GetParamBoolValue>
+          <func_GetParamUlongValue>EthLogging_GetParamUlongValue</func_GetParamUlongValue>
+          <func_SetParamBoolValue>EthLogging_SetParamBoolValue</func_SetParamBoolValue>
+          <func_SetParamUlongValue>EthLogging_SetParamUlongValue</func_SetParamUlongValue>
+          <func_Validate>EthLogging_Validate</func_Validate>
+          <func_Commit>EthLogging_Commit</func_Commit>
+          <func_Rollback>EthLogging_Rollback</func_Rollback>
+        </functions>
+        <parameters>
+        <parameter>
+          <name>xOpsDMEthLogEnabled</name>
+          <type>boolean</type>
+          <syntax>bool</syntax>
+          <writable>true</writable>
+        </parameter>
+      <parameter>
+        <name>xOpsDMEthLogPeriod</name>
+        <type>unsignedInt</type>
+        <syntax>uint32</syntax>
+        <writable>true</writable>
+      </parameter>
+      </parameters>
+    </object>
+    </objects>
+  </object>
+  </objects>
+  </object>
+    <object>
+      <name>Ethernet</name>
+      <objectType>object</objectType>
+      <functions>
+        <func_GetParamBoolValue>Ethernet_GetParamBoolValue</func_GetParamBoolValue>
+        <func_SetParamBoolValue>Ethernet_SetParamBoolValue</func_SetParamBoolValue>
+      </functions>
+      <parameters>
+        <parameter>
+          <name>X_RDKCENTRAL-COM_EthHost_Sync</name>
+          <type>boolean</type>
+          <syntax>bool</syntax>
+          <writable>true</writable>
+        </parameter>
+      </parameters>
+	<objects>
+      	<object>
+      	    <name>X_RDKCENTRAL-COM_WAN</name>
+            <objectType>object</objectType>
+      	    <functions>
+               <func_GetParamBoolValue>EthWan_GetParamBoolValue</func_GetParamBoolValue>
+               <func_GetParamUlongValue>EthWan_GetParamUlongValue</func_GetParamUlongValue>
+               <func_SetParamBoolValue>EthWan_SetParamBoolValue</func_SetParamBoolValue>
+            </functions>
+            <parameters>
+               <parameter>
+                   <name>Enabled</name>
+          	   <type>boolean</type>
+          	   <syntax>bool</syntax>
+          	   <writable>true</writable>
+        	</parameter>
+               <parameter>
+                   <name>Port</name>
+          	   <type>unsignedInt</type>
+          	   <syntax>uint32</syntax>
+          	   <writable>false</writable>
+        	</parameter>        	
+      	    </parameters>
+      	</object>
+      </objects>
+    </object>
+  </objects>
+</dataModelInfo>
