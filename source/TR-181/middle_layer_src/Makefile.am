@@ -19,7 +19,7 @@
 
 AM_CFLAGS = -D_ANSC_LINUX
 AM_CFLAGS += -D_ANSC_USER
-AM_LDFLAGS = -lccsp_common -lsecure_wrapper
+AM_LDFLAGS = -lccsp_common
 
 AM_CPPFLAGS = -Wall -Werror
 ACLOCAL_AMFLAGS = -I m4
@@ -29,6 +29,6 @@ noinst_LTLIBRARIES = libCcspEthAgent_middle_layer_src.la
 libCcspEthAgent_middle_layer_src_la_CPPFLAGS = -I$(top_srcdir)/source/TR-181/include -I$(top_srcdir)/source/TR-181/middle_layer_src
 
 libCcspEthAgent_middle_layer_src_la_SOURCES = cosa_ethernet_dml.c cosa_ethernet_internal.c plugin_main.c cosa_apis_util.c cosa_apis_busutil.c
-libCcspEthAgent_middle_layer_src_la_LDFLAGS = -lccsp_common -lsecure_wrapper
+libCcspEthAgent_middle_layer_src_la_LDFLAGS = -lccsp_common
 
 
