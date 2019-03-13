@@ -90,9 +90,13 @@
 #include <stdio.h>
 #include <string.h>
 #include "cosa_ethernet_apis.h"
-
-
-
+#ifdef FEATURE_SUPPORT_ONBOARD_LOGGING
+#include "cimplog.h"
+#define LOGGING_MODULE           "ETHAGENT"
+#define OnboardLog(...)          onboarding_log(LOGGING_MODULE, __VA_ARGS__)
+#else
+#define OnboardLog(...)
+#endif
 /**************************************************************************
                         DATA STRUCTURE DEFINITIONS
 **************************************************************************/
@@ -239,7 +243,7 @@ void CosaDmlEthWanChangeHandling( void* buff )
 /* Set the reboot reason */
                         char buf[8];
                         snprintf(buf,sizeof(buf),"%d",1);
-
+			OnboardLog("Device reboot due to reason WAN_Mode_Change\n");
                         if (syscfg_set(NULL, "X_RDKCENTRAL-COM_LastRebootReason", "WAN_Mode_Change") != 0)
                         {
                                 AnscTraceWarning(("RDKB_REBOOT : RebootDevice syscfg_set failed GUI\n"));
