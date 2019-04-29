@@ -208,10 +208,12 @@ void sig_handler(int sig)
 
         signal(SIGALRM, sig_handler); /* reset it to this function */
         CcspTraceInfo(("SIGALRM received!\n"));
+	#ifndef DISABLE_LOGAGENT
         RDKLogEnable = GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_LoggerEnable");
         RDKLogLevel = (char)GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_LogLevel");
         ETHAGENT_RDKLogLevel = GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_EthAgent_LogLevel");
         ETHAGENT_RDKLogEnable = (char)GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_EthAgent_LoggerEnable");
+	#endif
     }
     else {
     	/* get stack trace first */
@@ -258,10 +260,12 @@ CcspTraceInfo(("\nWithin the main function\n"));
 
     cmd_dispatch('e');
 
+    #ifndef DISABLE_LOGAGENT
     RDKLogEnable = GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_LoggerEnable");
     RDKLogLevel = (char)GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_LogLevel");
     ETHAGENT_RDKLogLevel = GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_EthAgent_LogLevel");
     ETHAGENT_RDKLogEnable = (char)GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_EthAgent_LoggerEnable");
+    #endif
 
     while ( cmdChar != 'q' )
     {
