@@ -541,6 +541,7 @@ EthLogging_SetParamBoolValue
             else
             {
                 pMyObject->LogStatus.Log_Enable = bValue;
+		CosaEthTelemetryxOpsLogSettingsSync();
             }
         }
         return TRUE;
@@ -603,6 +604,7 @@ EthLogging_SetParamUlongValue
             else
             {
                 pMyObject->LogStatus.Log_Period = uValue;
+		CosaEthTelemetryxOpsLogSettingsSync();
             }
         }
         return TRUE;
