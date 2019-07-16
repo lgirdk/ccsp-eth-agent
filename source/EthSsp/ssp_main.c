@@ -303,6 +303,12 @@ CcspTraceInfo(("\nAfter daemonize before signal\n"));
 CcspTraceInfo(("\nbefore cmd_dispatch command\n"));
 
     cmd_dispatch('e');
+#ifndef DISABLE_LOGAGENT
+    RDKLogEnable = GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_LoggerEnable");
+    RDKLogLevel = (char)GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_LogLevel");
+    ETHAGENT_RDKLogLevel = GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_EthAgent_LogLevel");
+    ETHAGENT_RDKLogEnable = (char)GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_EthAgent_LoggerEnable");
+#endif
 #ifdef _COSA_SIM_
     subSys = "";        /* PC simu use empty string as subsystem */
 #else
