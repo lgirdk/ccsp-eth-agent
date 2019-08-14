@@ -262,6 +262,7 @@ EthWan_GetParamBoolValue
     if ( AnscEqualString ( ParamName, "Enabled", TRUE ) )
     {
         *pBool =  pMyObject->EthWanCfg.Enable;
+	CcspTraceWarning(("EthWan_GetParamBoolValue Ethernet WAN is '%d'\n", *pBool));
         return TRUE;
     }
 
@@ -358,6 +359,7 @@ EthWan_SetParamBoolValue
     {
 	    	if ( bValue == pMyObject->EthWanCfg.Enable )
 	    	{
+		    	CcspTraceWarning((" EthWan_SetParamBoolValue Ethernet WAN is '%d'\n", bValue));
 	    		return TRUE;
 	    	}
 		else
@@ -365,6 +367,7 @@ EthWan_SetParamBoolValue
 			if( ANSC_STATUS_SUCCESS == CosaDmlEthWanSetEnable( bValue )  )
 			{
 				pMyObject->EthWanCfg.Enable = bValue;
+				CcspTraceWarning((" EthWan_SetParamBoolValue Ethernet WAN is '%d'\n", bValue));
 				return TRUE; 
 			}
 		}
