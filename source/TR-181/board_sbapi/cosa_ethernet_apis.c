@@ -278,7 +278,7 @@ CosaDmlEthWanSetEnable
         BOOL                       bEnable
     )
 {
-#if (defined (_COSA_BCM_ARM_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_PLATFORM_RASPBERRYPI_))
+#if (defined (_COSA_BCM_ARM_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_PLATFORM_RASPBERRYPI_) && !defined(_PLATFORM_TURRIS_))
         BOOL bGetStatus = FALSE;
         CcspHalExtSw_getEthWanEnable(&bGetStatus);
 	if (bEnable != bGetStatus)
