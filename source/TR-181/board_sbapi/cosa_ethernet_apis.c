@@ -286,13 +286,21 @@ CosaDmlEthWanSetEnable
 	   if(bEnable == FALSE)
 	   {
 		system("ifconfig erouter0 down");
+#ifdef _XB7_PRODUCT_REQ_        
+		system("ip link set erouter0 name eth3");
+#else
 		system("ip link set erouter0 name eth0");
+#endif
 		system("ip link set dummy-rf name erouter0");
 		system("ifconfig eth0 up;ifconfig erouter0 up");
 		
 	   } 
 	}
+#ifdef _XB7_PRODUCT_REQ_
+			CcspHalExtSw_setEthWanPort ( 3 ); // need to set it to 3 eth3 interface for XB7
+#else
 			CcspHalExtSw_setEthWanPort ( 0 ); // need to set it to 0 eth0 interface after  TCXB6-4234 getting fixed
+#endif
 	if ( ANSC_STATUS_SUCCESS == CcspHalExtSw_setEthWanEnable( bEnable ) ) 
 	{
 	 	pthread_t tid;		
