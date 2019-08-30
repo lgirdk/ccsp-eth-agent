@@ -164,22 +164,6 @@ void Ethernet_Hosts_Sync( void )
 	CcspTraceInfo(("%s-%d Sync With LMLite\n",__FUNCTION__,__LINE__));	
 }
 
-
-#define ETH_LOGVALUE_FILE "/tmp/eth_telemetry_xOpsLogSettings.txt"
-
-void CosaEthTelemetryxOpsLogSettingsSync()
-{
-    FILE *fp = fopen(ETH_LOGVALUE_FILE, "w");
-    if (fp != NULL) {
-	char buff[64] = {0};     
-	memset(buff,sizeof(buff),0);
-	syscfg_get(NULL, "eth_log_period", buff, 32);
-	syscfg_get(NULL,"eth_log_enabled", &buff[32], 32);
-	fprintf(fp,"%s,%s\n", &buff[0], &buff[32]);
-	fclose(fp);
-    }
-}
-
 INT CosaDmlEth_AssociatedDevice_callback(eth_device_t *eth_dev)
 {
 	Eth_host_t Eth_Host;

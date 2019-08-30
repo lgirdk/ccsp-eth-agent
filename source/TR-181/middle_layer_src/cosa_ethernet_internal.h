@@ -83,8 +83,6 @@ _COSA_DATAMODEL_ETHERNET_CLASS_CONTENT
 }
 COSA_DATAMODEL_ETHERNET, *PCOSA_DATAMODEL_ETHERNET;
 
-void CosaEthTelemetryxOpsLogSettingsSync();
-
 /*
     Standard function declaration
 */
