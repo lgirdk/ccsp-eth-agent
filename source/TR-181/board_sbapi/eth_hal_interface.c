@@ -149,6 +149,7 @@ eth_device_t* CcspHalExtSw_FindHost( eth_device_t *pstEthHost, eth_device_t* eth
    
    //get the hash 
    unsigned int hashIndex = mac_hash( recv_mac_id );  
+   unsigned int start_index = hashIndex;
 
 //   CcspTraceInfo(("%s %d - RecvMac:%s\n" , __FUNCTION__, __LINE__, recv_mac_id ) );
 
@@ -192,6 +193,10 @@ eth_device_t* CcspHalExtSw_FindHost( eth_device_t *pstEthHost, eth_device_t* eth
 		
       //wrap around the table
       hashIndex %= ETH_NODE_HASH_SIZE;
+
+      // Dont allow indefinite loop if hash table full.
+      if (start_index == hashIndex)
+        return NULL;
    }        
 	
    return NULL;        
@@ -236,6 +241,7 @@ int CcspHalExtSw_AddHost( eth_device_t *pstEthHost, eth_device_t* eth_device_Arr
 
    //get the hash 
    unsigned int hashIndex = mac_hash( recv_mac_id );
+   unsigned int start_index = hashIndex;
 
 //   CcspTraceInfo(("%s %d - RecvMac:%s\n" , __FUNCTION__, __LINE__, recv_mac_id ) );
 
@@ -247,6 +253,13 @@ int CcspHalExtSw_AddHost( eth_device_t *pstEthHost, eth_device_t* eth_device_Arr
 
       //wrap around the table
       hashIndex %= ETH_NODE_HASH_SIZE;
+      // Dont allow indefinite loop if hash table full.
+      if (start_index == hashIndex)
+      {
+         free(pstEthLocalHost);
+         pstEthLocalHost = NULL;
+         return -1;
+      }
    }
 	
    //Make it online explicitly	
