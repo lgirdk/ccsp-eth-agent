@@ -34,7 +34,7 @@ CcspEthAgent_DEPENDENCIES= \
 	${top_builddir}/source/TR-181/board_sbapi/libCcspEthAgent_board_sbapi.la
 
 CcspEthAgent_CFLAGS = $(SYSTEMD_CFLAGS) $(NONROOT_CFLAGS)
-CcspEthAgent_SOURCES = ssp_messagebus_interface.c ssp_main.c ssp_action.c
+CcspEthAgent_SOURCES = ssp_messagebus_interface.c ssp_main.c ssp_action.c dm_pack_datamodel.c
 CcspEthAgent_LDFLAGS = -lccsp_common -ldl -rdynamic $(SYSTEMD_LDFLAGS)
 CcspEthAgent_LDADD =  $(CcspEthAgent_DEPENDENCIES)
 
