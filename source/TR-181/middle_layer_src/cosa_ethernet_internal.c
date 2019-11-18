@@ -308,9 +308,18 @@ static int ethGetPHYRate
     INT status                              = RETURN_ERR;
     CCSP_HAL_ETHSW_LINK_RATE LinkRate       = CCSP_HAL_ETHSW_LINK_NULL;
     CCSP_HAL_ETHSW_DUPLEX_MODE DuplexMode   = CCSP_HAL_ETHSW_DUPLEX_Auto;
+    CCSP_HAL_ETHSW_LINK_STATUS  LinkStatus  = CCSP_HAL_ETHSW_LINK_Down;
     INT PHYRate                             = 0;
 
+    /* For Broadcom platform device, CcspHalEthSwGetPortStatus returns the Linkrate based
+     * on the CurrentBitRate and CcspHalEthSwGetPortCfg returns the Linkrate based on the
+     * MaximumBitRate. Hence CcspHalEthSwGetPortStatus called for Broadcom platform devices.
+     */
+#if defined(_CBR_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_)
+    status = CcspHalEthSwGetPortStatus(PortId, &LinkRate, &DuplexMode, &LinkStatus);
+#else
     status = CcspHalEthSwGetPortCfg(PortId, &LinkRate, &DuplexMode);
+#endif
     if (RETURN_OK == status)
     {
         switch (LinkRate)
