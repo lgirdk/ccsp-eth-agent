@@ -258,14 +258,12 @@ EthWan_GetParamBoolValue
     )
 {
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
-
     if ( AnscEqualString ( ParamName, "Enabled", TRUE ) )
     {
         *pBool =  pMyObject->EthWanCfg.Enable;
 	CcspTraceWarning(("EthWan_GetParamBoolValue Ethernet WAN is '%d'\n", *pBool));
         return TRUE;
     }
-
     return FALSE;
 }
 
@@ -306,7 +304,6 @@ EthWan_GetParamUlongValue
     )
 {    
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
-
     if ( AnscEqualString ( ParamName, "Port", TRUE ) )
     {
         *puLong =  pMyObject->EthWanCfg.Port;
@@ -354,7 +351,7 @@ EthWan_SetParamBoolValue
     )
 {
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
-
+#if !defined(AUTOWAN_ENABLE)
     if ( AnscEqualString (ParamName, "Enabled", TRUE) )
     {
 	    	if ( bValue == pMyObject->EthWanCfg.Enable )
@@ -380,7 +377,264 @@ EthWan_SetParamBoolValue
 			}
 		}
     }
+#endif
+    return FALSE;
+}
+/**********************************************************************  
+    caller:     owner of this object 
+    prototype: 
+        ULONG
+        EthernetWAN_GetParamStringValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                char*                       pValue,
+                ULONG*                      pUlSize
+            );
+    description:
+        This function is called to retrieve string parameter value; 
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+                char*                       ParamName,
+                The parameter name;
+                char*                       pValue,
+                The string value buffer;
+                ULONG*                      pUlSize
+                The buffer of length of string value;
+                Usually size of 1023 will be used.
+                If it's not big enough, put required size here and return 1;
+    return:     0 if succeeded;
+                1 if short of buffer size; (*pUlSize = required size)
+                -1 if not supported.
+**********************************************************************/
+#define WAN_MODE_AUTO		0
+#define WAN_MODE_ETH		1
+#define WAN_MODE_DOCSIS		2
+#define WAN_MODE_UNKNOWN	3
 
+ULONG
+EthernetWAN_GetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pValue,
+        ULONG*                      pUlSize
+    )
+{
+#ifdef AUTOWAN_ENABLE
+    char buf[8]={0};
+    memset(buf, 0, sizeof(buf));
+    int wan_mode = 0;
+    /* check the parameter name and return the corresponding value */
+    if( AnscEqualString(ParamName, "SelectedOperationalMode", TRUE) )
+    {
+	    if (syscfg_get(NULL, "selected_wan_mode", buf, sizeof(buf)) == 0)
+	    {
+		if (buf != NULL)
+		{
+			if ( _ansc_strlen(buf) >= *pUlSize )
+			{
+			    *pUlSize = _ansc_strlen(buf);
+			    return 1;
+			}
+			
+			wan_mode = atoi(buf);
+			if(wan_mode == WAN_MODE_DOCSIS)
+			{
+				AnscCopyString(pValue, "DOCSIS");
+			}
+			else if (wan_mode == WAN_MODE_ETH)
+			{
+				AnscCopyString(pValue, "Ethernet");
+			}
+			else
+			{
+				AnscCopyString(pValue, "Auto");
+			}
+		}
+	    }
+
+        return 0;
+    }
+    if( AnscEqualString(ParamName, "LastKnownOperationalMode", TRUE) )
+    {
+	    if (syscfg_get(NULL, "last_wan_mode", buf, sizeof(buf)) == 0)
+	    {
+		if (buf != NULL)
+		{
+			if ( _ansc_strlen(buf) >= *pUlSize )
+			{
+			    *pUlSize = _ansc_strlen(buf);
+			    return 1;
+			}
+
+			wan_mode = atoi(buf);
+			if(wan_mode == WAN_MODE_DOCSIS)
+			{
+				AnscCopyString(pValue, "DOCSIS");
+			}
+			else if (wan_mode == WAN_MODE_ETH)
+			{
+				AnscCopyString(pValue, "Ethernet");
+			}
+			else
+			{
+				AnscCopyString(pValue, "Unknown");
+			}
+		}
+		else
+		{
+			AnscCopyString(pValue, "Unknown");
+		}
+	    }
+            else
+            {
+		AnscCopyString(pValue, "Unknown");
+            }
+
+        return 0;
+    }
+    if( AnscEqualString(ParamName, "CurrentOperationalMode", TRUE) )
+    {
+	    if (syscfg_get(NULL, "curr_wan_mode", buf, sizeof(buf)) == 0)
+	    {
+		if (buf != NULL)
+		{
+			if ( _ansc_strlen(buf) >= *pUlSize )
+			{
+			    *pUlSize = _ansc_strlen(buf);
+			    return 1;
+			}
+
+			wan_mode = atoi(buf);
+			if(wan_mode == WAN_MODE_DOCSIS)
+			{
+				AnscCopyString(pValue, "DOCSIS");
+			}
+			else if (wan_mode == WAN_MODE_ETH)
+			{
+				AnscCopyString(pValue, "Ethernet");
+			}
+			else
+			{
+				AnscCopyString(pValue, "Unknown");
+			}
+		}
+	    }
+
+        return 0;
+    }
+#endif
+    /* AnscTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+    return -1;
+}
+
+/**********************************************************************  
+    caller:     owner of this object 
+    prototype: 
+        BOOL
+        EthernetWAN_SetParamStringValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                char*                       pString
+            );
+    description:
+        This function is called to set string parameter value; 
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+                char*                       ParamName,
+                The parameter name;
+                char*                       pString
+                The updated string value;
+    return:     TRUE if succeeded.
+**********************************************************************/
+BOOL
+EthernetWAN_SetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pString
+    )
+{
+#ifdef AUTOWAN_ENABLE
+    BOOL  bValue = FALSE;
+    char buf[8]={0};
+    int wan_mode = 0;
+    memset(buf, 0, sizeof(buf));
+    /* check the parameter name and set the corresponding value */
+    if( AnscEqualString(ParamName, "SelectedOperationalMode", TRUE))
+    {
+	if(strcmp(pString,"DOCSIS")==0)
+	{
+		bValue = FALSE;
+	}
+	else if(strcmp(pString,"Ethernet")==0)
+	{
+		bValue = TRUE;
+	}
+	else //if(strcmp(pString,"AUTO")==0)
+	{
+	
+	}
+
+	if(AnscEqualString(pString, "DOCSIS", TRUE))
+	{
+		wan_mode = WAN_MODE_DOCSIS;
+	}
+	else if(AnscEqualString(pString, "Ethernet", TRUE))
+	{
+		wan_mode = WAN_MODE_ETH;
+	}
+	else
+	{
+		wan_mode = WAN_MODE_AUTO;
+	}
+        snprintf(buf, sizeof(buf), "%d", wan_mode);
+	if (syscfg_set(NULL, "selected_wan_mode", buf) != 0) 
+        {
+            AnscTraceWarning(("syscfg_set failed\n"));
+        } 
+        else
+        {
+            if (syscfg_commit() != 0) 
+            {
+                AnscTraceWarning(("syscfg_commit failed\n"));
+            }
+            else
+            {
+            	int cur_wan_mode= 0;
+            	    memset(buf, 0, sizeof(buf));
+		    if (syscfg_get(NULL, "curr_wan_mode", buf, sizeof(buf)) == 0)
+		    {
+			if (buf != NULL)
+			{
+			
+				cur_wan_mode = atoi(buf);
+				if(cur_wan_mode == wan_mode)
+				{
+					CcspTraceWarning(("SelectedOperationalMode - %s is same as CurrentWanMode\n", pString));
+					return TRUE;
+				}
+
+			}
+		    }
+                if(strcmp(pString,"Auto")!=0)
+		{
+		    if( ANSC_STATUS_SUCCESS == CosaDmlEthWanSetEnable( bValue ) )
+		    {
+			//pMyObject->EthWanCfg.Enable = bValue;
+			CcspTraceWarning(("SelectedOperationalMode is %s\n", pString));
+			
+		    }
+		}
+		return TRUE; 
+            }
+        }
+
+    }
+#endif
+    /* AnscTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
 }
 
@@ -711,5 +965,53 @@ EthLogging_Rollback
     )
 {
     return 0;
+}
+
+/**********************************************************************
+    caller:     owner of this object
+
+    prototype:
+        BOOL
+        AutowanFeatureSupport_GetParamBoolValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                BOOL*                       pBool
+            );
+
+    description:
+        This function is called to retrieve Boolean parameter value;
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                BOOL*                       pBool
+                The buffer of returned boolean value;
+
+    return:     TRUE if succeeded.
+**********************************************************************/
+BOOL
+AutowanFeatureSupport_GetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL*                       pBool
+    )
+{
+
+    /*This parameter is created for the purpose of whether the AUTOWAN feature is enabled inside the UI.*/
+    if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_AutowanFeatureSupport", TRUE))
+    {
+#if defined(AUTOWAN_ENABLE)
+        *pBool =  1;
+#else
+        *pBool =  0;
+#endif /* AUTOWAN_ENABLE */
+	 return TRUE;
+    }
+    return FALSE;
 }
 

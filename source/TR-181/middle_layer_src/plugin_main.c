@@ -114,6 +114,7 @@ COSA_Init
     
     pPlugInfo->uPluginVersion       = THIS_PLUGIN_VERSION;
     /* register the back-end apis for the data model */
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "AutowanFeatureSupport_GetParamBoolValue",  AutowanFeatureSupport_GetParamBoolValue);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Ethernet_GetParamBoolValue",  Ethernet_GetParamBoolValue);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Ethernet_SetParamBoolValue",  Ethernet_SetParamBoolValue);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthWan_GetParamBoolValue", EthWan_GetParamBoolValue);
@@ -126,6 +127,8 @@ COSA_Init
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthLogging_Validate", EthLogging_Validate);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthLogging_Commit", EthLogging_Commit);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthLogging_Rollback", EthLogging_Rollback);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthernetWAN_GetParamStringValue", EthernetWAN_GetParamStringValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthernetWAN_SetParamStringValue", EthernetWAN_SetParamStringValue);
 
     g_pDslhDmlAgent                 = pPlugInfo->hDmlAgent;
     pGetParamValueByPathNameProc = (COSAGetParamValueByPathNameProc)pPlugInfo->AcquireFunction("COSAGetParamValueByPathName");

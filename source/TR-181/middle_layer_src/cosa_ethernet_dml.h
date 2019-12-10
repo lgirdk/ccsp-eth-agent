@@ -207,5 +207,26 @@ EthLogging_Rollback
     (
         ANSC_HANDLE                 hInsContext
     );
-
+ULONG
+EthernetWAN_GetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pValue,
+        ULONG*                      pUlSize
+    );
+BOOL
+EthernetWAN_SetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pString
+    );
+BOOL
+AutowanFeatureSupport_GetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL*                       pBool
+    );
 #endif
