@@ -104,7 +104,15 @@
 /**************************************************************************
                         GLOBAL VARIABLES
 **************************************************************************/
-
+#if defined (ENABLE_ETH_WAN)
+#if defined (_XB7_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_)
+#define ETHWAN_DEF_INTF_NAME "eth3"
+#elif defined (INTEL_PUMA7)
+#define ETHWAN_DEF_INTF_NAME "nsgmii0"
+#else
+#define ETHWAN_DEF_INTF_NAME "eth0"
+#endif
+#endif //#if defined (ENABLE_ETH_WAN)
 
 
 extern  ANSC_HANDLE bus_handle;
@@ -220,10 +228,10 @@ CosaDmlEthWanGetCfg
 {
 	memset( pMyObject,  0,  sizeof( COSA_DATAMODEL_ETH_WAN_AGENT ) );
 
-#if (defined (_COSA_BCM_ARM_) && !defined(_CBR_PRODUCT_REQ_))
+#if defined (ENABLE_ETH_WAN)
 	CcspHalExtSw_getEthWanEnable( &pMyObject->Enable );	
 	CcspHalExtSw_getEthWanPort( &pMyObject->Port );
-#endif /*  _COSA_BCM_ARM_   &&   _CBR_PRODUCT_REQ_*/
+#endif /*  ENABLE_ETH_WAN */
 
 
     return ANSC_STATUS_SUCCESS;
@@ -298,28 +306,32 @@ CosaDmlEthWanSetEnable
         BOOL                       bEnable
     )
 {
-#if (defined (_COSA_BCM_ARM_) && !defined(_CBR_PRODUCT_REQ_) && !defined(_PLATFORM_RASPBERRYPI_) && !defined(_PLATFORM_TURRIS_))
+#if defined (ENABLE_ETH_WAN)
         BOOL bGetStatus = FALSE;
         CcspHalExtSw_getEthWanEnable(&bGetStatus);
+        char command[50];
 	if (bEnable != bGetStatus)
 	{
 	   if(bEnable == FALSE)
 	   {
 		system("ifconfig erouter0 down");
-#ifdef _XB7_PRODUCT_REQ_        
-		system("ip link set erouter0 name eth3");
-#else
-		system("ip link set erouter0 name eth0");
-#endif
+		memset(command,0,sizeof(command));
+		// NOTE: Eventually ETHWAN_DEF_INTF_NAME should be replaced with GWP_GetEthWanInterfaceName()
+		sprintf(command, "ip link set erouter0 name %s", ETHWAN_DEF_INTF_NAME);
+		CcspTraceWarning(("****************value of command = %s**********************\n", command));
+		system(command);
 		system("ip link set dummy-rf name erouter0");
-		system("ifconfig eth0 up;ifconfig erouter0 up");
+		memset(command,0,sizeof(command));
+		sprintf(command, "ifconfig %s up;ifconfig erouter0 up", ETHWAN_DEF_INTF_NAME);
+		CcspTraceWarning(("****************value of command = %s**********************\n", command));
+		system(command);
 		
 	   } 
 	}
 #ifdef _XB7_PRODUCT_REQ_
-			CcspHalExtSw_setEthWanPort ( 3 ); // need to set it to 3 eth3 interface for XB7
+			CcspHalExtSw_setEthWanPort ( 3 ); // need to set it to port 4 index 3 for XB7
 #else
-			CcspHalExtSw_setEthWanPort ( 0 ); // need to set it to 0 eth0 interface after  TCXB6-4234 getting fixed
+			CcspHalExtSw_setEthWanPort ( 0 ); // need to set it to port 1 index 0 after  TCXB6-4234 getting fixed
 #endif
 	if ( ANSC_STATUS_SUCCESS == CcspHalExtSw_setEthWanEnable( bEnable ) ) 
 	{
@@ -355,7 +367,7 @@ CosaDmlEthWanSetEnable
     return ANSC_STATUS_SUCCESS;
 #else
 	return ANSC_STATUS_FAILURE;
-#endif /* (defined (_COSA_BCM_ARM_) && !defined(_CBR_PRODUCT_REQ_)) */
+#endif /* defined (ENABLE_ETH_WAN) */
 }
 
 ANSC_STATUS
