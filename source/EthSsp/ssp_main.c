@@ -47,6 +47,11 @@
 #include "ccsp_dm_api.h"
 
 #define DEBUG_INI_NAME  "/etc/debug.ini"
+#include "syscfg/syscfg.h"
+#include "cap.h"
+static cap_user appcaps;
+#define ARRAY_SIZE(x)  (sizeof(x) / sizeof(x[0]))
+
 
 extern char*                                pComponentName;
 char                                        g_Subsystem[32]         = {0};
@@ -231,12 +236,30 @@ int main(int argc, char* argv[])
     BOOL                            bRunAsDaemon       = TRUE;
     int                             cmdChar            = 0;
     int                             idx = 0;
-
+    const cap_value_t cap_add[] = {CAP_KILL};
+    const cap_value_t cap_drop[] = {};
+    appcaps.caps = NULL;
+    appcaps.add_count = ARRAY_SIZE(cap_add);
+    appcaps.drop_count = ARRAY_SIZE(cap_drop);
+    char buf[8] = {'\0'};
     extern ANSC_HANDLE bus_handle;
     char *subSys            = NULL;  
     DmErr_t    err;
    
 CcspTraceInfo(("\nWithin the main function\n"));
+    syscfg_init();
+    syscfg_get( NULL, "NonRootSupport", buf, sizeof(buf));
+#ifdef DROP_ROOT_EARLY
+    if( buf != NULL )  {
+        if (strncmp(buf, "true", strlen("true")) == 0) {
+            init_capability();
+            prepare_caps(&appcaps,cap_add,cap_drop);
+            drop_root_caps(&appcaps);
+            update_process_caps(&appcaps);
+            read_capability(&appcaps);
+        }
+    }
+#endif
 
 #ifdef FEATURE_SUPPORT_RDKLOG
     RDK_LOGGER_INIT();
@@ -324,6 +347,17 @@ CcspTraceWarning(("\nAfter Cdm_Init\n"));
         fprintf(stderr, "Cdm_Init: %s\n", Cdm_StrError(err));
         exit(1);
     }
+#ifndef DROP_ROOT_EARLY
+    if( buf != NULL )  {
+        if (strncmp(buf, "true", strlen("true")) == 0) {
+            init_capability();
+            prepare_caps(&appcaps,cap_add,cap_drop);
+            drop_root_caps(&appcaps);
+            update_process_caps(&appcaps);
+            read_capability(&appcaps);
+        }
+    }
+#endif
     system("touch /tmp/ethagent_initialized");
 
     if ( bRunAsDaemon )
@@ -355,4 +389,3 @@ CcspTraceInfo(("\n Before ssp_cancel() \n"));
 CcspTraceInfo(("\nExiting the main function\n"));
     return 0;
 }
-
