@@ -1209,15 +1209,19 @@ CosaUtilIoctlXXX
 int CosaUtilGetIfStats(char * ifname, PCOSA_DML_IF_STATS pStats)
 {
     int    i;
-    FILE * fp;
+    FILE * fp = NULL;
     char buf[1024] = {0} ;
     char * p;
     int    ret = 0;
 
     fp = fopen(NET_STATS_FILE, "r");
+      /* Coverity Issue Fix - CID:67981 : Forward NULL */
+    if( fp  == NULL)
+    {		
+      		printf("cannot open file: %s\n", NET_STATS_FILE);
+                return -1;
+    } 
     
-    if (fp)
-    {
         i = 0;
         while (fgets(buf, sizeof(buf), fp))
         {
@@ -1243,7 +1247,7 @@ int CosaUtilGetIfStats(char * ifname, PCOSA_DML_IF_STATS pStats)
             else continue;
         }
         
-    }   
+       
 
 _EXIT:
     fclose(fp);
