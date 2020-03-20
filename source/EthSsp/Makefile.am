@@ -35,6 +35,6 @@ CcspEthAgent_DEPENDENCIES= \
 
 CcspEthAgent_CFLAGS = $(SYSTEMD_CFLAGS) $(NONROOT_CFLAGS)
 CcspEthAgent_SOURCES = ssp_messagebus_interface.c ssp_main.c ssp_action.c dm_pack_datamodel.c
-CcspEthAgent_LDFLAGS = -lccsp_common -ldl -rdynamic $(SYSTEMD_LDFLAGS)
-CcspEthAgent_LDADD =  $(CcspEthAgent_DEPENDENCIES)
+CcspEthAgent_LDFLAGS = -rdynamic $(SYSTEMD_LDFLAGS) -pthread
+CcspEthAgent_LDADD =  $(CcspEthAgent_DEPENDENCIES) -lccsp_common -lsyscfg -ldl
 
