@@ -195,7 +195,13 @@ void sig_handler(int sig)
     }
     else if ( sig == SIGUSR1 ) {
     	signal(SIGUSR1, sig_handler); /* reset it to this function */
-    	CcspTraceInfo(("SIGUSR1 received!\n"));
+	CcspTraceInfo(("SIGUSR1 received!\n"));
+	#ifndef DISABLE_LOGAGENT
+        RDKLogEnable = GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_LoggerEnable");
+        RDKLogLevel = (char)GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_LogLevel");
+        ETHAGENT_RDKLogLevel = GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_EthAgent_LogLevel");
+        ETHAGENT_RDKLogEnable = (char)GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_EthAgent_LoggerEnable");
+	#endif    	
     }
     else if ( sig == SIGUSR2 ) {
     	CcspTraceInfo(("SIGUSR2 received!\n"));
@@ -213,12 +219,6 @@ void sig_handler(int sig)
 
         signal(SIGALRM, sig_handler); /* reset it to this function */
         CcspTraceInfo(("SIGALRM received!\n"));
-	#ifndef DISABLE_LOGAGENT
-        RDKLogEnable = GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_LoggerEnable");
-        RDKLogLevel = (char)GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_LogLevel");
-        ETHAGENT_RDKLogLevel = GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_EthAgent_LogLevel");
-        ETHAGENT_RDKLogEnable = (char)GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_EthAgent_LoggerEnable");
-	#endif
     }
     else {
     	/* get stack trace first */
@@ -341,7 +341,13 @@ CcspTraceInfo(("\nAfter daemonize before signal\n"));
 
 #ifdef INCLUDE_BREAKPAD
     breakpad_ExceptionHandler();
+    signal(SIGUSR1, sig_handler);    
 #else
+    if (is_core_dump_opened())
+    {
+        signal(SIGUSR1, sig_handler);
+        CcspTraceWarning(("Core dump is opened, do not catch signal\n"));
+    }
     signal(SIGTERM, sig_handler);
     signal(SIGINT, sig_handler);
     /*signal(SIGCHLD, sig_handler);*/
