@@ -364,6 +364,14 @@ EthWan_SetParamBoolValue
 	    	}
 		else
 		{
+			//RDKB-27656 : Bridge Mode must not set to true using WEBPA & dmcli in ETHWAN mode
+			BOOL bridgeInd = FALSE;
+			is_usg_in_bridge_mode(&bridgeInd);
+			if(bridgeInd)
+			{
+				CcspTraceWarning(("EthernetWAN mode is not supported in bridge mode. Disable Bridge mode to enable Ethernet WAN mode \n"));
+				return FALSE;
+			}
 			if( ANSC_STATUS_SUCCESS == CosaDmlEthWanSetEnable( bValue )  )
 			{
 				pMyObject->EthWanCfg.Enable = bValue;
