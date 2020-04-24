@@ -49,6 +49,7 @@
 #define DEBUG_INI_NAME  "/etc/debug.ini"
 #include "syscfg/syscfg.h"
 #include "cap.h"
+#include "safec_lib_common.h"
 
 cap_user appcaps;
 
@@ -246,6 +247,8 @@ int main(int argc, char* argv[])
     extern ANSC_HANDLE bus_handle;
     char *subSys            = NULL;  
     DmErr_t    err;
+    errno_t        rc = -1;
+    int ind = -1;
 
     CcspTraceInfo(("\nWithin the main function\n"));
     syscfg_init();
@@ -268,14 +271,34 @@ int main(int argc, char* argv[])
 
     for (idx = 1; idx < argc; idx++)
     {
-        if ( (strcmp(argv[idx], "-subsys") == 0) )
+         rc = strcmp_s("-subsys",strlen("-subsys"),argv[idx],&ind);
+         ERR_CHK(rc);
+         if((!ind) && (rc == EOK))
         {
-            AnscCopyString(g_Subsystem, argv[idx+1]);
+           if ((idx+1) < argc)
+           {
+              rc = strcpy_s(g_Subsystem,sizeof(g_Subsystem), argv[idx+1]);
+              if(rc != EOK)
+             {
+               ERR_CHK(rc);
+               return ANSC_STATUS_FAILURE;
+             }
+           }
+           else
+           {
+               CcspTraceError(("parameter after -subsys is missing"));
+           }
+             
         }
-        else if ( strcmp(argv[idx], "-c") == 0 )
+        else
         {
+           rc = strcmp_s("-c", strlen("-c"),argv[idx],&ind );
+           ERR_CHK(rc);
+           if((!ind) && (rc == EOK))
+          {
             bRunAsDaemon = FALSE;
-        }
+          }
+       }
     }
 
     pComponentName          = CCSP_COMPONENT_NAME_ETHAGENT;

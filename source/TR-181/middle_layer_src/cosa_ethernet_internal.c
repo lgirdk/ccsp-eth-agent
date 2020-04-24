@@ -74,6 +74,7 @@
 #include <sys/time.h>
 #include <sys/inotify.h>
 #include <sys/stat.h>
+#include "safec_lib_common.h"
 
 extern void * g_pDslhDmlAgent;
 extern ANSC_HANDLE g_EthObject;
@@ -256,12 +257,14 @@ static void ethGetClientMacDetails
         LONG num_eth_device,
         eth_device_t *eth_device,
         int total_client,
-        char *mac
+        char *mac,
+        int mem_size
     )
 {
     int idx;
     char mac_addr[20];
     char isFirst = TRUE;
+    errno_t rc = -1;
 
     if (!eth_device || !mac)
     {
@@ -273,7 +276,8 @@ static void ethGetClientMacDetails
     {
         if (PortId == eth_device[idx].eth_port)
         {
-            _ansc_memset(mac_addr, 0, 20);
+            rc = memset_s(mac_addr,sizeof(mac_addr), 0,sizeof(mac_addr) );
+            ERR_CHK(rc);
             if (isFirst)
             {
                 sprintf(mac_addr, "%02X:%02X:%02X:%02X:%02X:%02X",
@@ -295,7 +299,8 @@ static void ethGetClientMacDetails
                         eth_device[idx].eth_devMacAddress[4],
                         eth_device[idx].eth_devMacAddress[5]);
             }
-            strcat(mac, mac_addr);
+             rc = strcat_s(mac,mem_size, mac_addr);
+             ERR_CHK(rc);
         }
     }
 }
@@ -381,6 +386,7 @@ void Ethernet_Log(void)
     int count_client = 0;
     char *mac_address = NULL;
     int ret = ANSC_STATUS_FAILURE;
+    errno_t        rc = -1;
 
 #if defined(_CBR_PRODUCT_REQ_)
     total_port = 8;
@@ -407,13 +413,15 @@ void Ethernet_Log(void)
             mac_address = (char *)AnscAllocateMemory(mem_size);
             if (mac_address)
             {
-                _ansc_memset(mac_address, 0, mem_size);
+                rc = memset_s(mac_address,mem_size, 0, mem_size);
+                ERR_CHK(rc);
                 ethGetClientMacDetails(
                         i,
                         total_eth_device,
                         output_struct,
                         count_client,
-                        mac_address);
+                        mac_address,
+                        mem_size );
                 CcspTraceWarning(("ETH_MAC_%d:%s\n", i, mac_address));
                 CcspTraceWarning(("ETH_PHYRATE_%d:%d\n", i, ethGetPHYRate(i)));
 
@@ -535,6 +543,7 @@ static void read_updated_log_interval()
     FILE *fp = NULL;
     char buff[256] = {0}, tmp[64] = {0};
     fp = fopen(ETH_LOG_FILE, "r");
+    errno_t rc = -1;
     if (fp == NULL) {
         CcspTraceError(("%s  %s file open error!!!\n", __func__, ETH_LOG_FILE));
 	return;
@@ -542,15 +551,19 @@ static void read_updated_log_interval()
     fscanf(fp, "%d,%s", &gEthLogInterval, gEthLogEnable);
     fclose(fp);
 
-    memset(tmp,0,sizeof(tmp));
+    rc =  memset_s(tmp,sizeof(tmp),0,sizeof(tmp));
+    ERR_CHK(rc);
     get_formatted_time(tmp);
-    memset(buff,0,sizeof(buff));
+    rc =  memset_s(buff,sizeof(buff),0,sizeof(buff));
+    ERR_CHK(rc);
     snprintf(buff, 256, "%s ETH_TELEMETRY_LOG_PERIOD:%d\n", tmp, gEthLogInterval);
     write_to_file(eth_telemetry_log, buff);
     
-    memset(tmp,0,sizeof(tmp));
+    rc =  memset_s(tmp,sizeof(tmp),0,sizeof(tmp));
+    ERR_CHK(rc);
     get_formatted_time(tmp);
-    memset(buff,0,sizeof(buff));
+    rc =  memset_s(buff,sizeof(buff),0,sizeof(buff));
+    ERR_CHK(rc);
     snprintf(buff, 256, "%s ETH_TELEMETRY_LOG_ENABLED:%s\n", tmp, gEthLogEnable);
     write_to_file(eth_telemetry_log, buff);
 }
@@ -566,6 +579,7 @@ static void EthTelemetryPush()
     char *mac_address = NULL;
     int ret = ANSC_STATUS_FAILURE;
     char tmp[128] = {0}, buff[2048] = {0};
+    errno_t rc = -1;
 
 #if defined(_CBR_PRODUCT_REQ_)
     total_port = 8;
@@ -585,9 +599,11 @@ static void EthTelemetryPush()
     for (i = 1; i <= total_port; i++)
     {
 	count_client = ethGetClientsCount(i, total_eth_device, output_struct);
-	memset(tmp,0,sizeof(tmp));
+	rc =  memset_s(tmp,sizeof(tmp),0,sizeof(tmp));
+        ERR_CHK(rc);
 	get_formatted_time(tmp);
-	memset(buff,0,sizeof(buff));
+	rc =  memset_s(buff,sizeof(buff),0,sizeof(buff));
+        ERR_CHK(rc);
 	snprintf(buff, 2048, "%s ETH_MAC_%d_TOTAL_COUNT:%d\n", tmp, i, count_client);
 	write_to_file(eth_telemetry_log, buff);
 	if (count_client)
@@ -596,21 +612,27 @@ static void EthTelemetryPush()
 	    mac_address = (char *)AnscAllocateMemory(mem_size);
 	    if (mac_address)
 	    {
-		_ansc_memset(mac_address, 0, mem_size);
+		rc = memset_s(mac_address,mem_size, 0, mem_size);
+                ERR_CHK(rc);
 		ethGetClientMacDetails(
 			i,
 			total_eth_device,
 			output_struct,
 			count_client,
-			mac_address);
-		memset(tmp,0,sizeof(tmp));
+			mac_address,
+                        mem_size);
+	        rc =  memset_s(tmp,sizeof(tmp),0,sizeof(tmp));
+                ERR_CHK(rc);
 		get_formatted_time(tmp);
-		memset(buff,0,sizeof(buff));
+		rc =  memset_s(buff,sizeof(buff),0,sizeof(buff));
+                ERR_CHK(rc);
 		snprintf(buff, 2048, "%s ETH_MAC_%d:%s\n", tmp, i, mac_address);
 		write_to_file(eth_telemetry_log, buff);
-		memset(tmp,0,sizeof(tmp));
+		rc =  memset_s(tmp,sizeof(tmp),0,sizeof(tmp));
+                ERR_CHK(rc);
 		get_formatted_time(tmp);
-		memset(buff,0,sizeof(buff));
+		rc = memset_s(buff,sizeof(buff),0,sizeof(buff));
+                ERR_CHK(rc);
 		snprintf(buff, 2048, "%s ETH_PHYRATE_%d:%d\n", tmp, i, ethGetPHYRate(i));
 		write_to_file(eth_telemetry_log, buff);
 
