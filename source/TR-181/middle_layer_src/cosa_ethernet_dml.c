@@ -68,6 +68,7 @@
 
 //#include "dml_tr181_custom_cfg.h"
 #include "cosa_ethernet_dml.h"
+#include "safec_lib_common.h"
 
 extern ANSC_HANDLE g_EthObject;
 
@@ -153,8 +154,12 @@ Ethernet_GetParamBoolValue
         BOOL*                       pBool
     )
 {
+    errno_t rc = -1;
+    int ind = -1;
     /* check the parameter name and return the corresponding value */
-    if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_EthHost_Sync", TRUE))
+    rc = strcmp_s("X_RDKCENTRAL-COM_EthHost_Sync",strlen("X_RDKCENTRAL-COM_EthHost_Sync"),ParamName,&ind);
+    ERR_CHK(rc);
+    if((rc == EOK) && (ind == 0))
     {
         return TRUE;
     }
@@ -202,7 +207,11 @@ Ethernet_SetParamBoolValue
         BOOL                        bValue
     )
 {
-    if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_EthHost_Sync", TRUE))
+    errno_t rc = -1;
+    int ind = -1;
+    rc = strcmp_s("X_RDKCENTRAL-COM_EthHost_Sync",strlen("X_RDKCENTRAL-COM_EthHost_Sync"),ParamName,&ind);
+    ERR_CHK(rc);
+     if ((!ind) && (rc == EOK))
     {
         Ethernet_Hosts_Sync();
         return TRUE;
@@ -258,7 +267,11 @@ EthWan_GetParamBoolValue
     )
 {
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
-    if ( AnscEqualString ( ParamName, "Enabled", TRUE ) )
+    errno_t rc       = -1;
+    int     ind      = -1;
+    rc = strcmp_s("Enabled",strlen("Enabled"),ParamName,&ind);
+    ERR_CHK(rc);
+    if ((!ind) && (rc == EOK))
     {
         *pBool =  pMyObject->EthWanCfg.Enable;
 	CcspTraceWarning(("EthWan_GetParamBoolValue Ethernet WAN is '%d'\n", *pBool));
@@ -304,7 +317,11 @@ EthWan_GetParamUlongValue
     )
 {    
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
-    if ( AnscEqualString ( ParamName, "Port", TRUE ) )
+    errno_t rc       = -1;
+    int     ind      = -1;
+    rc = strcmp_s("Port",strlen("Port"),ParamName,&ind);
+    ERR_CHK(rc);
+    if ((!ind) && (rc == EOK))
     {
         *puLong =  pMyObject->EthWanCfg.Port;
         return TRUE;
@@ -352,7 +369,11 @@ EthWan_SetParamBoolValue
 {
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
 #if !defined(AUTOWAN_ENABLE)
-    if ( AnscEqualString (ParamName, "Enabled", TRUE) )
+    errno_t rc       = -1;
+    int     ind      = -1;
+    rc = strcmp_s("Enabled",strlen("Enabled"),ParamName,&ind);
+    ERR_CHK(rc);
+    if ((!ind) && (rc == EOK))
     {
 	    	if ( bValue == pMyObject->EthWanCfg.Enable )
 	    	{
@@ -423,10 +444,13 @@ EthernetWAN_GetParamStringValue
 {
 #ifdef AUTOWAN_ENABLE
     char buf[8]={0};
-    memset(buf, 0, sizeof(buf));
     int wan_mode = 0;
+    errno_t rc       = -1;
+    int     ind      = -1;
     /* check the parameter name and return the corresponding value */
-    if( AnscEqualString(ParamName, "SelectedOperationalMode", TRUE) )
+    rc = strcmp_s( "SelectedOperationalMode",strlen("SelectedOperationalMode"),ParamName,&ind);
+    ERR_CHK(rc);
+    if ((!ind) && (rc == EOK))
     {
 	    if (syscfg_get(NULL, "selected_wan_mode", buf, sizeof(buf)) == 0)
 	    {
@@ -441,22 +465,41 @@ EthernetWAN_GetParamStringValue
 			wan_mode = atoi(buf);
 			if(wan_mode == WAN_MODE_DOCSIS)
 			{
-				AnscCopyString(pValue, "DOCSIS");
+				rc = strcpy_s(pValue,*pUlSize,"DOCSIS");
+                                if(rc != EOK)
+                                {
+                                   ERR_CHK(rc);
+                                   return -1;
+                                 }
 			}
 			else if (wan_mode == WAN_MODE_ETH)
 			{
-				AnscCopyString(pValue, "Ethernet");
+				rc = strcpy_s(pValue,*pUlSize, "Ethernet");
+                                if(rc != EOK)
+                                {
+                                   ERR_CHK(rc);
+                                   return -1;
+                                 }
+
 			}
 			else
 			{
-				AnscCopyString(pValue, "Auto");
+				rc = strcpy_s(pValue,*pUlSize, "Auto");
+                                if(rc != EOK)
+                                {
+                                   ERR_CHK(rc);
+                                   return -1;
+                                 }
+
 			}
 		}
 	    }
 
         return 0;
     }
-    if( AnscEqualString(ParamName, "LastKnownOperationalMode", TRUE) )
+    rc = strcmp_s("LastKnownOperationalMode", strlen("LastKnownOperationalMode"),ParamName,&ind);
+    ERR_CHK(rc);
+    if ((!ind) && (rc == EOK)) 
     {
 	    if (syscfg_get(NULL, "last_wan_mode", buf, sizeof(buf)) == 0)
 	    {
@@ -471,15 +514,33 @@ EthernetWAN_GetParamStringValue
 			wan_mode = atoi(buf);
 			if(wan_mode == WAN_MODE_DOCSIS)
 			{
-				AnscCopyString(pValue, "DOCSIS");
+                                rc = strcpy_s(pValue,*pUlSize,"DOCSIS");
+                                if(rc != EOK)
+                                {
+                                   ERR_CHK(rc);
+                                   return -1;
+                                 }
+
 			}
 			else if (wan_mode == WAN_MODE_ETH)
 			{
-				AnscCopyString(pValue, "Ethernet");
+                                rc = strcpy_s(pValue,*pUlSize, "Ethernet");
+                                if(rc != EOK)
+                                {
+                                   ERR_CHK(rc);
+                                   return -1;
+                                 }
+
 			}
 			else
 			{
-				AnscCopyString(pValue, "Unknown");
+                                rc = strcpy_s(pValue,*pUlSize, "Unknown");
+                                if(rc != EOK)
+                                {
+                                   ERR_CHK(rc);
+                                   return -1;
+                                 }
+
 			}
 		}
 		else
@@ -494,7 +555,10 @@ EthernetWAN_GetParamStringValue
 
         return 0;
     }
-    if( AnscEqualString(ParamName, "CurrentOperationalMode", TRUE) )
+    rc =  strcmp_s( "CurrentOperationalMode",strlen("CurrentOperationalMode"),ParamName,&ind);
+    ERR_CHK(rc);
+    if ((!ind) && (rc == EOK))
+     
     {
 	    if (syscfg_get(NULL, "curr_wan_mode", buf, sizeof(buf)) == 0)
 	    {
@@ -509,15 +573,32 @@ EthernetWAN_GetParamStringValue
 			wan_mode = atoi(buf);
 			if(wan_mode == WAN_MODE_DOCSIS)
 			{
-				AnscCopyString(pValue, "DOCSIS");
+				rc = strcpy_s(pValue, *pUlSize,"DOCSIS");
+                                if(rc != EOK)
+                                {
+                                   ERR_CHK(rc);
+                                   return -1;
+                                }
 			}
 			else if (wan_mode == WAN_MODE_ETH)
 			{
-				AnscCopyString(pValue, "Ethernet");
+				rc = strcpy_s(pValue,*pUlSize, "Ethernet");
+                                if(rc != EOK)
+                                {
+                                   ERR_CHK(rc);
+                                   return -1;
+                                }
+
 			}
 			else
 			{
-				AnscCopyString(pValue, "Unknown");
+				rc = strcpy_s(pValue,*pUlSize, "Unknown");
+                                if(rc != EOK)
+                                {
+                                   ERR_CHK(rc);
+                                   return -1;
+                                }
+
 			}
 		}
 	    }
@@ -561,35 +642,48 @@ EthernetWAN_SetParamStringValue
     BOOL  bValue = FALSE;
     char buf[8]={0};
     int wan_mode = 0;
-    memset(buf, 0, sizeof(buf));
+    errno_t rc = -1;
+    int            ind = -1;
     /* check the parameter name and set the corresponding value */
-    if( AnscEqualString(ParamName, "SelectedOperationalMode", TRUE))
+    rc = strcmp_s( "SelectedOperationalMode",strlen("SelectedOperationalMode"),ParamName,&ind);
+    ERR_CHK(rc);
+    if ((!ind) && (rc == EOK))
     {
-	if(strcmp(pString,"DOCSIS")==0)
+	rc = strcmp_s("DOCSIS",strlen("DOCSIS"),pString,&ind);
+        ERR_CHK(rc);
+        if ((!ind) && (rc == EOK))
 	{
 		bValue = FALSE;
 	}
-	else if(strcmp(pString,"Ethernet")==0)
-	{
+	else
+        {
+           rc = strcmp_s("Ethernet",strlen("Ethernet"),pString,&ind);
+           ERR_CHK(rc);
+           if ((!ind) && (rc == EOK))
+           {
 		bValue = TRUE;
-	}
-	else //if(strcmp(pString,"AUTO")==0)
-	{
-	
-	}
+	   }
+        }
 
-	if(AnscEqualString(pString, "DOCSIS", TRUE))
+        rc = strcmp_s("DOCSIS",strlen("DOCSIS"),pString,&ind);
+        ERR_CHK(rc);
+        if ((!ind) && (rc == EOK))
 	{
 		wan_mode = WAN_MODE_DOCSIS;
 	}
-	else if(AnscEqualString(pString, "Ethernet", TRUE))
-	{
-		wan_mode = WAN_MODE_ETH;
-	}
 	else
-	{
+        {
+           rc = strcmp_s("Ethernet",strlen("Ethernet"),pString,&ind);
+           ERR_CHK(rc);
+           if ((!ind) && (rc == EOK))
+	   {
+		wan_mode = WAN_MODE_ETH;
+	   }
+	   else
+	   {
 		wan_mode = WAN_MODE_AUTO;
-	}
+	   }
+        }
         snprintf(buf, sizeof(buf), "%d", wan_mode);
 	if (syscfg_set(NULL, "selected_wan_mode", buf) != 0) 
         {
@@ -604,7 +698,8 @@ EthernetWAN_SetParamStringValue
             else
             {
             	int cur_wan_mode= 0;
-            	    memset(buf, 0, sizeof(buf));
+                rc =  memset_s(buf,sizeof(buf), 0, sizeof(buf));
+                ERR_CHK(rc);
 		    if (syscfg_get(NULL, "curr_wan_mode", buf, sizeof(buf)) == 0)
 		    {
 			if (buf != NULL)
@@ -619,7 +714,9 @@ EthernetWAN_SetParamStringValue
 
 			}
 		    }
-                if(strcmp(pString,"Auto")!=0)
+                rc = strcmp_s("Auto",strlen("Auto"),pString,&ind);
+                ERR_CHK(rc);
+                if ((ind) && (rc == EOK))
 		{
 		    if( ANSC_STATUS_SUCCESS == CosaDmlEthWanSetEnable( bValue ) )
 		    {
@@ -688,8 +785,12 @@ EthLogging_GetParamBoolValue
     )
 {
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
-
-    if (AnscEqualString(ParamName, "xOpsDMEthLogEnabled", TRUE))
+    errno_t rc       = -1;
+    int     ind      = -1;
+    
+    rc = strcmp_s("xOpsDMEthLogEnabled",strlen("xOpsDMEthLogEnabled"),ParamName,&ind);
+    ERR_CHK(rc);
+    if ((!ind) && (rc == EOK))
     {
         *pBool =  pMyObject->LogStatus.Log_Enable;
         return TRUE;
@@ -734,8 +835,11 @@ EthLogging_GetParamUlongValue
     )
 {    
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
-
-    if (AnscEqualString(ParamName, "xOpsDMEthLogPeriod", TRUE))
+    errno_t        rc = -1;
+    int            ind = -1;
+    rc = strcmp_s( "xOpsDMEthLogPeriod",strlen( "xOpsDMEthLogPeriod"),ParamName,&ind);
+    ERR_CHK(rc);
+    if( (ind == 0) && (rc == EOK))
     {
         *puLong =  pMyObject->LogStatus.Log_Period;
         return TRUE;
@@ -782,13 +886,31 @@ EthLogging_SetParamBoolValue
 {
     char buf[8]={0};
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
-
-    if (AnscEqualString(ParamName, "xOpsDMEthLogEnabled", TRUE))
+    errno_t rc = -1;
+    int            ind = -1;
+    rc = strcmp_s( "xOpsDMEthLogEnabled",strlen( "xOpsDMEthLogEnabled"),ParamName,&ind);
+    ERR_CHK(rc);
+    if( (ind == 0) && (rc == EOK))
     {
         if(bValue)
-            strcpy(buf,"true");
-        else
-            strcpy(buf,"false");
+        {
+            rc = strcpy_s(buf,sizeof(buf),"true");
+            if(rc != EOK)
+           {
+              ERR_CHK(rc);
+              return FALSE;
+           }
+     }
+     else
+     {
+             rc =  strcpy_s(buf,sizeof(buf),"false");
+             if(rc != EOK)
+             {
+                ERR_CHK(rc);
+                return FALSE;
+             }
+     }  
+        
 
         if (syscfg_set(NULL, "eth_log_enabled", buf) != 0) 
         {
@@ -848,8 +970,12 @@ EthLogging_SetParamUlongValue
 {
     char buf[16]={0};
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
+    errno_t        rc = -1;
+    int            ind = -1;
+    rc = strcmp_s( "xOpsDMEthLogPeriod",strlen( "xOpsDMEthLogPeriod"),ParamName,&ind);
+    ERR_CHK(rc);
+    if( (ind == 0) && (rc == EOK))
 
-    if (AnscEqualString(ParamName, "xOpsDMEthLogPeriod", TRUE))
     {
         sprintf(buf, "%d", uValue);
 
@@ -1001,9 +1127,12 @@ AutowanFeatureSupport_GetParamBoolValue
         BOOL*                       pBool
     )
 {
-
+    errno_t        rc =    -1;
+    int            ind = -1;
     /*This parameter is created for the purpose of whether the AUTOWAN feature is enabled inside the UI.*/
-    if (AnscEqualString(ParamName, "X_RDKCENTRAL-COM_AutowanFeatureSupport", TRUE))
+    rc = strcmp_s("X_RDKCENTRAL-COM_AutowanFeatureSupport", strlen("X_RDKCENTRAL-COM_AutowanFeatureSupport"), ParamName,&ind);
+    ERR_CHK(rc);
+    if( (ind == 0) && (rc == EOK))
     {
 #if defined(AUTOWAN_ENABLE)
         *pBool =  1;

@@ -90,10 +90,13 @@
 #include <stdio.h>
 #include <string.h>
 #include "cosa_ethernet_apis.h"
+#include "safec_lib_common.h"
 #include "cap.h"
 #include <linux/version.h>
 #ifdef FEATURE_SUPPORT_ONBOARD_LOGGING
 #include "cimplog.h"
+
+
 #define LOGGING_MODULE           "ETHAGENT"
 #define OnboardLog(...)          onboarding_log(LOGGING_MODULE, __VA_ARGS__)
 #else
@@ -203,7 +206,6 @@ void CosaEthTelemetryxOpsLogSettingsSync()
     FILE *fp = fopen(ETH_LOGVALUE_FILE, "w");
     if (fp != NULL) {
 	char buff[64] = {0};     
-	memset(buff,sizeof(buff),0);
 	syscfg_get(NULL, "eth_log_period", buff, 32);
 	syscfg_get(NULL,"eth_log_enabled", &buff[32], 32);
 	fprintf(fp,"%s,%s\n", &buff[0], &buff[32]);
@@ -244,8 +246,10 @@ CosaDmlEthWanGetCfg
     (
         PCOSA_DATAMODEL_ETH_WAN_AGENT  pMyObject
     )
-{
-	memset( pMyObject,  0,  sizeof( COSA_DATAMODEL_ETH_WAN_AGENT ) );
+{    
+     errno_t                         rc           = -1;
+     rc =  memset_s( pMyObject,sizeof( COSA_DATAMODEL_ETH_WAN_AGENT ),  0,  sizeof( COSA_DATAMODEL_ETH_WAN_AGENT ) );
+     ERR_CHK(rc);
 
 #if defined (ENABLE_ETH_WAN)
 	CcspHalExtSw_getEthWanEnable( &pMyObject->Enable );	
@@ -328,19 +332,20 @@ CosaDmlEthWanSetEnable
 #if defined (ENABLE_ETH_WAN)
         BOOL bGetStatus = FALSE;
         CcspHalExtSw_getEthWanEnable(&bGetStatus);
-        char command[50];
+        char command[50] = {0};
+        errno_t rc = -1;
 	if (bEnable != bGetStatus)
 	{
 	   if(bEnable == FALSE)
 	   {
 		system("ifconfig erouter0 down");
-		memset(command,0,sizeof(command));
 		// NOTE: Eventually ETHWAN_DEF_INTF_NAME should be replaced with GWP_GetEthWanInterfaceName()
 		sprintf(command, "ip link set erouter0 name %s", ETHWAN_DEF_INTF_NAME);
 		CcspTraceWarning(("****************value of command = %s**********************\n", command));
 		system(command);
 		system("ip link set dummy-rf name erouter0");
-		memset(command,0,sizeof(command));
+		rc =  memset_s(command,sizeof(command),0,sizeof(command));
+                ERR_CHK(rc);
 		sprintf(command, "ifconfig %s up;ifconfig erouter0 up", ETHWAN_DEF_INTF_NAME);
 		CcspTraceWarning(("****************value of command = %s**********************\n", command));
 		system(command);
@@ -353,8 +358,7 @@ CosaDmlEthWanSetEnable
 	if ( ANSC_STATUS_SUCCESS == CcspHalExtSw_setEthWanEnable( bEnable ) ) 
 	{
 	 	pthread_t tid;		
-		char buf[ 8 ];
-		memset( buf, 0, sizeof( buf ) );
+		char buf[ 8 ] = {0};
 		snprintf( buf, sizeof( buf ), "%s", bEnable ? "true" : "false" );
 
                 /* Linux version < 0 , switch to root */
@@ -407,7 +411,8 @@ CosaDmlEthGetLogStatus
     )
 {
     char buf[16] = {0};
-
+    errno_t rc = -1;
+    int ind = -1;
     pMyObject->Log_Enable = FALSE;
     pMyObject->Log_Period = 3600;
 
@@ -415,11 +420,15 @@ CosaDmlEthGetLogStatus
     {
         if (buf != NULL)
         {
-            pMyObject->Log_Enable = (strcmp(buf,"true") ? FALSE : TRUE);
+            rc = strcmp_s("true",strlen("true"),buf,&ind);
+            ERR_CHK(rc);
+            pMyObject->Log_Enable = (ind) ? FALSE : TRUE;
+            
         }
     }
 
-    memset(buf, 0, sizeof(buf));
+     rc = memset_s(buf,sizeof(buf), 0, sizeof(buf));
+     ERR_CHK(rc);
     if (syscfg_get( NULL, "eth_log_period", buf, sizeof(buf)) == 0)
     {
         if (buf != NULL)

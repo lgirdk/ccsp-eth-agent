@@ -22,6 +22,8 @@
 #include <string.h>
 #include "ansc_string_util.h"
 #include "ccsp_hal_ethsw.h"
+#include "safec_lib_common.h"
+
 #define ARP_CACHE "/tmp/arp.txt"
 #define DNSMASQ_CACHE "/tmp/dns.txt"
 #define DNSMASQ_FILE "/nvram/dnsmasq.leases"
@@ -49,11 +51,11 @@ eth_device_t* eth_device_hashArrayTempList[ ETH_NODE_HASH_SIZE ];
 int ValidateClient(char *mac)
 {
 	int ret = 0;
-	char buf[200];
+	char buf[200]= {0};
 	char buf1[200];
 	FILE *fp1 = NULL;
 	FILE *fp2 = NULL;
-	memset(buf,0,sizeof(buf));
+        errno_t rc = -1;
 		//Need to ignore brlan1 - XHS clients when during CB case
         snprintf(buf, sizeof(buf), "ip nei show | grep -v brlan1 | grep -i %s | grep -i REACHABLE > %s",mac,ARP_CACHE);
         system(buf);
@@ -61,7 +63,8 @@ int ValidateClient(char *mac)
 	{
         	return ret;
 	}
-	memset(buf,0,sizeof(buf));
+	rc  =  memset_s(buf,sizeof(buf),0,sizeof(buf));
+        ERR_CHK(rc);
 	if(fgets(buf, sizeof(buf), fp1)!= NULL)
 	{
 
@@ -83,7 +86,8 @@ int ValidateClient(char *mac)
             			unlink(ARP_CACHE);
                			return ret;
        			}
-			memset(buf1,0,sizeof(buf1));
+		  rc =	memset_s(buf1,sizeof(buf1),0,sizeof(buf1));
+                  ERR_CHK(rc);
 			if(fgets(buf1,sizeof(buf1),fp2)!= NULL)
 			{
 				ret = 1;
@@ -122,6 +126,8 @@ unsigned int mac_hash( char *str )
 eth_device_t* CcspHalExtSw_FindHost( eth_device_t *pstEthHost, eth_device_t* eth_device_ArrayList[ ], unsigned int* puiHashIndex )
 {
    char recv_mac_id[ 18 ];
+    errno_t                         rc           = -1;
+    int                             ind          = -1;
 
    //Validate received pointer
    if( NULL == pstEthHost )
@@ -175,7 +181,9 @@ eth_device_t* CcspHalExtSw_FindHost( eth_device_t *pstEthHost, eth_device_t* eth
 	   tmp_mac_id[ 17 ] = '\0';
 
 	   //Compare with received host and current host 
-       if( 0 ==  strcmp( tmp_mac_id, recv_mac_id ) )
+       rc = strcmp_s(tmp_mac_id,sizeof(tmp_mac_id),recv_mac_id,&ind);
+       ERR_CHK(rc);
+       if((rc == EOK) && (!ind))
 	   {
 //		     CcspTraceInfo(("%s %d - [Found] RecvMac:%s\n" , __FUNCTION__,__LINE__, recv_mac_id ) );
 
@@ -207,6 +215,7 @@ int CcspHalExtSw_AddHost( eth_device_t *pstEthHost, eth_device_t* eth_device_Arr
 {
    eth_device_t *pstEthLocalHost 	= ( eth_device_t* ) malloc( sizeof( eth_device_t ) );
    char 	     recv_mac_id[ 18 ];
+   errno_t rc = -1;
 
 	//Validate received pointer
    if( ( NULL == pstEthLocalHost ) || \
@@ -220,8 +229,16 @@ int CcspHalExtSw_AddHost( eth_device_t *pstEthHost, eth_device_t* eth_device_Arr
    }
    	
    //Copy received host details
-   memset( pstEthLocalHost, 0 , sizeof( eth_device_t ) );
-   memcpy( pstEthLocalHost, pstEthHost, sizeof( eth_device_t ) );
+   rc =  memset_s( pstEthLocalHost,sizeof(eth_device_t), 0 , sizeof( eth_device_t ) );
+   ERR_CHK(rc);
+   rc =  memcpy_s( pstEthLocalHost,sizeof( eth_device_t ), pstEthHost, sizeof( eth_device_t ) );
+   if(rc != EOK)
+   {
+      ERR_CHK(rc);
+      free(pstEthLocalHost);
+      return -1;
+   }
+
 
    //MAC Conversion
    snprintf

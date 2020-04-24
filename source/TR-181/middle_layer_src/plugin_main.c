@@ -42,6 +42,7 @@
 #include "cosa_plugin_api.h"
 #include "plugin_main.h"
 #include "cosa_ethernet_dml.h"
+#include "safec_lib_common.h"
 
 #define THIS_PLUGIN_VERSION                         1
 
@@ -105,6 +106,7 @@ COSA_Init
     COSAGetHandleProc               pGetMessageBusHandleProc    = (COSAGetHandleProc                 )NULL;
     COSAGetInterfaceByNameProc      pGetInterfaceByNameProc     = (COSAGetInterfaceByNameProc        )NULL;
     ULONG                           ret                         = 0;
+    errno_t        rc = -1;
 
     if ( uMaxVersionSupported < THIS_PLUGIN_VERSION )
     {
@@ -324,7 +326,12 @@ COSA_Init
         
         if ( tmpSubsystemPrefix = g_GetSubsystemPrefix(g_pDslhDmlAgent) )
         {
-            AnscCopyString(g_SubSysPrefix_Irep, tmpSubsystemPrefix);
+            rc =  strcpy_s(g_SubSysPrefix_Irep,sizeof(g_SubSysPrefix_Irep) ,tmpSubsystemPrefix);
+            if(rc != EOK)
+          {
+            ERR_CHK(rc);
+            return -1;
+           }
         }
 
         /* retrieve the subsystem prefix */

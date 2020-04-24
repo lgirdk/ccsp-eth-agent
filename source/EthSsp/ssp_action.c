@@ -55,6 +55,7 @@
 #include "dslh_dmagnt_interface.h"
 #include "ccsp_trace.h"
 #include "dm_pack_create_func.h"
+#include "safec_lib_common.h"
 
 PDSLH_CPE_CONTROLLER_OBJECT     pDslhCpeController        = NULL;
 PCOMPONENT_COMMON_ETHAGENT          g_pComponent_COMMON_ethagent  = NULL;
@@ -75,6 +76,7 @@ ssp_create
     /* Create component common data model object */
 
      g_pComponent_COMMON_ethagent = (PCOMPONENT_COMMON_ETHAGENT)AnscAllocateMemory(sizeof(COMPONENT_COMMON_ETHAGENT));
+     errno_t        rc = -1;
 
     if ( ! g_pComponent_COMMON_ethagent )
     {
@@ -98,7 +100,12 @@ ssp_create
         }
         else
         {
-            AnscCopyString(pSsdCcdIf->Name, CCSP_CCD_INTERFACE_NAME);
+            rc =  strcpy_s(pSsdCcdIf->Name,sizeof(pSsdCcdIf->Name), CCSP_CCD_INTERFACE_NAME);
+            if(rc != EOK)
+            {
+             ERR_CHK(rc);
+             return ANSC_STATUS_FAILURE;
+           }
 
             pSsdCcdIf->InterfaceId              = CCSP_CCD_INTERFACE_ID;
             pSsdCcdIf->hOwnerContext            = NULL;
@@ -131,7 +138,13 @@ ssp_create
         }
         else
         {
-            AnscCopyString(pDslhLcbIf->Name, CCSP_LIBCBK_INTERFACE_NAME);
+            rc = strcpy_s(pDslhLcbIf->Name,sizeof(pDslhLcbIf->Name), CCSP_LIBCBK_INTERFACE_NAME);
+             if(rc != EOK)
+            {
+             ERR_CHK(rc);
+             return ANSC_STATUS_FAILURE;
+           }
+
 
             pDslhLcbIf->InterfaceId              = CCSP_LIBCBK_INTERFACE_ID;
             pDslhLcbIf->hOwnerContext            = NULL;
