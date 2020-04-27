@@ -105,6 +105,7 @@
                         GLOBAL VARIABLES
 **************************************************************************/
 #if defined (ENABLE_ETH_WAN)
+/* ETH WAN Fallback Interface Name - Should eventually move away from Compile Time */
 #if defined (_XB7_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_)
 #define ETHWAN_DEF_INTF_NAME "eth3"
 #elif defined (INTEL_PUMA7)
@@ -112,6 +113,20 @@
 #else
 #define ETHWAN_DEF_INTF_NAME "eth0"
 #endif
+
+/* ETH WAN Physical Interface Number Assignment - Should eventually move away from Compile Time */
+/* ETh WAN HAL is 0 based */
+#if defined (_2_5G_ETHERNET_SUPPORT_)
+#if defined (ETH_6_PORTS)
+#define ETHWAN_DEF_INTF_NUM 5
+#elif defined (ETH_4_PORTS)
+#define ETHWAN_DEF_INTF_NUM 3
+#endif
+#else
+/* As Of Now All 1Gbps Devices Use Physical Port #1 for ETH WAN */
+#define ETHWAN_DEF_INTF_NUM 0
+#endif
+
 #endif //#if defined (ENABLE_ETH_WAN)
 
 
@@ -328,11 +343,9 @@ CosaDmlEthWanSetEnable
 		
 	   } 
 	}
-#ifdef _XB7_PRODUCT_REQ_
-			CcspHalExtSw_setEthWanPort ( 3 ); // need to set it to port 4 index 3 for XB7
-#else
-			CcspHalExtSw_setEthWanPort ( 0 ); // need to set it to port 1 index 0 after  TCXB6-4234 getting fixed
-#endif
+
+	CcspHalExtSw_setEthWanPort ( ETHWAN_DEF_INTF_NUM );
+
 	if ( ANSC_STATUS_SUCCESS == CcspHalExtSw_setEthWanEnable( bEnable ) ) 
 	{
 	 	pthread_t tid;		
