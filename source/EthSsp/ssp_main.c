@@ -314,6 +314,10 @@ int main(int argc, char* argv[])
     errno_t        rc = -1;
     int ind = -1;
 
+    // Buffer characters till newline for stdout and stderr
+    setlinebuf(stdout);
+    setlinebuf(stderr);
+
     CcspTraceInfo(("\nWithin the main function\n"));
 #ifdef DROP_ROOT_EARLY
     bool ret = false;
