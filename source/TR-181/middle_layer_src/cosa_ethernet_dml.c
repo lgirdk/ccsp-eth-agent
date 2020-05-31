@@ -384,8 +384,14 @@ EthWan_SetParamBoolValue
 		{
 			//RDKB-27656 : Bridge Mode must not set to true using WEBPA & dmcli in ETHWAN mode
 			BOOL bridgeInd = FALSE;
-			is_usg_in_bridge_mode(&bridgeInd);
-			if(bridgeInd)
+                        /*Coverity Fix CID :139267 CHECKED_RETURN */
+			if( ANSC_STATUS_SUCCESS !=  is_usg_in_bridge_mode(&bridgeInd) )
+                        {
+		    	   CcspTraceWarning(("is_usg_in_bridge_mode is not success\n"));
+                           return  FALSE;
+                        }
+			
+                        if(bridgeInd)
 			{
 				CcspTraceWarning(("EthernetWAN mode is not supported in bridge mode. Disable Bridge mode to enable Ethernet WAN mode \n"));
 				return FALSE;
@@ -911,7 +917,6 @@ EthLogging_SetParamBoolValue
              }
      }  
         
-
         if (syscfg_set(NULL, "eth_log_enabled", buf) != 0) 
         {
             AnscTraceWarning(("syscfg_set failed\n"));

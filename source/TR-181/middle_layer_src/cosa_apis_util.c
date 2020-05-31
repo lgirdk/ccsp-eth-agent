@@ -304,9 +304,10 @@ CosaUtilGetLowerLayers
 
                     if ( ulEntryInstanceNum )
                     {
-                        _ansc_sprintf(ucEntryFullPath, "%s%d", "Device.Ethernet.Interface.", ulEntryInstanceNum);
+                        /* Coverity Fix:CID 73664 DC.STRING_BUFFER */
+                        snprintf(ucEntryFullPath, sizeof(ucEntryFullPath),"%s%d", "Device.Ethernet.Interface.", ulEntryInstanceNum);
 
-                        _ansc_sprintf(ucEntryParamName, "%s%s", ucEntryFullPath, ".Name");
+                        snprintf(ucEntryParamName,sizeof(ucEntryParamName), "%s%s", ucEntryFullPath, ".Name");
                
                         ulEntryNameLen = sizeof(ucEntryNameValue);
                         rc = strcmp_s(ucEntryNameValue,ulEntryNameLen,pKeyword,&ind);
@@ -332,11 +333,12 @@ CosaUtilGetLowerLayers
                    {
                       ulEntryInstanceNum = CosaGetInstanceNumberByIndex("Device.IP.Interface.", i);
 
-                      if ( ulEntryInstanceNum )
-                      {
-                        _ansc_sprintf(ucEntryFullPath, "%s%d", "Device.IP.Interface.", ulEntryInstanceNum);
+                    if ( ulEntryInstanceNum )
+                    {
+                        /*Coverity Fix:CID 73664 DC.STRING_BUFFER */
+                        snprintf(ucEntryFullPath, sizeof(ucEntryFullPath),"%s%d", "Device.IP.Interface.", ulEntryInstanceNum);
 
-                        _ansc_sprintf(ucEntryParamName, "%s%s", ucEntryFullPath, ".Name");
+                        snprintf(ucEntryParamName,sizeof(ucEntryParamName), "%s%s", ucEntryFullPath, ".Name");
 
                         ulEntryNameLen = sizeof(ucEntryNameValue); 
                         rc = strcmp_s(ucEntryNameValue,ulEntryNameLen,pKeyword,&ind);
@@ -366,9 +368,10 @@ CosaUtilGetLowerLayers
                     
                         if (ulEntryInstanceNum)
                        {
-                          _ansc_sprintf(ucEntryFullPath, "%s%d.", "Device.WiFi.Radio.", ulEntryInstanceNum);
+                        /* Coverity Fix CID:73664 DC.STRING_BUFFER */
+                        snprintf(ucEntryFullPath, sizeof(ucEntryFullPath),"%s%d.", "Device.WiFi.Radio.", ulEntryInstanceNum);
                         
-                           _ansc_sprintf(ucEntryParamName, "%s%s", ucEntryFullPath, "Name");
+                        snprintf(ucEntryParamName, sizeof(ucEntryParamName),"%s%s", ucEntryFullPath, "Name");
                         
                             ulEntryNameLen = sizeof(ucEntryNameValue);
                              rc = strcmp_s(ucEntryNameValue,ulEntryNameLen,pKeyword,&ind);
@@ -397,11 +400,12 @@ CosaUtilGetLowerLayers
                             {
                                 ulEntryInstanceNum = CosaGetInstanceNumberByIndex("Device.MoCA.Interface.", i);
 
-                                 if ( ulEntryInstanceNum )
+                               if ( ulEntryInstanceNum )
                                {
-                                   _ansc_sprintf(ucEntryFullPath, "%s%d", "Device.MoCA.Interface.", ulEntryInstanceNum);
+                                   /*Coverity Fix CID:73664 DC.STRING_BUFFER */
+                        snprintf(ucEntryFullPath, sizeof(ucEntryFullPath),"%s%d", "Device.MoCA.Interface.", ulEntryInstanceNum);
 
-                                     _ansc_sprintf(ucEntryParamName, "%s%s", ucEntryFullPath, ".Name");
+                        snprintf(ucEntryParamName, sizeof(ucEntryParamName),"%s%s", ucEntryFullPath, ".Name");
                
                                        ulEntryNameLen = sizeof(ucEntryNameValue);
                                       rc = strcmp_s(ucEntryNameValue,ulEntryNameLen,pKeyword,&ind);
@@ -431,9 +435,9 @@ CosaUtilGetLowerLayers
 
                     if ( ulEntryInstanceNum )
                     {
-                        _ansc_sprintf(ucEntryFullPath, "%s%d", "Device.X_CISCO_COM_GRE.Interface.", ulEntryInstanceNum);
+                        snprintf(ucEntryFullPath, sizeof(ucEntryFullPath),"%s%d", "Device.X_CISCO_COM_GRE.Interface.", ulEntryInstanceNum);
 
-                        _ansc_sprintf(ucEntryParamName, "%s%s", ucEntryFullPath, ".Name");
+                        snprintf(ucEntryParamName, sizeof(ucEntryParamName),"%s%s", ucEntryFullPath, ".Name");
                
                         ulEntryNameLen = sizeof(ucEntryNameValue);
                          rc = strcmp_s(ucEntryNameValue,ulEntryNameLen,pKeyword,&ind);
@@ -464,9 +468,10 @@ CosaUtilGetLowerLayers
 
                     if ( ulEntryInstanceNum )
                     {
-                        _ansc_sprintf(ucEntryFullPath, "%s%d", "Device.Ethernet.Link.", ulEntryInstanceNum);
+                        /*Coverity Fix CID:73664 DC.STRING_BUFFER */
+                        snprintf(ucEntryFullPath,sizeof(ucEntryFullPath), "%s%d", "Device.Ethernet.Link.", ulEntryInstanceNum);
 
-                        _ansc_sprintf(ucEntryParamName, "%s%s", ucEntryFullPath, ".Name");
+                        snprintf(ucEntryParamName, sizeof(ucEntryParamName), "%s%s", ucEntryFullPath, ".Name");
                
                         ulEntryNameLen = sizeof(ucEntryNameValue);
                          rc = strcmp_s(ucEntryNameValue,ulEntryNameLen,pKeyword,&ind);
@@ -518,6 +523,8 @@ CosaUtilGetLowerLayers
                     rc = memset_s(ucEntryNameValue,sizeof(ucEntryNameValue), 0, sizeof(ucEntryNameValue));
                      ERR_CHK(rc);
                     _ansc_sprintf(ucEntryParamName,"Device.WiFi.SSID.%d.Name",ulEntryInstanceNum);                    
+                        /*Coverity Fix CID:73664 DC.STRING_BUFFER */
+                    snprintf(ucEntryParamName,sizeof(ucEntryParamName),"Device.WiFi.SSID.%d.Name",ulEntryInstanceNum);                    
                         
                     if (COSAGetParamValueByPathName(g_MessageBusHandle,&varStruct,&ulEntryNameLen))
                     {
@@ -532,7 +539,8 @@ CosaUtilGetLowerLayers
                      ERR_CHK(rc);
                      if ((!ind) && (rc == EOK))
                     {
-                        _ansc_sprintf(ucEntryFullPath,"Device.WiFi.SSID.%d",ulEntryInstanceNum);
+                        /*Coverity Fix CID:73664 DC.STRING_BUFFER */
+                        snprintf(ucEntryFullPath,sizeof(ucEntryFullPath),"Device.WiFi.SSID.%d",ulEntryInstanceNum);
                         pMatchedLowerLayer =  AnscCloneString(ucEntryFullPath);
 
                         break;
@@ -556,15 +564,17 @@ CosaUtilGetLowerLayers
 
                     if ( ulEntryInstanceNum )
                     {
-                        _ansc_sprintf(ucEntryFullPath, "%s%d", "Device.Bridging.Bridge.", ulEntryInstanceNum);
-                        _ansc_sprintf(ucLowerEntryPath, "%s%s", ucEntryFullPath, ".PortNumberOfEntries"); 
+                        /*Coverity Fix CID:73664 DC.STRING_BUFFER */
+                        snprintf(ucEntryFullPath,sizeof(ucEntryFullPath), "%s%d", "Device.Bridging.Bridge.", ulEntryInstanceNum);
+                        snprintf(ucLowerEntryPath,sizeof(ucLowerEntryPath), "%s%s", ucEntryFullPath, ".PortNumberOfEntries"); 
                         
                         ulEntryPortNum = CosaGetParamValueUlong(ucLowerEntryPath);  
                         CcspTraceInfo(("----------CosaUtilGetLowerLayers, Param:%s,port num:%d\n",ucLowerEntryPath, ulEntryPortNum));
 
                         for ( j = 1; j<= ulEntryPortNum; j++) {
-                            _ansc_sprintf(ucLowerEntryName, "%s%s%d", ucEntryFullPath, ".Port.", j);
-                            _ansc_sprintf(ucEntryParamName, "%s%s%d%s", ucEntryFullPath, ".Port.", j, ".Name");
+                        /*Coverity Fix CID:73664 DC.STRING_BUFFER */
+                            snprintf(ucLowerEntryName,sizeof(ucLowerEntryName), "%s%s%d", ucEntryFullPath, ".Port.", j);
+                            snprintf(ucEntryParamName,sizeof(ucEntryParamName), "%s%s%d%s", ucEntryFullPath, ".Port.", j, ".Name");
                             CcspTraceInfo(("----------CosaUtilGetLowerLayers, Param:%s,Param2:%s\n", ucLowerEntryName, ucEntryParamName));
                         
                             ulEntryNameLen = sizeof(ucEntryNameValue);
@@ -780,11 +790,13 @@ CosaUtilConstructLowerLayers
     if ( LinkType == COSA_DML_LINK_TYPE_Bridge )
     {
         /* Special processing for Bridge type LowerLayers */
-        _ansc_sprintf(pLowerLayersBuf, "%s%d.Port.1", linkTypePath, InstNumber);
+        /*Coverity Fix CID: 73664 DC.STRING_BUFFER */
+        snprintf(pLowerLayersBuf,sizeof(pLowerLayersBuf) ,"%s%d.Port.1", linkTypePath, InstNumber);
     }
     else
     {
-        _ansc_sprintf(pLowerLayersBuf, "%s%d", linkTypePath, InstNumber);
+        /*Coverity Fix CID: 73664 DC.STRING_BUFFER */
+        snprintf(pLowerLayersBuf,sizeof(pLowerLayersBuf),"%s%d", linkTypePath, InstNumber);
     }
 
     AnscTraceFlow(("%s, size %d, buf len %d\n", pLowerLayersBuf, _ansc_strlen(pLowerLayersBuf), *pBufLen));
@@ -859,21 +871,23 @@ CosaUtilFindBridgeName(char* pBridgePath)
     ULONG                           ulEntryPortNum              = 0;
     PUCHAR                          pMatchedBridgeName          = NULL;
     BOOL                            bMgrPort                    = FALSE;
-
-    _ansc_sprintf(ucLowerEntryPath, "%s%s", pBridgePath, ".PortNumberOfEntries"); 
+    /* Coverity Fix CID:73664 DC.STRING_BUFFER */
+    snprintf(ucLowerEntryPath,sizeof(ucLowerEntryPath), "%s%s", pBridgePath, ".PortNumberOfEntries"); 
                         
     ulEntryPortNum = CosaGetParamValueUlong(ucLowerEntryPath);  
     AnscTraceFlow(("%s: Param:%s,port num:%d\n", __FUNCTION__, ucLowerEntryPath, ulEntryPortNum));
 
     for ( j = 1; j<= ulEntryPortNum; j++) {
-        _ansc_sprintf(ucLowerEntryName, "%s%s%d", pBridgePath, ".Port.", j);
-        _ansc_sprintf(ucEntryParamName, "%s%s%d%s", pBridgePath, ".Port.", j, ".ManagementPort");
+       /* Coverity Fix CID:73664 DC.STRING_BUFFER */
+        snprintf(ucLowerEntryName,sizeof(ucLowerEntryName), "%s%s%d", pBridgePath, ".Port.", j);
+        snprintf(ucEntryParamName,sizeof(ucEntryParamName), "%s%s%d%s", pBridgePath, ".Port.", j, ".ManagementPort");
         AnscTraceFlow(("%s: Param:%s,Param2:%s\n",__FUNCTION__, ucLowerEntryName, ucEntryParamName)); 
                         
         bMgrPort = CosaGetParamValueBool(ucEntryParamName);
         if(bMgrPort)
         {
-            _ansc_sprintf(ucEntryParamName, "%s%s%d%s", pBridgePath, ".Port.", j, ".Name");
+             /* Coverity Fix CID:73664 DC.STRING_BUFFER */
+            snprintf(ucEntryParamName,sizeof(ucEntryParamName), "%s%s%d%s", pBridgePath, ".Port.", j, ".Name");
                 
             ulEntryNameLen = sizeof(ucEntryNameValue);
             if (0 == CosaGetParamValueString(ucEntryParamName, ucEntryNameValue, &ulEntryNameLen)) 
@@ -922,15 +936,17 @@ CosaUtilFindBridgePath(char* pBridgeName)
         AnscTraceFlow(("%s: instance num:%d\n", __FUNCTION__, ulEntryInstanceNum));
         if ( ulEntryInstanceNum )
         {
-            _ansc_sprintf(ucEntryFullPath, "%s%d", "Device.Bridging.Bridge.", ulEntryInstanceNum);
-            _ansc_sprintf(ucLowerEntryPath, "%s%s", ucEntryFullPath, ".PortNumberOfEntries"); 
+            /*Coverity Fix CID:73664 DC.STRING_BUFFER */
+            snprintf(ucEntryFullPath,sizeof(ucEntryFullPath), "%s%d", "Device.Bridging.Bridge.", ulEntryInstanceNum);
+            snprintf(ucLowerEntryPath,sizeof(ucLowerEntryPath), "%s%s", ucEntryFullPath, ".PortNumberOfEntries"); 
                         
             ulEntryPortNum = CosaGetParamValueUlong(ucLowerEntryPath);  
             CcspTraceInfo(("----------CosaUtilGetLowerLayers, Param:%s,port num:%d\n",ucLowerEntryPath, ulEntryPortNum));
 
             for ( j = 1; j<= ulEntryPortNum; j++) {
-                _ansc_sprintf(ucLowerEntryName, "%s%s%d", ucEntryFullPath, ".Port.", j);
-                _ansc_sprintf(ucEntryParamName, "%s%s%d%s", ucEntryFullPath, ".Port.", j, ".Name");
+            /*Coverity Fix CID:73664 DC.STRING_BUFFER */
+                snprintf(ucLowerEntryName,sizeof(ucLowerEntryName), "%s%s%d", ucEntryFullPath, ".Port.", j);
+                snprintf(ucEntryParamName,sizeof(ucEntryParamName), "%s%s%d%s", ucEntryFullPath, ".Port.", j, ".Name");
                 CcspTraceInfo(("----------CosaUtilGetLowerLayers, Param:%s,Param2:%s\n", ucLowerEntryName, ucEntryParamName));
                         
                 ulEntryNameLen = sizeof(ucEntryNameValue);
@@ -1029,7 +1045,8 @@ CosaUtilGetFullPathNameByKeyword
 
             pString--;
             pString[0] = '\0';
-            _ansc_sprintf(ucTmp2, "%s%s", pString2, "NumberOfEntries");                
+            /*Coveity Fix CID: 73664 DC.STRING_BUFFER */
+            snprintf(ucTmp2, sizeof(ucTmp2),"%s%s", pString2, "NumberOfEntries");                
             pString[0] = '.';
 
             /* Enumerate the entry in this table */
@@ -1037,7 +1054,8 @@ CosaUtilGetFullPathNameByKeyword
             {
                 pString2--;
                 pString2[0]='\0';
-                _ansc_sprintf(ucTmp, "%s.%s", pTableStringToken->Name, ucTmp2);                
+            /*Coveity Fix CID: 73664 DC.STRING_BUFFER */
+                snprintf(ucTmp,sizeof(ucTmp), "%s.%s", pTableStringToken->Name, ucTmp2);                
                 pString2[0]='.';
                 ulNumOfEntries =       CosaGetParamValueUlong(ucTmp);
 
@@ -1047,9 +1065,10 @@ CosaUtilGetFullPathNameByKeyword
 
                     if ( ulEntryInstanceNum )
                     {
-                        _ansc_sprintf(ucEntryFullPath, "%s%d%s", pTableStringToken->Name, ulEntryInstanceNum, ".");
+            /*Coveity Fix CID: 73664 DC.STRING_BUFFER */
+                        snprintf(ucEntryFullPath, sizeof(ucEntryFullPath),"%s%d%s", pTableStringToken->Name, ulEntryInstanceNum, ".");
 
-                        _ansc_sprintf(ucEntryParamName, "%s%s", ucEntryFullPath, pParameterName);
+                        snprintf(ucEntryParamName,sizeof(ucEntryParamName), "%s%s", ucEntryFullPath, pParameterName);
                
                         ulEntryNameLen = sizeof(ucEntryNameValue);
                         rc = strcmp_s(ucEntryNameValue,ulEntryNameLen, pKeyword,&ind);
