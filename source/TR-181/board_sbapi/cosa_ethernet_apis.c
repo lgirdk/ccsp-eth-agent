@@ -165,9 +165,11 @@ void Notify_To_LMLite(Eth_host_t *host)
 
     sprintf(param_value+17,"%s",",");
     if(host->eth_Active)
-    	sprintf(param_value+18,"%s","true");
+       /*Coverity Fix CID:67001 DC.STRING_BUFFER */
+    	snprintf(param_value+18,sizeof(param_value),"%s","true");
     else
-	sprintf(param_value+18,"%s","false");
+       /*Coverity Fix CID:67001 DC.STRING_BUFFER */
+	snprintf(param_value+18,sizeof(param_value),"%s","false");
 
     notif_val[0].parameterName =  param_name ;
     notif_val[0].parameterValue = param_value;
@@ -239,6 +241,8 @@ INT CosaDmlEth_AssociatedDevice_callback(eth_device_t *eth_dev)
 	    Eth_Host.eth_port = eth_dev->eth_port;		
 		if((ANSC_STATUS_SUCCESS == is_usg_in_bridge_mode(&bridgeId)) && (FALSE == bridgeId))
 	    	Notify_To_LMLite(&Eth_Host);
+    /*Coverity  Fix  CID:60418 MISSING_RETURN */
+    return ANSC_STATUS_SUCCESS;
 }
 
 ANSC_STATUS
@@ -346,7 +350,8 @@ CosaDmlEthWanSetEnable
 		system("ip link set dummy-rf name erouter0");
 		rc =  memset_s(command,sizeof(command),0,sizeof(command));
                 ERR_CHK(rc);
-		sprintf(command, "ifconfig %s up;ifconfig erouter0 up", ETHWAN_DEF_INTF_NAME);
+                /*Coverity Fix  CID: 132495 DC.STRING_BUFFER*/
+		snprintf(command,sizeof(command), "ifconfig %s up;ifconfig erouter0 up", ETHWAN_DEF_INTF_NAME);
 		CcspTraceWarning(("****************value of command = %s**********************\n", command));
 		system(command);
 		
