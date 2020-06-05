@@ -90,6 +90,8 @@
 #include <stdio.h>
 #include <string.h>
 #include "cosa_ethernet_apis.h"
+#include "cap.h"
+#include <linux/version.h>
 #ifdef FEATURE_SUPPORT_ONBOARD_LOGGING
 #include "cimplog.h"
 #define LOGGING_MODULE           "ETHAGENT"
@@ -133,7 +135,9 @@
 extern  ANSC_HANDLE bus_handle;
 extern  ANSC_HANDLE g_EthObject;
 extern void* g_pDslhDmlAgent;
-
+#define ARRAY_SIZE(x)  (sizeof(x) / sizeof(x[0]))
+extern cap_user appcaps;
+static bool bNonrootEnabled = false;
 void Notify_To_LMLite(Eth_host_t *host)
 {
     parameterValStruct_t notif_val[1];
@@ -352,6 +356,13 @@ CosaDmlEthWanSetEnable
 		char buf[ 8 ];
 		memset( buf, 0, sizeof( buf ) );
 		snprintf( buf, sizeof( buf ), "%s", bEnable ? "true" : "false" );
+
+                /* Linux version < 0 , switch to root */
+                if( (LINUX_VERSION_CODE < KERNEL_VERSION(4, 3, 0)) && (getuid() != 0))  { 
+		   AnscTraceWarning(( "Linux version < 4.3 and CcspEthAgent is running as non-root user\n" ));
+                   gain_root_privilege();
+                   bNonrootEnabled = true;
+                }
 		if(bEnable)
 		{
 			system("touch /nvram/ETHWAN_ENABLE");
@@ -360,6 +371,12 @@ CosaDmlEthWanSetEnable
 		{
 			system("rm /nvram/ETHWAN_ENABLE");
 		}
+                if(bNonrootEnabled){
+		    init_capability();
+		    drop_root_caps(&appcaps);
+		    update_process_caps(&appcaps);
+		    bNonrootEnabled = false;
+                }
 
 		if ( syscfg_set( NULL, "eth_wan_enabled", buf ) != 0 )
 		{
