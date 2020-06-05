@@ -98,6 +98,5 @@ typedef struct _COSA_DML_ETH_LOG_STATUS COSA_DML_ETH_LOG_STATUS, *PCOSA_DML_ETH_
 
 void Ethernet_Hosts_Sync( void );
 INT CosaDmlEth_AssociatedDevice_callback(eth_device_t *eth_dev);
-
 #endif
 

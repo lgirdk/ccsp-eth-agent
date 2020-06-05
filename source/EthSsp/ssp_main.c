@@ -49,9 +49,10 @@
 #define DEBUG_INI_NAME  "/etc/debug.ini"
 #include "syscfg/syscfg.h"
 #include "cap.h"
-static cap_user appcaps;
-#define ARRAY_SIZE(x)  (sizeof(x) / sizeof(x[0]))
 
+cap_user appcaps;
+
+#define ARRAY_SIZE(x)  (sizeof(x) / sizeof(x[0]))
 
 extern char*                                pComponentName;
 char                                        g_Subsystem[32]         = {0};
@@ -245,8 +246,8 @@ int main(int argc, char* argv[])
     extern ANSC_HANDLE bus_handle;
     char *subSys            = NULL;  
     DmErr_t    err;
-   
-CcspTraceInfo(("\nWithin the main function\n"));
+
+    CcspTraceInfo(("\nWithin the main function\n"));
     syscfg_init();
     syscfg_get( NULL, "NonRootSupport", buf, sizeof(buf));
 #ifdef DROP_ROOT_EARLY
