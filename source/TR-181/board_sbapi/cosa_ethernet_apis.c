@@ -195,10 +195,21 @@ void CosaEthTelemetryxOpsLogSettingsSync()
 {
     FILE *fp = fopen(ETH_LOGVALUE_FILE, "w");
     if (fp != NULL) {
-	char buff[64] = {0};     
-	syscfg_get(NULL, "eth_log_period", buff, 32);
-	syscfg_get(NULL,"eth_log_enabled", &buff[32], 32);
-	fprintf(fp,"%s,%s\n", &buff[0], &buff[32]);
+	char log_period[32] = {0};
+	char log_enable[32] = {0};
+	memset(log_period,0,sizeof(log_period));
+	memset(log_enable,0,sizeof(log_enable));
+	if(syscfg_get(NULL, "eth_log_period", log_period, sizeof(log_period))!= 0 || (log_period[0] == '\0'))
+	{
+		CcspTraceWarning(("eth_log_period syscfg_get failed\n"));
+		sprintf(log_period,"3600");
+	}
+	if(syscfg_get(NULL,"eth_log_enabled", log_enable, sizeof(log_enable)) != 0 || (log_enable[0] == '\0'))
+	{
+		CcspTraceWarning(("eth_log_enabled syscfg_get failed\n"));
+		sprintf(log_enable,"false");
+	}
+	fprintf(fp,"%s,%s\n", log_period, log_enable);
 	fclose(fp);
     }
 }
