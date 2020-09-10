@@ -526,6 +526,30 @@ CosaUtilGetLowerLayers
             }
             else if ( AnscEqualString(pTableStringToken->Name, "Device.PPP.Interface.", TRUE ) )
             {
+
+               ulNumOfEntries =       CosaGetParamValueUlong("Device.PPP.InterfaceNumberOfEntries");
+
+                for ( i = 0 ; i < ulNumOfEntries; i++ )
+                {
+                    ulEntryInstanceNum = CosaGetInstanceNumberByIndex("Device.PPP.Interface.", i);
+
+                    if ( ulEntryInstanceNum )
+                    {
+                        _ansc_sprintf(ucEntryFullPath, "%s%d", "Device.PPP.Interface.", ulEntryInstanceNum);
+
+                        _ansc_sprintf(ucEntryParamName, "%s%s", ucEntryFullPath, ".Name");
+
+                        ulEntryNameLen = sizeof(ucEntryNameValue);
+                        if ( ( 0 == CosaGetParamValueString(ucEntryParamName, ucEntryNameValue, &ulEntryNameLen)) &&
+                             AnscEqualString(ucEntryNameValue, pKeyword, TRUE ) )
+                        {
+                            pMatchedLowerLayer =  AnscCloneString(ucEntryFullPath);
+
+                            break;
+                        }
+                    }
+                }
+
             }
             else if ( AnscEqualString(pTableStringToken->Name, "Device.DSL.Channel.", TRUE ) )
             {
