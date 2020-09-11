@@ -207,6 +207,7 @@ EthLogging_Rollback
     (
         ANSC_HANDLE                 hInsContext
     );
+
 ULONG
 EthernetWAN_GetParamStringValue
     (
@@ -228,5 +229,105 @@ AutowanFeatureSupport_GetParamBoolValue
         ANSC_HANDLE                 hInsContext,
         char*                       ParamName,
         BOOL*                       pBool
+    );
+
+
+/***********************************************************************
+
+ APIs for Object:
+
+    Ethernet.X_RDKCENTRAL-COM_Interface.{i}
+
+    *  EthInterface_GetEntryCount
+    *  EthInterface_GetEntry
+    *  EthInterface_GetParamBoolValue
+    *  EthInterface_SetParamBoolValue
+    *  EthInterface_SetParamStringValue
+    *  EthInterface_Validate
+    *  EthInterface_Commit
+    *  EthInterface_Rollback
+
+***********************************************************************/
+ULONG
+EthInterface_GetEntryCount
+    (
+        ANSC_HANDLE
+    );
+
+ANSC_HANDLE
+EthInterface_GetEntry
+    (
+        ANSC_HANDLE                 hInsContext,
+        ULONG                       nIndex,
+        ULONG*                      pInsNumber
+    );
+
+BOOL
+EthInterface_GetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL*                       pBool
+    );
+
+ULONG
+EthInterface_GetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pValue,
+        ULONG*                      pUlSize
+    );
+
+BOOL
+EthInterface_SetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL                        bValue
+    );
+
+BOOL
+EthInterface_SetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pString
+    );
+
+BOOL
+EthInterface_Validate
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       pReturnParamName,
+        ULONG*                      puLength
+    );
+
+ULONG
+EthInterface_Commit
+    (
+        ANSC_HANDLE                 hInsContext
+    );
+
+ULONG
+EthInterface_Rollback
+    (
+        ANSC_HANDLE                 hInsContext
+    );
+
+BOOL
+EthInterface_GetParamUlongValue
+    (
+    ANSC_HANDLE hInsContext,
+    char *ParamName,
+    ULONG *puLong
+    );
+
+BOOL
+EthInterface_SetParamUlongValue
+    (
+    ANSC_HANDLE hInsContext,
+    char *ParamName,
+    ULONG uValue
     );
 #endif

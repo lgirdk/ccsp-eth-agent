@@ -89,10 +89,20 @@
 **************************************************************************/
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
+#include <mqueue.h>
+
 #include "cosa_ethernet_apis.h"
 #include "safec_lib_common.h"
 #include "cap.h"
 #include <linux/version.h>
+#include "cosa_ethernet_internal.h"
+#include "ccsp_hal_ethsw.h"
+
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+#include "cosa_ethernet_manager.h"
+#endif //FEATURE_RDKB_WAN_MANAGER
+
 #ifdef FEATURE_SUPPORT_ONBOARD_LOGGING
 #include "cimplog.h"
 
@@ -102,6 +112,26 @@
 #else
 #define OnboardLog(...)
 #endif
+
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+#define TOTAL_NUMBER_OF_INTERFACES 4
+#define COSA_ETH_EVENT_QUEUE_NAME "/ETH_event_queue"
+#define MAX_QUEUE_MSG_SIZE (512) 
+#define MAX_QUEUE_LENGTH (100)
+#define EVENT_MSG_MAX_SIZE (256)
+
+#define CHECK(x)                                                 \
+    do                                                           \
+    {                                                            \
+        if (!(x))                                                \
+        {                                                        \
+            CcspTraceError(("%s:%d: ", __FUNCTION__, __LINE__)); \
+            perror(#x);                                          \
+            return;                                              \
+        }                                                        \
+    } while (0)
+#endif //FEATURE_RDKB_WAN_MANAGER
+
 /**************************************************************************
                         DATA STRUCTURE DEFINITIONS
 **************************************************************************/
@@ -122,13 +152,48 @@
 
 #endif //#if defined (ENABLE_ETH_WAN)
 
-
 extern  ANSC_HANDLE bus_handle;
 extern  ANSC_HANDLE g_EthObject;
 extern void* g_pDslhDmlAgent;
 #define ARRAY_SIZE(x)  (sizeof(x) / sizeof(x[0]))
 extern cap_user appcaps;
 static bool bNonrootEnabled = false;
+
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+typedef enum _COSA_ETH_MSGQ_MSG_TYPE
+{
+    MSG_TYPE_WAN = 1,
+
+} COSA_ETH_MSGQ_MSG_TYPE;
+
+typedef struct _CosaEthEventQData
+{
+    char Msg[EVENT_MSG_MAX_SIZE];   //Msg structure for the specific event
+    COSA_ETH_MSGQ_MSG_TYPE MsgType; // WAN = 1
+} CosaEthEventQData;
+
+typedef struct _CosaETHMSGQWanData
+{
+    CHAR Name[64];
+    COSA_DML_ETH_LINK_STATUS LinkStatus;
+} CosaETHMSGQWanData;
+
+
+PCOSA_DML_ETH_PORT_GLOBAL_CONFIG gpstEthGInfo = NULL;
+static pthread_mutex_t gmEthGInfo_mutex = PTHREAD_MUTEX_INITIALIZER;
+static ANSC_STATUS CosDmlEthPortPrepareGlobalInfo();
+static ANSC_STATUS CosaDmlEthGetParamValues(char *pComponent, char *pBus, char *pParamName, char *pReturnVal);
+static ANSC_STATUS CosaDmlEthSetParamValues(char *pComponent, char *pBus, char *pParamName, char *pParamVal, enum dataType_e type, unsigned int bCommitFlag);
+static ANSC_STATUS CosaDmlEthGetParamNames(char *pComponent, char *pBus, char *pParamName, char a2cReturnVal[][256], int *pReturnSize);
+static ANSC_STATUS CosaDmlEthPortSendLinkStatusToEventQueue(CosaETHMSGQWanData *MSGQWanData);
+static ANSC_STATUS CosaDmlEthGetLowerLayersInstanceInOtherAgent(COSA_ETH_NOTIFY_ENUM enNotifyAgent, char *pLowerLayers, INT *piInstanceNumber);
+static ANSC_STATUS CosaDmlGetWanOEInterfaceName(char *pInterface, unsigned int length);
+static void CosaDmlEthTriggerEventHandlerThread(void);
+static void *CosaDmlEthEventHandlerThread(void *arg);
+static ANSC_STATUS CosaDmlEthPortGetIndexFromIfName( char *ifname, INT *IfIndex );
+static INT CosaDmlEthGetTotalNoOfInterfaces ( VOID );
+#endif //#if defined (FEATURE_RDKB_WAN_MANAGER)
+
 void Notify_To_LMLite(Eth_host_t *host)
 {
     parameterValStruct_t notif_val[1];
@@ -444,3 +509,1037 @@ CosaDmlEthGetLogStatus
     return ANSC_STATUS_SUCCESS;
 }
 
+ANSC_STATUS
+CosaDmlEthInit(
+    ANSC_HANDLE hDml,
+    PANSC_HANDLE phContext)
+{
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+    char PhyStatus[16] = {0};
+    char WanOEInterface[16] = {0};
+    PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)phContext;
+    int ifIndex;
+    //Initialise ethsw-hal to get event notification from lower layer.
+    if (CcspHalEthSwInit() != RETURN_OK)
+    {
+        CcspTraceError(("Hal initialization failed \n"));
+        return ANSC_STATUS_FAILURE;
+    }
+    //ETH Port Init.
+    CosaDmlEthPortInit(pMyObject);
+
+    if(CosaDmlGetWanOEInterfaceName(WanOEInterface, sizeof(WanOEInterface)) == ANSC_STATUS_SUCCESS) {
+        if(GWP_GetEthWanLinkStatus() == 1) {
+            if(CosaDmlEthGetPhyStatusForWanAgent(WanOEInterface, PhyStatus) == ANSC_STATUS_SUCCESS) {
+                if(strcmp(PhyStatus, "Up") != 0) {
+                    CosaDmlEthSetPhyStatusForWanAgent(WanOEInterface, "Up");
+                    CcspTraceError(("Successfully updated PhyStatus to UP for %s interface \n", WanOEInterface));
+                    /** We need also update `linkStatus` in global data to inform linkstatus is up
+                     * for the EthAgent state machine. This is required for SM, when its being started
+                     * by setting `upstream` from WanAgent.
+                     */
+                    if (ANSC_STATUS_SUCCESS == CosaDmlEthPortGetIndexFromIfName(WanOEInterface, &ifIndex))
+                    {
+                        CcspTraceError(("%s Successfully get index for this %s interface\n", __FUNCTION__, WanOEInterface));
+                        pthread_mutex_lock(&gmEthGInfo_mutex);
+                        gpstEthGInfo[ifIndex].LinkStatus = ETH_LINK_STATUS_UP;
+                        pthread_mutex_unlock(&gmEthGInfo_mutex);
+                    }
+                }
+            }      
+        }
+    }
+
+    /* Trigger Event Handler thread.
+     * Monitor for the link status event and notify the other agents,
+     */
+    CosaDmlEthTriggerEventHandlerThread();
+#endif //#if defined (FEATURE_RDKB_WAN_MANAGER)
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS
+CosaDmlEthPortInit(
+    PANSC_HANDLE phContext)
+{
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+    PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)phContext;
+    PCOSA_DML_ETH_PORT_CONFIG pETHlinkTemp = NULL;
+    INT iTotalInterfaces = 0;
+    INT iLoopCount = 0;
+
+    iTotalInterfaces = CosaDmlEthGetTotalNoOfInterfaces();
+    pETHlinkTemp = (PCOSA_DML_ETH_PORT_CONFIG)AnscAllocateMemory(sizeof(COSA_DML_ETH_PORT_CONFIG) * iTotalInterfaces);
+
+    if (NULL == pETHlinkTemp)
+    {
+        CcspTraceError(("Failed to allocate memeory \n"));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    pMyObject->ulTotalNoofEthInterfaces = iTotalInterfaces;
+    memset(pETHlinkTemp, 0, sizeof(pETHlinkTemp) * iTotalInterfaces);
+
+    //Fill line static information and initialize default values
+    for (iLoopCount = 0; iLoopCount < iTotalInterfaces; iLoopCount++)
+    {
+        pETHlinkTemp[iLoopCount].WanStatus = ETH_WAN_DOWN;
+        pETHlinkTemp[iLoopCount].LinkStatus = ETH_LINK_STATUS_DOWN;
+        pETHlinkTemp[iLoopCount].ulInstanceNumber = iLoopCount + 1;
+        // Get  Name.
+        snprintf(pETHlinkTemp[iLoopCount].Name, sizeof(pETHlinkTemp[iLoopCount].Name), "eth%d", iLoopCount);
+        snprintf(pETHlinkTemp[iLoopCount].Path, sizeof(pETHlinkTemp[iLoopCount].Path), "%s%d", ETHERNET_IF_PATH, iLoopCount + 1);
+        pETHlinkTemp[iLoopCount].Upstream = FALSE;
+        pETHlinkTemp[iLoopCount].WanValidated = FALSE;
+    }
+
+    //Assign the memory address to oringinal structure
+    pMyObject->pEthLink = pETHlinkTemp;
+    //Prepare global information.
+    CosDmlEthPortPrepareGlobalInfo();
+#endif //#if defined (FEATURE_RDKB_WAN_MANAGER)
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS CosaDmlEthGetPortCfg(INT nIndex, PCOSA_DML_ETH_PORT_CONFIG pEthLink)
+{
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+    COSA_DML_ETH_LINK_STATUS linkstatus;
+    COSA_DML_ETH_WAN_STATUS wan_status;
+
+    if (pEthLink == NULL)
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //Get Link status.
+    if (ANSC_STATUS_SUCCESS == CosaDmlEthPortGetLinkStatus(nIndex, &linkstatus))
+    {
+        pEthLink->LinkStatus = linkstatus;
+    }
+
+    if (ANSC_STATUS_SUCCESS == CosaDmlEthPortGetWanStatus(nIndex, &wan_status))
+    {
+        pEthLink->WanStatus = wan_status;
+    }
+
+    snprintf(pEthLink->Name, sizeof(pEthLink->Name), "eth%d", nIndex);
+#endif //#if defined (FEATURE_RDKB_WAN_MANAGER)
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS CosaDmlEthPortSetUpstream(INT IfIndex, BOOL Upstream)
+{
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+    ETH_SM_PRIVATE_INFO stSMPrivateInfo = {0};
+
+    //Validate index
+    if (IfIndex < 0)
+    {
+        CcspTraceError(("%s Invalid index[%d]\n", __FUNCTION__, IfIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    // Set upstream global info.
+    pthread_mutex_lock(&gmEthGInfo_mutex);
+
+    /* Check upstream flag is already set to true.
+     * In that case, we don't need to start the state machine again.
+     */
+    if (gpstEthGInfo[IfIndex].Upstream == Upstream)
+    {
+        CcspTraceInfo(("%s %d - Same upstream value received, no need to do anything \n", __FUNCTION__, __LINE__));
+        pthread_mutex_unlock(&gmEthGInfo_mutex);
+        return ANSC_STATUS_SUCCESS;
+    }
+
+    gpstEthGInfo[IfIndex].Upstream = Upstream;
+    snprintf(stSMPrivateInfo.Name, sizeof(stSMPrivateInfo.Name), "%s", gpstEthGInfo[IfIndex].Name);
+    pthread_mutex_unlock(&gmEthGInfo_mutex);
+
+    //Start the State machine thread.
+    if (TRUE == Upstream)
+    {
+        /* Create and Start EthAgent state machine */
+        CosaEthManager_Start_StateMachine(&stSMPrivateInfo);
+        CcspTraceInfo(("%s %d - RDKB_ETH_CFG_CHANGED:ETH state machine started\n", __FUNCTION__, __LINE__));
+    }
+#endif //#if defined (FEATURE_RDKB_WAN_MANAGER)
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS CosaDmlEthPortSetWanValidated(INT IfIndex, BOOL WanValidated)
+{
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS CosaDmlEthPortGetWanStatus(INT IfIndex, COSA_DML_ETH_WAN_STATUS *wan_status)
+{
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+    if (IfIndex < 0 || IfIndex > 4)
+    {
+        CcspTraceError(("%s Invalid index[%d]\n", __FUNCTION__, IfIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //Get WAN status.
+    pthread_mutex_lock(&gmEthGInfo_mutex);
+    *wan_status = gpstEthGInfo[IfIndex].WanStatus;
+    pthread_mutex_unlock(&gmEthGInfo_mutex);
+#endif //#if defined (FEATURE_RDKB_WAN_MANAGER)
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS CosaDmlEthPortSetWanStatus(INT IfIndex, COSA_DML_ETH_WAN_STATUS wan_status)
+{
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+    if (IfIndex < 0 || IfIndex > 4)
+    {
+        CcspTraceError(("%s Invalid index[%d]\n", __FUNCTION__, IfIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //Set WAN status.
+    pthread_mutex_lock(&gmEthGInfo_mutex);
+    gpstEthGInfo[IfIndex].WanStatus = wan_status;
+    pthread_mutex_unlock(&gmEthGInfo_mutex);
+#endif //#if defined (FEATURE_RDKB_WAN_MANAGER)
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS CosaDmlEthPortGetLinkStatus(INT IfIndex, COSA_DML_ETH_LINK_STATUS *LinkStatus)
+{
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+    if (IfIndex < 0 || IfIndex > 4)
+    {
+        CcspTraceError(("%s Invalid index[%d]\n", __FUNCTION__, IfIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    pthread_mutex_lock(&gmEthGInfo_mutex);
+    *LinkStatus = gpstEthGInfo[IfIndex].LinkStatus;
+    pthread_mutex_unlock(&gmEthGInfo_mutex);
+#endif //#if defined (FEATURE_RDKB_WAN_MANAGER)
+    return ANSC_STATUS_SUCCESS;
+}
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+INT CosaDmlEthPortLinkStatusCallback(CHAR *ifname, CHAR *state)
+{
+    if (NULL == ifname || state == NULL)
+    {
+        CcspTraceError(("Invalid memory \n"));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    COSA_DML_ETH_LINK_STATUS link_status;
+
+    if (strncmp(state, UP, 2) == 0)
+    {
+        link_status = ETH_LINK_STATUS_UP;
+    }
+    else
+    {
+        link_status = ETH_LINK_STATUS_DOWN;
+    }
+
+    INT ifIndex = -1;
+    if (CosaDmlEthPortGetIndexFromIfName(ifname, &ifIndex) == ANSC_STATUS_SUCCESS)
+    {
+        CosaETHMSGQWanData MSGQWanData = {0};
+
+        pthread_mutex_lock(&gmEthGInfo_mutex);
+        gpstEthGInfo[ifIndex].LinkStatus = link_status;
+        snprintf(MSGQWanData.Name, sizeof(MSGQWanData.Name), "%s", gpstEthGInfo[ifIndex].Name);
+        pthread_mutex_unlock(&gmEthGInfo_mutex);
+        MSGQWanData.LinkStatus = gpstEthGInfo[ifIndex].LinkStatus;
+        //Send message to Queue
+        CosaDmlEthPortSendLinkStatusToEventQueue(&MSGQWanData);
+    }
+    return TRUE;
+}
+
+static ANSC_STATUS CosaDmlEthPortGetIndexFromIfName(char *ifname, INT *IfIndex)
+{
+    INT iTotalInterfaces = CosaDmlEthGetTotalNoOfInterfaces();
+    INT iLoopCount;
+
+    if (NULL == ifname || IfIndex == NULL || gpstEthGInfo == NULL)
+    {
+        CcspTraceError(("Invalid Memory \n"));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    *IfIndex = -1;
+    pthread_mutex_lock(&gmEthGInfo_mutex);
+    for (iLoopCount = 0; iLoopCount < iTotalInterfaces; iLoopCount++)
+    {
+        if ((NULL != &gpstEthGInfo[iLoopCount]) && (0 == strcmp(gpstEthGInfo[iLoopCount].Name, ifname)))
+        {
+            *IfIndex = iLoopCount;
+            pthread_mutex_unlock(&gmEthGInfo_mutex);
+            return ANSC_STATUS_SUCCESS;
+        }
+    }
+
+    pthread_mutex_unlock(&gmEthGInfo_mutex);
+
+    return ANSC_STATUS_FAILURE;
+}
+
+/* CosaDmlEthLineGetCopyOfGlobalInfoForGivenIndex() */
+ANSC_STATUS CosaDmlEthPortGetCopyOfGlobalInfoForGivenIfName(char *ifname, PCOSA_DML_ETH_PORT_GLOBAL_CONFIG pGlobalInfo)
+{
+    ANSC_STATUS   retStatus;
+    INT           LineIndex = -1;
+
+    if ((NULL == pGlobalInfo) || (ifname == NULL))
+    {
+        CcspTraceError(("%s Invalid data \n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    retStatus = CosaDmlEthPortGetIndexFromIfName(ifname, &LineIndex);
+
+    if ( (ANSC_STATUS_FAILURE == retStatus ) || ( -1 == LineIndex ) )
+    {
+        CcspTraceError(("%s Failed to get index for %s\n", __FUNCTION__,ifname));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //Copy of the data
+    pthread_mutex_lock(&gmEthGInfo_mutex);
+    memcpy(pGlobalInfo, &gpstEthGInfo[LineIndex], sizeof(COSA_DML_ETH_PORT_GLOBAL_CONFIG));
+    pthread_mutex_unlock(&gmEthGInfo_mutex);
+
+    return (ANSC_STATUS_SUCCESS);
+}
+
+/* *CosaDmlEthLinePrepareGlobalInfo() */
+static ANSC_STATUS CosDmlEthPortPrepareGlobalInfo()
+{
+    INT iLoopCount = 0;
+    INT Totalinterfaces = 0;
+
+    Totalinterfaces = CosaDmlEthGetTotalNoOfInterfaces();
+
+    //Allocate memory for Eth Global Status Information
+    gpstEthGInfo = (PCOSA_DML_ETH_PORT_GLOBAL_CONFIG *)AnscAllocateMemory(sizeof(COSA_DML_ETH_PORT_GLOBAL_CONFIG) * Totalinterfaces);
+
+    //Return failure if allocation failiure
+    if (NULL == gpstEthGInfo)
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+
+    memset(gpstEthGInfo, 0, sizeof(gpstEthGInfo) * Totalinterfaces);
+    //Assign default value
+    for (iLoopCount = 0; iLoopCount < Totalinterfaces; ++iLoopCount)
+    {
+        gpstEthGInfo[iLoopCount].Upstream = FALSE;
+        gpstEthGInfo[iLoopCount].WanStatus = ETH_WAN_DOWN;
+        gpstEthGInfo[iLoopCount].LinkStatus = ETH_LINK_STATUS_DOWN;
+        gpstEthGInfo[iLoopCount].WanValidated = TRUE; //Make default as True.
+        snprintf(gpstEthGInfo[iLoopCount].Name, sizeof(gpstEthGInfo[iLoopCount].Name), "eth%d", iLoopCount);
+        snprintf(gpstEthGInfo[iLoopCount].Path, sizeof(gpstEthGInfo[iLoopCount].Path), "%s%d", ETHERNET_IF_PATH, iLoopCount + 1);
+    }
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+/* Send link information to the message queue. */
+static ANSC_STATUS CosaDmlEthPortSendLinkStatusToEventQueue(CosaETHMSGQWanData *MSGQWanData)
+{
+    CosaEthEventQData EventMsg = {0};
+    mqd_t mq;
+    char buffer[MAX_QUEUE_MSG_SIZE];
+
+    //Validate buffer
+    if (NULL == MSGQWanData)
+    {
+        CcspTraceError(("%s %d Invalid Buffer\n", __FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //message queue send
+    mq = mq_open(COSA_ETH_EVENT_QUEUE_NAME, O_WRONLY);
+    CHECK((mqd_t)-1 != mq);
+    memset(buffer, 0, MAX_QUEUE_MSG_SIZE);
+    EventMsg.MsgType = MSG_TYPE_WAN;
+
+    memcpy(EventMsg.Msg, MSGQWanData, sizeof(CosaETHMSGQWanData));
+    memcpy(buffer, &EventMsg, sizeof(EventMsg));
+    CHECK(0 <= mq_send(mq, buffer, MAX_QUEUE_MSG_SIZE, 0));
+    CHECK((mqd_t)-1 != mq_close(mq));
+
+    CcspTraceInfo(("%s %d - Successfully sent message to event queue\n", __FUNCTION__, __LINE__));
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+/* Start event handler thread. */
+static void CosaDmlEthTriggerEventHandlerThread(void)
+{
+    pthread_t EvtThreadId;
+    int iErrorCode = 0;
+
+    //Eth event handler thread
+    iErrorCode = pthread_create(&EvtThreadId, NULL, &CosaDmlEthEventHandlerThread, NULL);
+
+    if (0 != iErrorCode)
+    {
+        CcspTraceInfo(("%s %d - Failed to start Event Handler Thread EC:%d\n", __FUNCTION__, __LINE__, iErrorCode));
+    }
+    else
+    {
+        CcspTraceInfo(("%s %d - Event Handler Thread Started Successfully\n", __FUNCTION__, __LINE__));
+    }
+}
+
+/* Event handler thread which is monitoring for the
+ * interface link status and dispatch to the other agent.
+ */
+static void *CosaDmlEthEventHandlerThread(void *arg)
+{
+    mqd_t mq;
+    struct mq_attr attr;
+    char buffer[MAX_QUEUE_MSG_SIZE + 1];
+
+    /* initialize the queue attributes */
+    attr.mq_flags = 0;
+    attr.mq_maxmsg = MAX_QUEUE_LENGTH;
+    attr.mq_msgsize = MAX_QUEUE_MSG_SIZE;
+    attr.mq_curmsgs = 0;
+
+    /* create the message queue */
+    mq = mq_open(COSA_ETH_EVENT_QUEUE_NAME, O_CREAT | O_RDONLY, 0644, &attr);
+
+    CHECK((mqd_t)-1 != mq);
+
+    do
+    {
+        ssize_t bytes_read;
+        CosaEthEventQData EventMsg = {0};
+
+        /* receive the message */
+        bytes_read = mq_receive(mq, buffer, MAX_QUEUE_MSG_SIZE, NULL);
+        CHECK(bytes_read >= 0);
+        buffer[bytes_read] = '\0';
+        memcpy(&EventMsg, buffer, sizeof(EventMsg));
+
+        //WAN Event
+        if (MSG_TYPE_WAN == EventMsg.MsgType)
+        {
+            CosaETHMSGQWanData MSGQWanData = {0};
+            char acTmpPhyStatus[32] = {0};
+            BOOL IsValidStatus = TRUE;
+            memcpy(&MSGQWanData, EventMsg.Msg, sizeof(CosaETHMSGQWanData));
+            CcspTraceInfo(("%s %d - Event Msg Received\n", __FUNCTION__, __LINE__));
+            CcspTraceInfo(("****** [%s,%d]\n", MSGQWanData.Name, MSGQWanData.LinkStatus));
+
+            switch (MSGQWanData.LinkStatus)
+            {
+            case ETH_LINK_STATUS_UP:
+                snprintf(acTmpPhyStatus, sizeof(acTmpPhyStatus), "%s", "Up");
+                break;
+            case ETH_LINK_STATUS_DOWN:
+                snprintf(acTmpPhyStatus, sizeof(acTmpPhyStatus), "%s", "Down");
+                break;
+            default:
+                IsValidStatus = FALSE;
+                break;
+            }
+
+            if (TRUE == IsValidStatus)
+            {
+                CosaDmlEthSetPhyStatusForWanAgent(MSGQWanData.Name, acTmpPhyStatus);
+            }
+        }
+    } while (1);
+
+    //exit from thread
+    pthread_exit(NULL);
+}
+
+/* Get data from the other component. */
+static ANSC_STATUS CosaDmlEthGetParamNames(char *pComponent, char *pBus, char *pParamName, char a2cReturnVal[][256], int *pReturnSize)
+{
+    CCSP_MESSAGE_BUS_INFO *bus_info = (CCSP_MESSAGE_BUS_INFO *)bus_handle;
+    parameterInfoStruct_t **retInfo;
+    char *ParamName[1];
+    int ret = 0,
+        nval;
+
+    ret = CcspBaseIf_getParameterNames(
+        bus_handle,
+        pComponent,
+        pBus,
+        pParamName,
+        1,
+        &nval,
+        &retInfo);
+
+    if (CCSP_SUCCESS == ret)
+    {
+        int iLoopCount;
+
+        *pReturnSize = nval;
+
+        for (iLoopCount = 0; iLoopCount < nval; iLoopCount++)
+        {
+            if (NULL != retInfo[iLoopCount]->parameterName)
+            {
+                CcspTraceWarning(("%s parameterName[%d,%s]\n", __FUNCTION__, iLoopCount, retInfo[iLoopCount]->parameterName));
+
+                snprintf(a2cReturnVal[iLoopCount], strlen(retInfo[iLoopCount]->parameterName) + 1, "%s", retInfo[iLoopCount]->parameterName);
+            }
+        }
+
+        if (retInfo)
+        {
+            free_parameterInfoStruct_t(bus_handle, nval, retInfo);
+        }
+
+        return ANSC_STATUS_SUCCESS;
+    }
+
+    if (retInfo)
+    {
+        free_parameterInfoStruct_t(bus_handle, nval, retInfo);
+    }
+
+    return ANSC_STATUS_FAILURE;
+}
+
+/* *CosaDmlEthGetParamValues() */
+static ANSC_STATUS CosaDmlEthGetParamValues(char *pComponent, char *pBus, char *pParamName, char *pReturnVal)
+{
+    CCSP_MESSAGE_BUS_INFO *bus_info = (CCSP_MESSAGE_BUS_INFO *)bus_handle;
+    parameterValStruct_t **retVal;
+    char *ParamName[1];
+    int ret = 0,
+        nval;
+
+    //Assign address for get parameter name
+    ParamName[0] = pParamName;
+
+    ret = CcspBaseIf_getParameterValues(
+        bus_handle,
+        pComponent,
+        pBus,
+        ParamName,
+        1,
+        &nval,
+        &retVal);
+
+    //Copy the value
+    if (CCSP_SUCCESS == ret)
+    {
+        CcspTraceWarning(("%s parameterValue[%s]\n", __FUNCTION__, retVal[0]->parameterValue));
+
+        if (NULL != retVal[0]->parameterValue)
+        {
+            memcpy(pReturnVal, retVal[0]->parameterValue, strlen(retVal[0]->parameterValue) + 1);
+        }
+
+        if (retVal)
+        {
+            free_parameterValStruct_t(bus_handle, nval, retVal);
+        }
+
+        return ANSC_STATUS_SUCCESS;
+    }
+
+    if (retVal)
+    {
+        free_parameterValStruct_t(bus_handle, nval, retVal);
+    }
+
+    return ANSC_STATUS_FAILURE;
+}
+
+/* Notification to the Other component. */
+static ANSC_STATUS CosaDmlEthSetParamValues(char *pComponent, char *pBus, char *pParamName, char *pParamVal, enum dataType_e type, unsigned int bCommitFlag)
+{
+    CCSP_MESSAGE_BUS_INFO *bus_info = (CCSP_MESSAGE_BUS_INFO *)bus_handle;
+    parameterValStruct_t param_val[1] = {0};
+    char *faultParam = NULL;
+    char acParameterName[256] = {0},
+         acParameterValue[128] = {0};
+    int ret = 0;
+
+    sprintf(acParameterName, "%s", pParamName);
+    param_val[0].parameterName = acParameterName;
+
+    sprintf(acParameterValue, "%s", pParamVal);
+    param_val[0].parameterValue = acParameterValue;
+
+    param_val[0].type = type;
+
+    ret = CcspBaseIf_setParameterValues(
+        bus_handle,
+        pComponent,
+        pBus,
+        0,
+        0,
+        &param_val,
+        1,
+        bCommitFlag,
+        &faultParam);
+
+    CcspTraceInfo(("Value being set [%d] \n", ret));
+
+    if ((ret != CCSP_SUCCESS) && (faultParam != NULL))
+    {
+        CcspTraceError(("%s-%d Failed to set %s\n", __FUNCTION__, __LINE__, pParamName));
+        bus_info->freefunc(faultParam);
+        return ANSC_STATUS_FAILURE;
+    }
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+/* Set wan status event to Wanagent. */
+ANSC_STATUS CosaDmlEthSetWanStatusForWanAgent(char *ifname, char *WanStatus)
+{
+    COSA_DML_ETH_PORT_GLOBAL_CONFIG stGlobalInfo = {0};
+    char acSetParamName[256];
+    INT iWANInstance = -1;
+
+    //Validate buffer
+    if ((NULL == ifname) || (NULL == WanStatus))
+    {
+        CcspTraceError(("%s Invalid Memory\n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //Get global copy of the data from interface name
+    CosaDmlEthPortGetCopyOfGlobalInfoForGivenIfName(ifname, &stGlobalInfo);
+
+    //Get Instance for corresponding name
+    CosaDmlEthGetLowerLayersInstanceInOtherAgent(NOTIFY_TO_WAN_AGENT, stGlobalInfo.Name, &iWANInstance);
+
+    //Index is not present. so no need to do anything any WAN instance
+    if (-1 == iWANInstance)
+    {
+        CcspTraceError(("%s %d WAN instance not present\n", __FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    CcspTraceInfo(("%s %d WAN Instance:%d\n", __FUNCTION__, __LINE__, iWANInstance));
+
+    //Set WAN Status
+    memset(acSetParamName, 0, sizeof(acSetParamName));
+    snprintf(acSetParamName, sizeof(acSetParamName), WAN_STATUS_PARAM_NAME, iWANInstance);
+    CosaDmlEthSetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH, acSetParamName, WanStatus, ccsp_string, TRUE);
+
+    CcspTraceInfo(("%s %d Successfully notified %s event to WAN Agent for %s interface\n", __FUNCTION__, __LINE__, WanStatus, ifname));
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+static ANSC_STATUS CosaDmlGetWanOEInterfaceName(char *pInterface, unsigned int length)
+{
+    char acTmpReturnValue[256] = {0};
+    INT iLoopCount;
+    INT iTotalNoofEntries;
+
+    if(ANSC_STATUS_FAILURE == CosaDmlEthGetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH, WAN_NOE_PARAM_NAME,acTmpReturnValue))
+    {
+        CcspTraceError(("%s %d Failed to get param value\n", __FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //Total count
+    iTotalNoofEntries = atoi(acTmpReturnValue);
+    CcspTraceInfo(("%s %d - TotalNoofEntries:%d\n", __FUNCTION__, __LINE__, iTotalNoofEntries));
+
+    if (0 >= iTotalNoofEntries) {
+        return ANSC_STATUS_FAILURE;
+    }
+	
+    //Traverse from loop
+    for (iLoopCount = 0; iLoopCount < iTotalNoofEntries; iLoopCount++) {
+        char acTmpQueryParam[256] = {0};
+        //Query
+        snprintf(acTmpQueryParam, sizeof(acTmpQueryParam), WAN_IF_NAME_PARAM_NAME, iLoopCount + 1);
+
+        memset(acTmpReturnValue, 0, sizeof(acTmpReturnValue));
+        if(ANSC_STATUS_FAILURE == CosaDmlEthGetParamValues(WAN_COMPONENT_NAME,WAN_DBUS_PATH,acTmpQueryParam,acTmpReturnValue))
+        {
+            CcspTraceError(("%s %d Failed to get param value\n", __FUNCTION__, __LINE__));
+            continue;
+        }
+
+        if (NULL != strstr(acTmpReturnValue, "eth")) {
+            strncpy(pInterface, acTmpReturnValue, length);
+            break;
+        }
+    }
+	
+    return ANSC_STATUS_SUCCESS;
+}
+
+/* * CosaDmlEthGetLowerLayersInstanceInOtherAgent() */
+static ANSC_STATUS CosaDmlEthGetLowerLayersInstanceInOtherAgent(COSA_ETH_NOTIFY_ENUM enNotifyAgent, char *pLowerLayers, INT *piInstanceNumber)
+{
+    //Validate buffer
+    if ((NULL == pLowerLayers) || (NULL == piInstanceNumber))
+    {
+        CcspTraceError(("%s Invalid Buffer\n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //Initialise default value
+    *piInstanceNumber = -1;
+
+    switch (enNotifyAgent)
+    {
+    case NOTIFY_TO_WAN_AGENT:
+    {
+        char acTmpReturnValue[256] = {0};
+        INT iLoopCount;
+        INT iTotalNoofEntries;
+
+        if (ANSC_STATUS_FAILURE == CosaDmlEthGetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH, WAN_NOE_PARAM_NAME, acTmpReturnValue))
+        {
+            CcspTraceError(("%s %d Failed to get param value\n", __FUNCTION__, __LINE__));
+            return ANSC_STATUS_FAILURE;
+        }
+
+        //Total count
+        iTotalNoofEntries = atoi(acTmpReturnValue);
+        CcspTraceInfo(("%s %d - TotalNoofEntries:%d\n", __FUNCTION__, __LINE__, iTotalNoofEntries));
+
+        if (0 >= iTotalNoofEntries)
+        {
+            return ANSC_STATUS_SUCCESS;
+        }
+
+        //Traverse from loop
+        for (iLoopCount = 0; iLoopCount < iTotalNoofEntries; iLoopCount++)
+        {
+            char acTmpQueryParam[256] = {0};
+
+            //Query
+            snprintf(acTmpQueryParam, sizeof(acTmpQueryParam), WAN_IF_NAME_PARAM_NAME, iLoopCount + 1);
+
+            memset(acTmpReturnValue, 0, sizeof(acTmpReturnValue));
+            if (ANSC_STATUS_FAILURE == CosaDmlEthGetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH, acTmpQueryParam, acTmpReturnValue))
+            {
+                CcspTraceError(("%s %d Failed to get param value\n", __FUNCTION__, __LINE__));
+                continue;
+            }
+
+            //Compare name
+            if (0 == strcmp(acTmpReturnValue, pLowerLayers))
+            {
+                *piInstanceNumber = iLoopCount + 1;
+                break;
+            }
+        }
+    }
+    break; /* * NOTIFY_TO_WAN_AGENT */
+
+    case NOTIFY_TO_VLAN_AGENT:
+    {
+        char acTmpReturnValue[256] = {0},
+             a2cTmpTableParams[10][256] = {0};
+        INT iLoopCount,
+            iTotalNoofEntries;
+
+        if (ANSC_STATUS_FAILURE == CosaDmlEthGetParamValues(VLAN_COMPONENT_NAME, VLAN_DBUS_PATH, VLAN_ETH_NOE_PARAM_NAME, acTmpReturnValue))
+        {
+            CcspTraceError(("%s %d Failed to get param value\n", __FUNCTION__, __LINE__));
+            return ANSC_STATUS_FAILURE;
+        }
+        //Total count
+        iTotalNoofEntries = atoi(acTmpReturnValue);
+        CcspTraceInfo(("%s %d - TotalNoofEntries:%d\n", __FUNCTION__, __LINE__, iTotalNoofEntries));
+
+        if (0 >= iTotalNoofEntries)
+        {
+            return ANSC_STATUS_SUCCESS;
+        }
+
+        //Get table names
+        iTotalNoofEntries = 0;
+        if (ANSC_STATUS_FAILURE == CosaDmlEthGetParamNames(VLAN_COMPONENT_NAME, VLAN_DBUS_PATH, VLAN_ETH_LINK_TABLE_NAME, a2cTmpTableParams, &iTotalNoofEntries))
+        {
+            CcspTraceError(("%s %d Failed to get param value\n", __FUNCTION__, __LINE__));
+            return ANSC_STATUS_FAILURE;
+        }
+
+        //Traverse from loop
+        for (iLoopCount = 0; iLoopCount < iTotalNoofEntries; iLoopCount++)
+        {
+            char acTmpQueryParam[256] = {0};
+
+            //Query
+            snprintf(acTmpQueryParam, sizeof(acTmpQueryParam), "%sLowerLayers", a2cTmpTableParams[iLoopCount]);
+
+            memset(acTmpReturnValue, 0, sizeof(acTmpReturnValue));
+            if (ANSC_STATUS_FAILURE == CosaDmlEthGetParamValues(VLAN_COMPONENT_NAME, VLAN_DBUS_PATH, acTmpQueryParam, acTmpReturnValue))
+            {
+                CcspTraceError(("%s %d Failed to get param value\n", __FUNCTION__, __LINE__));
+                continue;
+            }
+
+            //Compare lowerlayers
+            if (0 == strcmp(acTmpReturnValue, pLowerLayers))
+            {
+                char tmpTableParam[256] = {0};
+                const char *last_two;
+
+                //Copy table param
+                snprintf(tmpTableParam, sizeof(tmpTableParam), "%s", a2cTmpTableParams[iLoopCount]);
+
+                //Get last two chareters from return value and cut the instance
+                last_two = &tmpTableParam[strlen(VLAN_ETH_LINK_TABLE_NAME)];
+
+                *piInstanceNumber = atoi(last_two);
+                break;
+            }
+        }
+    }
+    break; /* * NOTIFY_TO_XTM_AGENT */
+
+    default:
+    {
+        CcspTraceError(("%s Invalid Case\n", __FUNCTION__));
+    }
+    break; /* * default */
+    }
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+static INT CosaDmlEthGetTotalNoOfInterfaces(VOID)
+{
+    //TODO - READ FROM HAL.
+    return TOTAL_NUMBER_OF_INTERFACES;
+}
+
+/* Create and Enbale Ethernet.Link. */
+ANSC_STATUS CosaDmlEthCreateEthLink(char *l2ifName, char *Path)
+{
+    //COSA_DML_ETH_PORT_GLOBAL_CONFIG stGlobalInfo   = { 0 };
+    char acSetParamName[256];
+    INT LineIndex = -1,
+        iVLANInstance = -1;
+
+    //Validate buffer
+    if (NULL == l2ifName || NULL == Path)
+    {
+        CcspTraceError(("%s Invalid Memory\n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //Get line index from name
+    if (ANSC_STATUS_SUCCESS != CosaDmlEthPortGetIndexFromIfName(l2ifName, &LineIndex))
+    {
+        CcspTraceError(("%s Failed to get index for this %s interface\n", __FUNCTION__, l2ifName));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //Get Instance for corresponding lower layer
+    CosaDmlEthGetLowerLayersInstanceInOtherAgent(NOTIFY_TO_VLAN_AGENT,Path, &iVLANInstance);
+
+    //Create VLAN Link.
+    //Index is not present. so needs to create a PTM instance
+    if (-1 == iVLANInstance)
+    {
+        char acTableName[128] = {0};
+        INT iNewTableInstance = -1;
+
+        sprintf(acTableName, "%s", VLAN_ETH_LINK_TABLE_NAME);
+        if (CCSP_SUCCESS != CcspBaseIf_AddTblRow(
+                                bus_handle,
+                                VLAN_COMPONENT_NAME,
+                                VLAN_DBUS_PATH,
+                                0, /* session id */
+                                acTableName,
+                                &iNewTableInstance))
+        {
+            CcspTraceError(("%s Failed to add table %s\n", __FUNCTION__, acTableName));
+            return ANSC_STATUS_FAILURE;
+        }
+
+        //Assign new instance
+        iVLANInstance = iNewTableInstance;
+    }
+
+    CcspTraceInfo(("%s %d VLANAgent -> Device.Ethernet.Link Instance:%d\n", __FUNCTION__, __LINE__, iVLANInstance));
+
+    //Set Alias
+    memset(acSetParamName, 0, sizeof(acSetParamName));
+    snprintf(acSetParamName, sizeof(acSetParamName), VLAN_ETH_LINK_PARAM_ALIAS, iVLANInstance);
+    CosaDmlEthSetParamValues(VLAN_COMPONENT_NAME, VLAN_DBUS_PATH, acSetParamName, l2ifName, ccsp_string,FALSE);
+
+    //Set Name
+    memset(acSetParamName, 0, sizeof(acSetParamName));
+    snprintf(acSetParamName, sizeof(acSetParamName), VLAN_ETH_LINK_PARAM_NAME, iVLANInstance);
+    CosaDmlEthSetParamValues(VLAN_COMPONENT_NAME, VLAN_DBUS_PATH, acSetParamName, l2ifName, ccsp_string,FALSE);
+
+    //Set Lowerlayers
+    memset(acSetParamName, 0, sizeof(acSetParamName));
+    snprintf(acSetParamName, sizeof(acSetParamName), VLAN_ETH_LINK_PARAM_LOWERLAYERS, iVLANInstance);
+    CosaDmlEthSetParamValues(VLAN_COMPONENT_NAME, VLAN_DBUS_PATH, acSetParamName, Path, ccsp_string,FALSE);
+
+    //Set Enable
+    memset(acSetParamName, 0, sizeof(acSetParamName));
+    snprintf(acSetParamName, sizeof(acSetParamName), VLAN_ETH_LINK_PARAM_ENABLE, iVLANInstance);
+    CosaDmlEthSetParamValues(VLAN_COMPONENT_NAME, VLAN_DBUS_PATH, acSetParamName, "true", ccsp_boolean, TRUE);
+
+    CcspTraceInfo(("%s %d Enabled Device.Ethernet.Link.%d.Enable for %s interface\n", __FUNCTION__, __LINE__,iVLANInstance, l2ifName));
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+/* Disable and delete Eth link. (Ethernet.Link.) */
+ANSC_STATUS CosaDmlEthDeleteEthLink(char *ifName, char *Path)
+{
+    char acSetParamName[256],
+        acTableName[128] = {0};
+    INT LineIndex = -1,
+        iVLANInstance = -1;
+
+    //Validate buffer
+    if ((NULL == ifName ) || ( NULL == Path ))
+    {
+        CcspTraceError(("%s Invalid Memory\n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //Get line index from name
+    if (ANSC_STATUS_SUCCESS != CosaDmlEthPortGetIndexFromIfName(ifName, &LineIndex))
+    {
+        CcspTraceError(("%s Failed to get index for this %s interface\n", __FUNCTION__, ifName));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //Get Instance for corresponding lower layer
+    CosaDmlEthGetLowerLayersInstanceInOtherAgent(NOTIFY_TO_VLAN_AGENT,Path, &iVLANInstance);
+
+    //Index is not present. so no need to do anything any ETH Link instance
+    if (-1 == iVLANInstance)
+    {
+        CcspTraceError(("%s %d Device.Ethernet.Link Table instance not present\n", __FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    CcspTraceInfo(("%s %d VLANAgent -> Device.Ethernet.Link Instance:%d\n", __FUNCTION__, __LINE__, iVLANInstance));
+
+    //Disable link.
+    memset(acSetParamName, 0, sizeof(acSetParamName));
+    snprintf(acSetParamName, sizeof(acSetParamName), VLAN_ETH_LINK_PARAM_ENABLE, iVLANInstance);
+    CosaDmlEthSetParamValues(VLAN_COMPONENT_NAME, VLAN_DBUS_PATH, acSetParamName, "false", ccsp_boolean, TRUE);
+
+    //Delay - to set param.
+    sleep(2);
+
+    /*
+     * Delete Device.Ethernet.Link. Instance.
+     * VLANAgent will delete the vlan interface as part table deletion process.
+     */
+    sprintf(acTableName, "%s%d.", VLAN_ETH_LINK_TABLE_NAME, iVLANInstance);
+    if (CCSP_SUCCESS != CcspBaseIf_DeleteTblRow(
+                            bus_handle,
+                            VLAN_COMPONENT_NAME,
+                            VLAN_DBUS_PATH,
+                            0, /* session id */
+                            acTableName))
+    {
+        CcspTraceError(("%s Failed to delete table %s\n", __FUNCTION__, acTableName));
+        return ANSC_STATUS_FAILURE;
+    }
+    CcspTraceInfo(("%s %d Deleted the Device.Ethernet.Link.%d. Table Instance for %s interface\n", __FUNCTION__, __LINE__, iVLANInstance, ifName));
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS CosaDmlEthSetPhyStatusForWanAgent(char *ifname, char *PhyStatus)
+{
+    COSA_DML_ETH_PORT_GLOBAL_CONFIG stGlobalInfo = {0};
+    char acSetParamName[256];
+    char acSetParamVal[256];
+    INT iLinkInstance = -1;
+    INT iWANInstance = -1;
+
+    //Validate buffer
+    if ((NULL == ifname) || (NULL == PhyStatus))
+    {
+        CcspTraceError(("%s Invalid Memory\n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //Get global copy of the data from interface name
+    CosaDmlEthPortGetCopyOfGlobalInfoForGivenIfName(ifname, &stGlobalInfo);
+
+    //Get Instance for corresponding name
+    CosaDmlEthGetLowerLayersInstanceInOtherAgent(NOTIFY_TO_WAN_AGENT, stGlobalInfo.Name, &iWANInstance);
+
+    //Index is not present. so no need to do anything any WAN instance
+    if (-1 == iWANInstance)
+    {
+        CcspTraceError(("%s %d WAN instance not present\n", __FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    CcspTraceInfo(("%s %d WAN Instance:%d\n", __FUNCTION__, __LINE__, iWANInstance));
+
+    //Set PHY path
+    memset(acSetParamName, 0, sizeof(acSetParamName));
+    snprintf(acSetParamName, sizeof(acSetParamName), WAN_PHY_PATH_PARAM_NAME, iWANInstance);
+
+    memset(acSetParamVal, 0, sizeof(acSetParamVal));
+    CosaDmlEthPortGetIndexFromIfName(ifname, &iLinkInstance);
+    snprintf(acSetParamVal, sizeof(acSetParamVal),ETH_IF_PHY_PATH, (iLinkInstance + 1));
+    CosaDmlEthSetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH, acSetParamName, acSetParamVal, ccsp_string, TRUE);
+
+    //Set PHY Status
+    memset(acSetParamName, 0, sizeof(acSetParamName));
+    snprintf(acSetParamName, sizeof(acSetParamName), WAN_PHY_STATUS_PARAM_NAME, iWANInstance);
+    CosaDmlEthSetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH, acSetParamName, PhyStatus, ccsp_string, TRUE);
+
+    CcspTraceInfo(("%s %d Successfully notified %s event to WAN Agent for %s interface\n", __FUNCTION__, __LINE__, PhyStatus, ifname));
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS CosaDmlEthGetPhyStatusForWanAgent(char *ifname, char *PhyStatus)
+{
+    COSA_DML_ETH_PORT_GLOBAL_CONFIG stGlobalInfo = {0};
+    char acGetParamName[256];
+    INT iLinkInstance = -1;
+    INT iWANInstance = -1;
+
+    //Validate buffer
+    if ((NULL == ifname) || (NULL == PhyStatus))
+    {
+        CcspTraceError(("%s Invalid Memory\n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //Get global copy of the data from interface name
+    CosaDmlEthPortGetCopyOfGlobalInfoForGivenIfName(ifname, &stGlobalInfo);
+
+    //Get Instance for corresponding name
+    CosaDmlEthGetLowerLayersInstanceInOtherAgent(NOTIFY_TO_WAN_AGENT, stGlobalInfo.Name, &iWANInstance);
+
+    //Index is not present. so no need to do anything any WAN instance
+    if (-1 == iWANInstance)
+    {
+        CcspTraceError(("%s %d WAN instance not present\n", __FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    CcspTraceInfo(("%s %d WAN Instance:%d\n", __FUNCTION__, __LINE__, iWANInstance));
+
+    //Get PHY Status
+    memset(acGetParamName, 0, sizeof(acGetParamName));
+    snprintf(acGetParamName, sizeof(acGetParamName), WAN_PHY_STATUS_PARAM_NAME, iWANInstance);
+    CosaDmlEthGetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH, acGetParamName, PhyStatus);
+
+    return ANSC_STATUS_SUCCESS;
+}
+#endif //#if defined (FEATURE_RDKB_WAN_MANAGER)
