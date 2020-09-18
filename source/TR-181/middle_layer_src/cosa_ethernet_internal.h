@@ -76,7 +76,7 @@
     COSA_DATAMODEL_ETH_WAN_AGENT EthWanCfg;            \
     COSA_DML_ETH_LOG_STATUS LogStatus;                 \
     UINT ulTotalNoofEthInterfaces;                 \
-    PCOSA_DML_ETH_PORT_CONFIG pEthLink
+    PCOSA_DML_ETH_PORT_CONFIG pEthLink;
 
 typedef  struct
 _COSA_DATAMODEL_ETHERNET_CLASS_CONTENT
