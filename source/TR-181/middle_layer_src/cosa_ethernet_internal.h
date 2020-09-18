@@ -70,12 +70,14 @@
 #include "sys_definitions.h"
 #include "ccsp_hal_ethsw.h"
 
-#define  COSA_DATAMODEL_ETHERNET_CLASS_CONTENT                              \
-    /* duplication of the base object class content */                      \
-    COSA_BASE_CONTENT                                                       \
-    COSA_DATAMODEL_ETH_WAN_AGENT    EthWanCfg ;			\    
-    COSA_DML_ETH_LOG_STATUS    LogStatus									\
-    
+#define COSA_DATAMODEL_ETHERNET_CLASS_CONTENT          \
+    /* duplication of the base object class content */ \
+    COSA_BASE_CONTENT                                  \
+    COSA_DATAMODEL_ETH_WAN_AGENT EthWanCfg;            \
+    COSA_DML_ETH_LOG_STATUS LogStatus;                 \
+    UINT ulTotalNoofEthInterfaces;                 \
+    PCOSA_DML_ETH_PORT_CONFIG pEthLink
+
 typedef  struct
 _COSA_DATAMODEL_ETHERNET_CLASS_CONTENT
 {

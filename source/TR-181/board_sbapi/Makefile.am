@@ -29,5 +29,5 @@ hardware_platform = i686-linux-gnu
 
 noinst_LTLIBRARIES = libCcspEthAgent_board_sbapi.la
 libCcspEthAgent_board_sbapi_la_CPPFLAGS = -I$(top_srcdir)/source/TR-181/include -I$(top_srcdir)/source/TR-181/middle_layer_src 
-libCcspEthAgent_board_sbapi_la_SOURCES = cosa_ethernet_apis.c eth_hal_interface.c ../middle_layer_src/cosa_apis_util.c ../middle_layer_src/cosa_apis_busutil.c
-libCcspEthAgent_board_sbapi_la_LDFLAGS = -lccsp_common -lhal_ethsw -lhal_platform -llmapi 
+libCcspEthAgent_board_sbapi_la_SOURCES = cosa_ethernet_apis.c eth_hal_interface.c ../middle_layer_src/cosa_apis_util.c ../middle_layer_src/cosa_apis_busutil.c cosa_ethernet_manager.c eth_hal.c
+libCcspEthAgent_board_sbapi_la_LDFLAGS = -lccsp_common -lhal_ethsw -lhal_platform -llmapi

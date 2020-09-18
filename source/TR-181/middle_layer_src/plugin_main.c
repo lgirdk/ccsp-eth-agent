@@ -132,6 +132,18 @@ COSA_Init
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthernetWAN_GetParamStringValue", EthernetWAN_GetParamStringValue);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthernetWAN_SetParamStringValue", EthernetWAN_SetParamStringValue);
 
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthInterface_GetEntryCount", EthInterface_GetEntryCount);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthInterface_GetEntry", EthInterface_GetEntry);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthInterface_GetParamBoolValue", EthInterface_GetParamBoolValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthInterface_GetParamStringValue", EthInterface_GetParamStringValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthInterface_GetParamUlongValue", EthInterface_GetParamUlongValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthInterface_SetParamBoolValue", EthInterface_SetParamBoolValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthInterface_SetParamUlongValue", EthInterface_SetParamUlongValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthInterface_SetParamStringValue", EthInterface_SetParamStringValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthInterface_Validate", EthInterface_Validate);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthInterface_Commit", EthInterface_Commit);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthInterface_Rollback", EthInterface_Rollback);
+
     g_pDslhDmlAgent                 = pPlugInfo->hDmlAgent;
     pGetParamValueByPathNameProc = (COSAGetParamValueByPathNameProc)pPlugInfo->AcquireFunction("COSAGetParamValueByPathName");
     if( pGetParamValueByPathNameProc != NULL)

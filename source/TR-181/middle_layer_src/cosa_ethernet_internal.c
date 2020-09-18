@@ -71,6 +71,7 @@
 #include "cosa_ethernet_internal.h"
 #include "cosa_ethernet_apis.h"
 #include "ccsp_trace.h"
+#include "cosa_ethernet_manager.h"
 #include <sys/time.h>
 #include <sys/inotify.h>
 #include <sys/stat.h>
@@ -78,12 +79,50 @@
 
 extern void * g_pDslhDmlAgent;
 extern ANSC_HANDLE g_EthObject;
+extern ANSC_HANDLE bus_handle;
 
 #define LENGTH_MAC_ADDRESS              (18)
 #define LENGTH_DELIMITER                (2)
 
 static void CosaEthernetLogger(void);
 static int CosaEthTelemetryInit(void);
+
+#if defined(FEATURE_RDKB_WAN_MANAGER)
+static int checkIfSystemReady(void);
+static void waitUntilSystemReady(void);
+
+/**
+* @brief checkIfSystemReady Function to query CR and check if system is ready.
+* If SystemReadySignal is already sent then this will return 1 indicating system is ready.
+*/
+static int checkIfSystemReady()
+{
+    char str[256] = {0};
+    int val, ret;
+    snprintf(str, sizeof(str), "eRT.%s", CCSP_DBUS_INTERFACE_CR);
+    // Query CR for system ready
+    ret = CcspBaseIf_isSystemReady(bus_handle, str, &val);
+    CcspTraceError(("checkIfSystemReady(): ret %d, val %d\n", ret, val));
+    return val;
+}
+
+static void waitUntilSystemReady()
+{
+    int wait_time = 0;
+
+    /* Check CR is ready in every 5 seconds. This needs
+    to be continued upto 3 mins (36 * 5 = 180s) */
+    while(wait_time <= 36)
+    {
+        if(checkIfSystemReady()) {
+            break;
+        }
+
+        wait_time++;
+        sleep(5);
+    }
+}
+#endif
 
 /**********************************************************************
 
@@ -171,17 +210,24 @@ CosaEthernetInitialize
     ANSC_STATUS                     returnStatus        = ANSC_STATUS_SUCCESS;
     PCOSA_DATAMODEL_ETHERNET        pMyObject           = (PCOSA_DATAMODEL_ETHERNET)hThisObject;
     syscfg_init();
-
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+    waitUntilSystemReady();
+#endif // FEATURE_RDKB_WAN_MANAGER
     CosaDmlEthGetLogStatus(&pMyObject->LogStatus);
     CosaEthernetLogger();
     CcspHalExtSw_ethAssociatedDevice_callback_register(CosaDmlEth_AssociatedDevice_callback);
     CosaDmlEthWanGetCfg(&pMyObject->EthWanCfg);
-   
+
+#if defined(FEATURE_RDKB_WAN_MANAGER)
+    CosaDmlEthInit(NULL, (PANSC_HANDLE)pMyObject);
+    eth_hal_registerLinkEventCallback(CosaDmlEthPortLinkStatusCallback); //Register cb for link event.
+#endif //FEATURE_RDKB_WAN_MANAGER
     CosaEthTelemetryxOpsLogSettingsSync();
     if (CosaEthTelemetryInit() < 0) {
-	CcspTraceError(("RDK_LOG_ERROR, CcspEth %s : CosaEthTelemetryInit create Error!!!\n", __FUNCTION__));
-	return ANSC_STATUS_FAILURE;
-    }	 
+        CcspTraceError(("RDK_LOG_ERROR, CcspEth %s : CosaEthTelemetryInit create Error!!!\n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
     return returnStatus;
 }
 
@@ -590,9 +636,8 @@ static void EthTelemetryPush()
 #endif
 
     ret = CcspHalExtSw_getAssociatedDevice(&total_eth_device, &output_struct);
-    if (ANSC_STATUS_SUCCESS != ret)
-    {
-	return;
+    if (ANSC_STATUS_SUCCESS != ret) {
+        return;
     }
 
     //Port number start from 1
@@ -646,10 +691,9 @@ static void EthTelemetryPush()
 	}
     }
 
-    if (output_struct)
-    {
-	AnscFreeMemory(output_struct);
-	output_struct= NULL;
+    if (output_struct) {
+        AnscFreeMemory(output_struct);
+        output_struct= NULL;
     }
 }
 
