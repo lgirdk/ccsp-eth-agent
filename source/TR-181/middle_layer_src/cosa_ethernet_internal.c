@@ -75,6 +75,7 @@
 #include <sys/inotify.h>
 #include <sys/stat.h>
 #include "safec_lib_common.h"
+#include "syscfg/syscfg.h"
 
 #if defined (FEATURE_RDKB_WAN_MANAGER)
 #include "cosa_ethernet_manager.h"
@@ -83,6 +84,18 @@
 extern void * g_pDslhDmlAgent;
 extern ANSC_HANDLE g_EthObject;
 extern ANSC_HANDLE bus_handle;
+
+ANSC_STATUS
+CosaDmlEthGetLogStatus
+    (
+        PCOSA_DML_ETH_LOG_STATUS  pMyObject
+    );
+
+ANSC_STATUS
+CosaDmlEthWanGetCfg
+    (
+        PCOSA_DATAMODEL_ETH_WAN_AGENT  pMyObject
+    );
 
 #define LENGTH_MAC_ADDRESS              (18)
 #define LENGTH_DELIMITER                (2)
@@ -104,7 +117,7 @@ static int checkIfSystemReady()
     int val, ret;
     snprintf(str, sizeof(str), "eRT.%s", CCSP_DBUS_INTERFACE_CR);
     // Query CR for system ready
-    ret = CcspBaseIf_isSystemReady(bus_handle, str, &val);
+    ret = CcspBaseIf_isSystemReady(bus_handle, str, (dbus_bool *)&val);
     CcspTraceError(("checkIfSystemReady(): ret %d, val %d\n", ret, val));
     return val;
 }
@@ -154,7 +167,6 @@ CosaEthernetCreate
         VOID
     )
 {
-    ANSC_STATUS                 returnStatus = ANSC_STATUS_SUCCESS;
     PCOSA_DATAMODEL_ETHERNET    pMyObject    = (PCOSA_DATAMODEL_ETHERNET)NULL;
 
     /*
@@ -291,7 +303,7 @@ static int ethGetClientsCount
 
     for (idx = 0; idx < num_eth_device; idx++)
     {
-        if (PortId == eth_device[idx].eth_port)
+        if ((int)PortId == eth_device[idx].eth_port)
         {
             count_client++;
         }
@@ -310,6 +322,7 @@ static void ethGetClientMacDetails
         int mem_size
     )
 {
+    UNREFERENCED_PARAMETER(total_client);
     int idx;
     char mac_addr[20];
     char isFirst = TRUE;
@@ -323,7 +336,7 @@ static void ethGetClientMacDetails
 
     for (idx = 0; idx < num_eth_device; idx++)
     {
-        if (PortId == eth_device[idx].eth_port)
+        if ((int)PortId == eth_device[idx].eth_port)
         {
             rc = memset_s(mac_addr,sizeof(mac_addr), 0,sizeof(mac_addr) );
             ERR_CHK(rc);
@@ -348,7 +361,8 @@ static void ethGetClientMacDetails
                         eth_device[idx].eth_devMacAddress[4],
                         eth_device[idx].eth_devMacAddress[5]);
             }
-             rc = strcat_s(mac,mem_size, mac_addr);
+             char *pMacaddr = mac_addr;
+             rc = strcat_s(mac,(unsigned int)mem_size, pMacaddr);
              ERR_CHK(rc);
         }
     }
@@ -362,9 +376,10 @@ static int ethGetPHYRate
     INT status                              = RETURN_ERR;
     CCSP_HAL_ETHSW_LINK_RATE LinkRate       = CCSP_HAL_ETHSW_LINK_NULL;
     CCSP_HAL_ETHSW_DUPLEX_MODE DuplexMode   = CCSP_HAL_ETHSW_DUPLEX_Auto;
-    CCSP_HAL_ETHSW_LINK_STATUS  LinkStatus  = CCSP_HAL_ETHSW_LINK_Down;
     INT PHYRate                             = 0;
-
+#if defined(_CBR_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_)
+    CCSP_HAL_ETHSW_LINK_STATUS  LinkStatus  = CCSP_HAL_ETHSW_LINK_Down;
+#endif
     /* For Broadcom platform device, CcspHalEthSwGetPortStatus returns the Linkrate based
      * on the CurrentBitRate and CcspHalEthSwGetPortCfg returns the Linkrate based on the
      * MaximumBitRate. Hence CcspHalEthSwGetPortStatus called for Broadcom platform devices.
@@ -493,7 +508,7 @@ void Ethernet_Log(void)
 
 void * Ethernet_Logger_Thread(void *data)
 {
-    COSA_DML_ETH_LOG_STATUS log_status = {3600, FALSE};
+    UNREFERENCED_PARAMETER(data);
     LONG timeleft;
     ULONG Log_Period_old;
 
@@ -565,7 +580,7 @@ static char *get_formatted_time(char *time)
 
     strftime(tmp, 128, "%y%m%d-%T", tm_info);
 
-    snprintf(time, 128, "%s.%06d", tmp, tv_now.tv_usec);
+    snprintf(time, 128, "%s.%06d", tmp, (int)tv_now.tv_usec);
     return time;
 }
 
@@ -703,7 +718,7 @@ static void EthTelemetryPush()
 void*  EthTelemetryxOpsLogSettingsEventThread()
 {
     struct inotify_event *event;
-    int inotifyFd, inotifywd, numRead;
+    int inotifyFd, numRead;
     char eth_log_buf[BUF_LEN] __attribute__ ((aligned(8))) = {0}, *ptr = NULL;
 
     while (!(IsFileExists(ETH_LOG_FILE) == 0)) {
@@ -714,7 +729,7 @@ void*  EthTelemetryxOpsLogSettingsEventThread()
     read_updated_log_interval();
 
     inotifyFd = inotify_init();
-    inotifywd = inotify_add_watch(inotifyFd, ETH_LOG_FILE, IN_MODIFY);
+    inotify_add_watch(inotifyFd, ETH_LOG_FILE, IN_MODIFY);
 
     for (;;)
     {
