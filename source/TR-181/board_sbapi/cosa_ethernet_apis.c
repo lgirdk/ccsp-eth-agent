@@ -152,6 +152,10 @@
 
 #endif //#if defined (ENABLE_ETH_WAN)
 
+#define ETH_HOST_PARAMVALUE_TRUE "true"
+#define ETH_HOST_PARAMVALUE_FALSE "false"
+#define ETH_HOST_MAC_LENGTH 17
+
 extern  ANSC_HANDLE bus_handle;
 extern  ANSC_HANDLE g_EthObject;
 extern void* g_pDslhDmlAgent;
@@ -200,7 +204,7 @@ void Notify_To_LMLite(Eth_host_t *host)
     char compo[256] = "eRT.com.cisco.spvtg.ccsp.lmlite"; 
     char bus[256] = "/com/cisco/spvtg/ccsp/lmlite";
     char param_name[256] = "Device.Hosts.X_RDKCENTRAL-COM_EthHost_Sync";
-    char param_value[25];
+    char param_value[25] = {0};
     char* faultParam = NULL;
     int ret = CCSP_FAILURE;
 
@@ -216,13 +220,28 @@ void Notify_To_LMLite(Eth_host_t *host)
         host->eth_macAddr[5]
     );
 
-    sprintf(param_value+17,"%s",",");
     if(host->eth_Active)
+    {
        /*Coverity Fix CID:67001 DC.STRING_BUFFER */
-    	snprintf(param_value+18,sizeof(param_value),"%s","true");
+        int ret_paramval;
+        ret_paramval = snprintf(param_value + ETH_HOST_MAC_LENGTH, sizeof(param_value) - ETH_HOST_MAC_LENGTH, ",%s", ETH_HOST_PARAMVALUE_TRUE);
+        if ((ret_paramval < 0) || (ret_paramval >= sizeof(param_value)))
+        {
+            CcspTraceWarning(("%s : FAILED due to error on snprintf return value: %d in true statement ret: %d \n", __FUNCTION__, ret_paramval, ret));
+            return;
+        }
+    }
     else
+    {
        /*Coverity Fix CID:67001 DC.STRING_BUFFER */
-	snprintf(param_value+18,sizeof(param_value),"%s","false");
+        int ret_paramval;
+        ret_paramval = snprintf(param_value + ETH_HOST_MAC_LENGTH, sizeof(param_value) - ETH_HOST_MAC_LENGTH, ",%s", ETH_HOST_PARAMVALUE_FALSE);
+        if ((ret_paramval < 0) || (ret_paramval >= sizeof(param_value)))
+        {
+            CcspTraceWarning(("%s : FAILED due to error on snprintf return value: %d in false statement ret: %d \n", __FUNCTION__, ret_paramval, ret));
+            return;
+        }
+    }
 
     notif_val[0].parameterName =  param_name ;
     notif_val[0].parameterValue = param_value;
