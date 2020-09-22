@@ -292,6 +292,19 @@ EthInterface_SetParamStringValue
         char*                       ParamName,
         char*                       pString
     );
+ANSC_HANDLE 
+EthInterface_AddEntry 
+    ( 
+        ANSC_HANDLE hInsContext,
+        ULONG* pInsNumber 
+    );
+
+ULONG 
+EthInterface_DelEntry
+    ( 
+        ANSC_HANDLE hInsContext,
+        ANSC_HANDLE hInstance 
+    );
 
 BOOL
 EthInterface_Validate

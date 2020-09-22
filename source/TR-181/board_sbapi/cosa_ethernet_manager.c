@@ -329,7 +329,7 @@ static ethSmState_t Transition_EthWanLinkFound(PETH_SM_PRIVATE_INFO pstInfo)
      * Notify VLAN Agent to create Ethernet.Link and Enable it.
      * Eg: L2 Interface ->eth3  , l3 Interface -> erouter0
      */
-    if (ANSC_STATUS_SUCCESS != CosaDmlEthCreateEthLink(pstInfo->Name, stGlobalInfo.Path))
+    if (ANSC_STATUS_SUCCESS != CosaDmlEthCreateEthLink(pstInfo->Name, stGlobalInfo.LowerLayers))
     {
         CcspTraceError(("%s Failed to create Ethernet link \n", __FUNCTION__));
     }
@@ -373,7 +373,7 @@ static ethSmState_t Transition_EthPhyInterfaceDown(PETH_SM_PRIVATE_INFO pstInfo)
     /**
      * Notify VLANAgent to delete Ethernet.Link.
      */
-    if (ANSC_STATUS_SUCCESS != CosaDmlEthDeleteEthLink(pstInfo->Name,stGlobalInfo.Path))
+    if (ANSC_STATUS_SUCCESS != CosaDmlEthDeleteEthLink(pstInfo->Name,stGlobalInfo.LowerLayers))
     {
         CcspTraceError(("%s Failed to delete eth link", __FUNCTION__));
     }

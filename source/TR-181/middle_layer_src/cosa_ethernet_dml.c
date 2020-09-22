@@ -1183,17 +1183,20 @@ EthInterface_GetEntry
 {
 #if defined(FEATURE_RDKB_WAN_MANAGER)
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
-    if ( ( pMyObject->pEthLink  ) && ( nIndex < pMyObject->ulTotalNoofEthInterfaces ) )
+    PSINGLE_LINK_ENTRY              pSListEntry       = NULL;
+    PCOSA_CONTEXT_LINK_OBJECT       pCxtLink          = NULL;
+
+    pSListEntry       = AnscSListGetEntryByIndex(&pMyObject->Q_EthList, nIndex);
+
+    if ( pSListEntry )
     {
-        PCOSA_DML_ETH_PORT_CONFIG      pEthlink = NULL;
-        pEthlink = pMyObject->pEthLink + nIndex;
-        pEthlink->ulInstanceNumber = nIndex + 1;
-        *pInsNumber = pEthlink->ulInstanceNumber;
-        CosaDmlEthGetPortCfg(nIndex, pEthlink);
-        return pEthlink;
+        pCxtLink      = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSListEntry);
+        *pInsNumber   = pCxtLink->InstanceNumber;
     }
+    return (ANSC_HANDLE)pSListEntry;
 #endif
     return NULL; /* return the invlalid handle */
+
 }
 
 /**********************************************************************
@@ -1226,10 +1229,89 @@ EthInterface_GetEntryCount
 {
 #if defined(FEATURE_RDKB_WAN_MANAGER)
     PCOSA_DATAMODEL_ETHERNET   pMyObject   = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
-    return pMyObject->ulTotalNoofEthInterfaces;
+    return AnscSListQueryDepth( &pMyObject->Q_EthList );
+#endif
+    return -1;
+
+}
+
+ULONG EthInterface_DelEntry (ANSC_HANDLE hInsContext, ANSC_HANDLE hInstance )
+{
+#if defined(FEATURE_RDKB_WAN_MANAGER)
+    ANSC_STATUS               returnStatus      = ANSC_STATUS_SUCCESS;
+    PCOSA_DATAMODEL_ETHERNET    pEthLink = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
+    PCOSA_CONTEXT_LINK_OBJECT      pEthCxtLink       = (PCOSA_CONTEXT_LINK_OBJECT)hInstance;
+    PCOSA_DML_ETH_PORT_CONFIG             p_EthLink         = (PCOSA_DML_ETH_PORT_CONFIG)pEthCxtLink->hContext;
+
+    if ( ( p_EthLink->Enable == TRUE ) ||
+         ( ANSC_STATUS_SUCCESS != CosDmlEthPortUpdateGlobalInfo(pEthLink,  p_EthLink->Name, ETH_DEL_TABLE ) ) )
+    {
+       CcspTraceError(("[%s][%d] Active or Internal Interface cant be deleted. \n", __FUNCTION__, __LINE__));
+       return ANSC_STATUS_FAILURE;
+    }
+
+    if ( pEthCxtLink->bNew )
+    {
+        /* Set bNew to FALSE to indicate this node is not going to save to SysRegistry */
+        pEthCxtLink->bNew = FALSE;
+    }
+
+    if ( AnscSListPopEntryByLink(&pEthLink->Q_EthList, &pEthCxtLink->Linkage) )
+    {
+        AnscFreeMemory(pEthCxtLink->hContext);
+        AnscFreeMemory(pEthCxtLink);
+    }
+
+    return returnStatus;
 #endif
     return -1;
 }
+
+ANSC_HANDLE EthInterface_AddEntry( ANSC_HANDLE hInsContext, ULONG* pInsNumber )
+{
+#if defined(FEATURE_RDKB_WAN_MANAGER)
+    ANSC_STATUS                 returnStatus   = ANSC_STATUS_SUCCESS;
+    PCOSA_DATAMODEL_ETHERNET    gpEthLink      = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
+    PCOSA_DML_ETH_PORT_CONFIG   p_EthLink      = NULL;
+    PCOSA_CONTEXT_LINK_OBJECT   pEthCxtLink    = NULL;
+    PSINGLE_LINK_ENTRY          pSListEntry    = NULL;
+
+    p_EthLink = (PCOSA_DML_ETH_PORT_CONFIG)AnscAllocateMemory(sizeof(COSA_DML_ETH_PORT_CONFIG));
+
+    if ( !p_EthLink )
+    {
+        return NULL;
+    }
+
+    memset(p_EthLink, 0, sizeof(p_EthLink));
+
+    pEthCxtLink = (PCOSA_CONTEXT_LINK_OBJECT)AnscAllocateMemory(sizeof(COSA_CONTEXT_LINK_OBJECT));
+    if ( !pEthCxtLink )
+    {
+        goto EXIT;
+    }
+
+    /* now we have this link content */
+    pEthCxtLink->hContext = (ANSC_HANDLE)p_EthLink;
+    pEthCxtLink->bNew     = TRUE;
+
+    /* Get InstanceNumber and Default values */
+    InitEthIfaceEntry(NULL, p_EthLink);
+
+    pEthCxtLink->InstanceNumber = p_EthLink->ulInstanceNumber ;
+     *pInsNumber                 = p_EthLink->ulInstanceNumber ;
+
+    CosaSListPushEntryByInsNum(&gpEthLink->Q_EthList, (PCOSA_CONTEXT_LINK_OBJECT)pEthCxtLink);
+    CosDmlEthPortUpdateGlobalInfo(gpEthLink, p_EthLink->Name, ETH_ADD_TABLE );
+    return (ANSC_HANDLE)pEthCxtLink;
+
+EXIT:
+
+    AnscFreeMemory(p_EthLink);
+#endif
+    return NULL;
+}
+
 
 /**********************************************************************
     caller:     owner of this object
@@ -1260,8 +1342,16 @@ EthInterface_GetParamBoolValue
    )
 {
 #if defined(FEATURE_RDKB_WAN_MANAGER)
-    PCOSA_DML_ETH_PORT_CONFIG   pEthLink   = (PCOSA_DML_ETH_PORT_CONFIG)hInsContext;
     /* check the parameter name and return the corresponding value */
+    PCOSA_CONTEXT_LINK_OBJECT   pCxtLink      = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_ETH_PORT_CONFIG   pEthLink      = (PCOSA_DML_ETH_PORT_CONFIG)pCxtLink->hContext;
+    /* check the parameter name and return the corresponding value */
+    if( AnscEqualString(ParamName, "Enable", TRUE) )
+    {
+        *pBool = pEthLink->Enable;
+        return TRUE;
+    }
+
     if( AnscEqualString(ParamName, "Upstream", TRUE) )
     {
         *pBool = pEthLink->Upstream;
@@ -1312,7 +1402,8 @@ EthInterface_GetParamStringValue
     )
 {
 #if defined(FEATURE_RDKB_WAN_MANAGER)
-    PCOSA_DML_ETH_PORT_CONFIG pEthLink = (PCOSA_DML_ETH_PORT_CONFIG)hInsContext;
+    PCOSA_CONTEXT_LINK_OBJECT   pCxtLink      = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_ETH_PORT_CONFIG   pEthLink      = (PCOSA_DML_ETH_PORT_CONFIG)pCxtLink->hContext;
     if( AnscEqualString(ParamName, "Name", TRUE) )
     {
        /* collect value */
@@ -1327,6 +1418,21 @@ EthInterface_GetParamStringValue
            return 1;
        }
     }
+    if( AnscEqualString(ParamName, "LowerLayers", TRUE) )
+    {
+       /* collect value */
+       if ( ( sizeof( pEthLink->LowerLayers ) - 1 ) < *pUlSize )
+       {
+           AnscCopyString( pValue,  pEthLink->LowerLayers);
+           return 0;
+       }
+       else
+       {
+           *pUlSize = sizeof( pEthLink->LowerLayers );
+           return 1;
+       }
+    }
+
 #endif
     return FALSE;
 }
@@ -1358,6 +1464,39 @@ EthInterface_SetParamStringValue
         char*                       pString
     )
 {
+#if defined(FEATURE_RDKB_WAN_MANAGER)
+    PCOSA_CONTEXT_LINK_OBJECT   pCxtLink        = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_ETH_PORT_CONFIG   pEthLink        = (PCOSA_DML_ETH_PORT_CONFIG)pCxtLink->hContext;
+
+    /* check the parameter name and return the corresponding value */
+    if( AnscEqualString(ParamName, "Name", TRUE) )
+    {
+       /* collect value */
+       if ( ANSC_STATUS_SUCCESS == CosaDmlEthPortSetName(pEthLink->Name, pString))
+       {
+           AnscCopyString( pEthLink->Name, pString);
+           return TRUE;
+       }
+       else
+       {
+           return FALSE;
+       }
+    }
+    if( AnscEqualString(ParamName, "LowerLayers", TRUE) )
+    {
+       /* collect value */
+       if ( ANSC_STATUS_SUCCESS == CosaDmlEthPortSetLowerLayers(pEthLink->Name, pString))
+       {
+           AnscCopyString( pEthLink->LowerLayers, pString);
+           return TRUE;
+       }
+       else
+       {
+           return FALSE;
+       }
+    }
+#endif
+    /* AnscTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
 }
 /**********************************************************************
@@ -1389,12 +1528,13 @@ EthInterface_GetParamUlongValue
     )
 {
 #if defined(FEATURE_RDKB_WAN_MANAGER)
-    PCOSA_DML_ETH_PORT_CONFIG   pEthLink   = (PCOSA_DML_ETH_PORT_CONFIG)hInsContext;
+    PCOSA_CONTEXT_LINK_OBJECT       pCxtLink      = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_ETH_PORT_CONFIG   pEthLink        = (PCOSA_DML_ETH_PORT_CONFIG)pCxtLink->hContext;
     /* check the parameter name and return the corresponding value */
     if( AnscEqualString(ParamName, "Status", TRUE) )
     {
         COSA_DML_ETH_LINK_STATUS linkstatus;
-        if (ANSC_STATUS_SUCCESS == CosaDmlEthPortGetLinkStatus(pEthLink->ulInstanceNumber - 1, &linkstatus))
+        if (ANSC_STATUS_SUCCESS == CosaDmlEthPortGetLinkStatus(pEthLink->Name, &linkstatus))
         {
             pEthLink->LinkStatus = linkstatus;
         }
@@ -1404,7 +1544,7 @@ EthInterface_GetParamUlongValue
     if( AnscEqualString(ParamName, "WanStatus", TRUE) )
     {
         COSA_DML_ETH_WAN_STATUS wan_status;
-        if (ANSC_STATUS_SUCCESS == CosaDmlEthPortGetWanStatus(pEthLink->ulInstanceNumber - 1, &wan_status))
+        if (ANSC_STATUS_SUCCESS == CosaDmlEthPortGetWanStatus(pEthLink->Name, &wan_status))
         {
             pEthLink->WanStatus = wan_status;
         }
@@ -1443,7 +1583,8 @@ EthInterface_SetParamUlongValue
     )
 {
 #if defined(FEATURE_RDKB_WAN_MANAGER)
-    PCOSA_DML_ETH_PORT_CONFIG   pEthLink   = (PCOSA_DML_ETH_PORT_CONFIG)hInsContext;
+    PCOSA_CONTEXT_LINK_OBJECT   pCxtLink      = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_ETH_PORT_CONFIG   pEthLink      = (PCOSA_DML_ETH_PORT_CONFIG)pCxtLink->hContext;
     if( AnscEqualString(ParamName, "WanStatus", TRUE) )
     {
         if (uValue == pEthLink->WanStatus)
@@ -1451,7 +1592,7 @@ EthInterface_SetParamUlongValue
             return TRUE;	//No need to proceed when same value comes
         }
         pEthLink->WanStatus = uValue;
-        CosaDmlEthPortSetWanStatus(pEthLink->ulInstanceNumber - 1, pEthLink->WanStatus);
+        CosaDmlEthPortSetWanStatus(pEthLink->Name, pEthLink->WanStatus);
         return TRUE;
     }
 #endif
@@ -1486,7 +1627,8 @@ EthInterface_SetParamBoolValue
     )
 {
 #if defined(FEATURE_RDKB_WAN_MANAGER)
-    PCOSA_DML_ETH_PORT_CONFIG   pEthLink   = (PCOSA_DML_ETH_PORT_CONFIG)hInsContext;
+    PCOSA_CONTEXT_LINK_OBJECT   pCxtLink      = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_ETH_PORT_CONFIG   pEthLink      = (PCOSA_DML_ETH_PORT_CONFIG)pCxtLink->hContext;
     /* check the parameter name and set the corresponding value */
     if( AnscEqualString(ParamName, "Upstream", TRUE))
     {
@@ -1495,7 +1637,21 @@ EthInterface_SetParamBoolValue
             return TRUE;	//No need to proceed when same value comes
         }
         pEthLink->Upstream = bValue;
-	    CosaDmlEthPortSetUpstream(( pEthLink->ulInstanceNumber - 1 ), pEthLink->Upstream );
+	CosaDmlEthPortSetUpstream( pEthLink->Name , pEthLink->Upstream );
+        return TRUE;
+    }
+
+    if( AnscEqualString(ParamName, "Enable", TRUE) )
+    {
+        if( bValue == pEthLink->Enable )
+        {
+            return TRUE;	//No need to proceed when same value comes
+        }
+
+        CosaDmlTriggerExternalEthPortLinkStatus(pEthLink->Name, bValue);
+
+        pEthLink->Enable = bValue;
+
         return TRUE;
     }
 

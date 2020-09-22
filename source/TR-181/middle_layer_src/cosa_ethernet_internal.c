@@ -213,6 +213,8 @@ CosaEthernetInitialize
 #if defined (FEATURE_RDKB_WAN_MANAGER)
     waitUntilSystemReady();
 #endif // FEATURE_RDKB_WAN_MANAGER
+    AnscSListInitializeHeader( &pMyObject->Q_EthList );
+    pMyObject->ulPtNextInstanceNumber   = 1;
     CosaDmlEthGetLogStatus(&pMyObject->LogStatus);
     CosaEthernetLogger();
     CcspHalExtSw_ethAssociatedDevice_callback_register(CosaDmlEth_AssociatedDevice_callback);
@@ -781,4 +783,42 @@ int CosaEthTelemetryInit()
     pthread_attr_destroy( &tattr );
 
     return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS InitEthIfaceEntry(ANSC_HANDLE hDml, PCOSA_DML_ETH_PORT_CONFIG pEntry)
+{
+    ANSC_STATUS                     returnStatus      = ANSC_STATUS_SUCCESS;
+    PCOSA_DATAMODEL_ETHERNET    pEthernet = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
+    /*
+        For dynamic and writable table, we don't keep the Maximum InstanceNumber.
+        If there is delay_added entry, we just jump that InstanceNumber.
+    */
+    do
+    {
+        if ( pEthernet->ulPtNextInstanceNumber == 0 )
+        {
+            pEthernet->ulPtNextInstanceNumber   = 1;
+        }
+
+        if ( !CosaSListGetEntryByInsNum(&pEthernet->Q_EthList, pEthernet->ulPtNextInstanceNumber) )
+        {
+            break;
+        }
+        else
+        {
+            pEthernet->ulPtNextInstanceNumber++;
+        }
+    }while(1);
+
+    pEntry->ulInstanceNumber            = pEthernet->ulPtNextInstanceNumber;
+
+    DML_ETHIF_INIT(pEntry);
+
+    _ansc_sprintf( pEntry->Path, "Device.Ethernet.X_RDK_Interface.%d", pEntry->ulInstanceNumber );
+    _ansc_sprintf( pEntry->LowerLayers, "Device.Ethernet.X_RDK_Interface.%d", pEntry->ulInstanceNumber );
+    _ansc_sprintf( pEntry->Name, "eth%d", pEntry->ulInstanceNumber - 1 );
+
+    pEthernet->ulPtNextInstanceNumber++;
+
+    return returnStatus;
 }

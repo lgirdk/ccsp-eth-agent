@@ -134,6 +134,8 @@ COSA_Init
 
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthInterface_GetEntryCount", EthInterface_GetEntryCount);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthInterface_GetEntry", EthInterface_GetEntry);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthInterface_AddEntry", EthInterface_AddEntry);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthInterface_DelEntry", EthInterface_DelEntry);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthInterface_GetParamBoolValue", EthInterface_GetParamBoolValue);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthInterface_GetParamStringValue", EthInterface_GetParamStringValue);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthInterface_GetParamUlongValue", EthInterface_GetParamUlongValue);

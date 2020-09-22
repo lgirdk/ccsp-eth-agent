@@ -112,7 +112,7 @@
 #if defined(FEATURE_RDKB_WAN_MANAGER)
 #include "cosa_ethernet_manager.h"
 #include "eth_hal.h"
-#define TOTAL_NUMBER_OF_INTERFACES 4
+#define TOTAL_NUMBER_OF_INTERNAL_INTERFACES 4
 #define COSA_ETH_EVENT_QUEUE_NAME "/ETH_event_queue"
 #define MAX_QUEUE_MSG_SIZE (512)
 #define MAX_QUEUE_LENGTH (100)
@@ -483,6 +483,7 @@ typedef struct _CosaETHMSGQWanData
 
 
 PCOSA_DML_ETH_PORT_GLOBAL_CONFIG gpstEthGInfo = NULL;
+INT gTotal = TOTAL_NUMBER_OF_INTERNAL_INTERFACES;
 static pthread_mutex_t gmEthGInfo_mutex = PTHREAD_MUTEX_INITIALIZER;
 static ANSC_STATUS CosDmlEthPortPrepareGlobalInfo();
 static ANSC_STATUS CosaDmlEthGetParamValues(char *pComponent, char *pBus, char *pParamName, char *pReturnVal);
@@ -501,71 +502,289 @@ CosaDmlEthPortInit(
     PANSC_HANDLE phContext)
 {
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)phContext;
-    PCOSA_DML_ETH_PORT_CONFIG pETHlinkTemp = NULL;
+    PCOSA_DML_ETH_PORT_CONFIG pETHTemp = NULL;
+    PCOSA_CONTEXT_LINK_OBJECT pEthCxtLink    = NULL;
     INT iTotalInterfaces = 0;
     INT iLoopCount = 0;
 
     iTotalInterfaces = CosaDmlEthGetTotalNoOfInterfaces();
-    pETHlinkTemp = (PCOSA_DML_ETH_PORT_CONFIG)AnscAllocateMemory(sizeof(COSA_DML_ETH_PORT_CONFIG) * iTotalInterfaces);
-
-    if (NULL == pETHlinkTemp)
-    {
-        CcspTraceError(("Failed to allocate memeory \n"));
-        return ANSC_STATUS_FAILURE;
-    }
-
     pMyObject->ulTotalNoofEthInterfaces = iTotalInterfaces;
-    memset(pETHlinkTemp, 0, sizeof(pETHlinkTemp) * iTotalInterfaces);
 
-    //Fill line static information and initialize default values
     for (iLoopCount = 0; iLoopCount < iTotalInterfaces; iLoopCount++)
     {
-        pETHlinkTemp[iLoopCount].WanStatus = ETH_WAN_DOWN;
-        pETHlinkTemp[iLoopCount].LinkStatus = ETH_LINK_STATUS_DOWN;
-        pETHlinkTemp[iLoopCount].ulInstanceNumber = iLoopCount + 1;
-        // Get  Name.
-        snprintf(pETHlinkTemp[iLoopCount].Name, sizeof(pETHlinkTemp[iLoopCount].Name), "eth%d", iLoopCount);
-        snprintf(pETHlinkTemp[iLoopCount].Path, sizeof(pETHlinkTemp[iLoopCount].Path), "%s%d", ETHERNET_IF_PATH, iLoopCount + 1);
-        pETHlinkTemp[iLoopCount].Upstream = FALSE;
-        pETHlinkTemp[iLoopCount].WanValidated = FALSE;
-    }
+        pETHTemp = (PCOSA_DML_ETH_PORT_CONFIG)AnscAllocateMemory(sizeof(COSA_DML_ETH_PORT_CONFIG));
 
-    //Assign the memory address to oringinal structure
-    pMyObject->pEthLink = pETHlinkTemp;
+        if (NULL == pETHTemp)
+        {
+            CcspTraceError(("Failed to allocate memory \n"));
+            return ANSC_STATUS_FAILURE;
+        }
+
+        pEthCxtLink = (PCOSA_CONTEXT_LINK_OBJECT)AnscAllocateMemory(sizeof(COSA_CONTEXT_LINK_OBJECT));
+        if ( !pEthCxtLink )
+        {
+            CcspTraceError(("pEthCxtLink Failed to allocate memory \n"));
+            return NULL;
+        }
+
+        memset(pETHTemp, 0, sizeof(pETHTemp));
+
+        //Fill line static information and initialize default values
+        DML_ETHIF_INIT(pETHTemp);
+        pETHTemp->ulInstanceNumber = iLoopCount + 1;
+        pMyObject->ulPtNextInstanceNumber=  pETHTemp->ulInstanceNumber + 1;
+
+        // Get  Name.
+        snprintf(pETHTemp->Name, sizeof(pETHTemp->Name), "eth%d", iLoopCount);
+        snprintf(pETHTemp->LowerLayers, sizeof(pETHTemp->LowerLayers), "%s%d", ETHERNET_IF_LOWERLAYERS, iLoopCount + 1);
+        pEthCxtLink->hContext = (ANSC_HANDLE)pETHTemp;
+        pEthCxtLink->bNew     = TRUE;
+        pEthCxtLink->InstanceNumber = pETHTemp->ulInstanceNumber ;
+        CosaSListPushEntryByInsNum(&pMyObject->Q_EthList, (PCOSA_CONTEXT_LINK_OBJECT)pEthCxtLink);
+   }
+
     //Prepare global information.
     CosDmlEthPortPrepareGlobalInfo();
+
     return ANSC_STATUS_SUCCESS;
 }
 
-
-ANSC_STATUS CosaDmlEthGetPortCfg(INT nIndex, PCOSA_DML_ETH_PORT_CONFIG pEthLink)
+static INT CosaDmlEthGetTotalNoOfInterfaces(VOID)
 {
-    COSA_DML_ETH_LINK_STATUS linkstatus;
-    COSA_DML_ETH_WAN_STATUS wan_status;
+    //TODO - READ FROM HAL.
+    return gTotal;
+}
 
-    if (pEthLink == NULL)
+ANSC_STATUS CosDmlEthPortUpdateGlobalInfo(PANSC_HANDLE phContext, char *ifname, COSA_DML_ETH_TABLE_OPER Oper )
+{
+    INT iTotal = 0;
+    PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)phContext;
+
+    if (ifname == NULL)
+    {
+        CcspTraceError(("%s Invalid data \n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    /* Add new Entry - gpstEthInfo */
+    if(Oper == ETH_ADD_TABLE)
+    {
+        pMyObject->ulTotalNoofEthInterfaces++;
+        iTotal=pMyObject->ulTotalNoofEthInterfaces;
+        INT newIndex = iTotal - 1;
+
+        pthread_mutex_lock(&gmEthGInfo_mutex);
+        gpstEthGInfo = (PCOSA_DML_ETH_PORT_GLOBAL_CONFIG *)AnscReAllocateMemory(gpstEthGInfo, sizeof(COSA_DML_ETH_PORT_GLOBAL_CONFIG) * iTotal);
+
+        //Return failure if allocation failiure
+        if (NULL == gpstEthGInfo)
+        {
+            CcspTraceError(("%s AnscReallocateMemory Failed for adding ifname[%s]\n", __FUNCTION__,ifname));
+            pthread_mutex_unlock(&gmEthGInfo_mutex);
+            return ANSC_STATUS_FAILURE;
+        }
+
+        gTotal++;  // Increment gTotal
+
+        /* Populate Default Values */
+        gpstEthGInfo[newIndex].Upstream = FALSE;
+        gpstEthGInfo[newIndex].WanStatus = ETH_WAN_DOWN;
+        gpstEthGInfo[newIndex].LinkStatus = ETH_LINK_STATUS_DOWN;
+        gpstEthGInfo[newIndex].WanValidated = TRUE; //Make default as True.
+        gpstEthGInfo[newIndex].Enable = FALSE; //Make default as False.
+        snprintf(gpstEthGInfo[newIndex].Name, sizeof(gpstEthGInfo[newIndex].Name), "eth%d", newIndex);
+	snprintf(gpstEthGInfo[newIndex].Path, sizeof(gpstEthGInfo[newIndex].Path), "%s%d", ETHERNET_IF_PATH, newIndex + 1 );
+        snprintf(gpstEthGInfo[newIndex].LowerLayers, sizeof(gpstEthGInfo[newIndex].LowerLayers), "%s%d", ETHERNET_IF_LOWERLAYERS, newIndex + 1 );
+        pthread_mutex_unlock(&gmEthGInfo_mutex);
+    }
+    else if(Oper == ETH_DEL_TABLE )
+    {
+        /* Delete an Entry from gpstEthInfo */
+        ANSC_STATUS   retStatus;
+        INT           IfIndex = -1;
+
+        retStatus = CosaDmlEthPortGetIndexFromIfName(ifname, &IfIndex);
+
+        if ( (ANSC_STATUS_FAILURE == retStatus ) || ( -1 == IfIndex ) )
+        {
+            CcspTraceError(("%s Failed to get index for %s\n", __FUNCTION__,ifname));
+            return ANSC_STATUS_FAILURE;
+        }
+
+        if ( IfIndex < TOTAL_NUMBER_OF_INTERNAL_INTERFACES )
+        {
+            CcspTraceError(("%s Default Eth Port Cant be deleted %s\n", __FUNCTION__,ifname));
+            return ANSC_STATUS_FAILURE;
+        }
+
+        if((IfIndex + 1) == pMyObject->ulTotalNoofEthInterfaces)
+        {
+            /* Delete Last Entry in gpstEthGInfo */
+            pMyObject->ulTotalNoofEthInterfaces--;
+            iTotal = pMyObject->ulTotalNoofEthInterfaces;
+
+            pthread_mutex_lock(&gmEthGInfo_mutex);
+            gpstEthGInfo = (PCOSA_DML_ETH_PORT_GLOBAL_CONFIG *)AnscReAllocateMemory(gpstEthGInfo, sizeof(COSA_DML_ETH_PORT_GLOBAL_CONFIG) * iTotal);
+
+            //Return failure if allocation failiure
+            if (NULL == gpstEthGInfo)
+            {
+                CcspTraceError(("%s AnscReallocateMemory Failed for deleting (last entry) ifname[%s]\n", __FUNCTION__,ifname));
+                pthread_mutex_unlock(&gmEthGInfo_mutex);
+                return ANSC_STATUS_FAILURE;
+            }
+            gTotal--;
+            pthread_mutex_unlock(&gmEthGInfo_mutex);
+        }
+        else
+        {
+            /* Delete Entry which is in middle of gpstEthGInfo Array*/
+            INT           lastIndex = pMyObject->ulTotalNoofEthInterfaces -1;
+            COSA_DML_ETH_PORT_GLOBAL_CONFIG tmpEthGInfo;
+
+            pMyObject->ulTotalNoofEthInterfaces--;
+            iTotal = pMyObject->ulTotalNoofEthInterfaces;
+
+
+            pthread_mutex_lock(&gmEthGInfo_mutex);
+
+            /* Take a backup - last Entry */
+            tmpEthGInfo.Upstream = gpstEthGInfo[lastIndex].Upstream;
+            tmpEthGInfo.WanStatus = gpstEthGInfo[lastIndex].WanStatus;
+            tmpEthGInfo.LinkStatus = gpstEthGInfo[lastIndex].LinkStatus;
+            tmpEthGInfo.WanValidated = gpstEthGInfo[lastIndex].WanValidated;
+            tmpEthGInfo.Enable = gpstEthGInfo[lastIndex].Enable;
+            strncpy(tmpEthGInfo.Name, gpstEthGInfo[lastIndex].Name, sizeof(gpstEthGInfo[lastIndex].Name));
+            strncpy(tmpEthGInfo.Path, gpstEthGInfo[lastIndex].Path, sizeof(gpstEthGInfo[lastIndex].Path));
+            strncpy(tmpEthGInfo.LowerLayers, gpstEthGInfo[lastIndex].LowerLayers, sizeof(gpstEthGInfo[lastIndex].LowerLayers));
+
+            /* Remove last Entry */
+            gpstEthGInfo = (PCOSA_DML_ETH_PORT_GLOBAL_CONFIG *)AnscReAllocateMemory(gpstEthGInfo, sizeof(COSA_DML_ETH_PORT_GLOBAL_CONFIG) * iTotal);
+
+            //Return failure if allocation failiure
+            if (NULL == gpstEthGInfo)
+            {
+                CcspTraceError(("%s AnscReallocateMemory Failed for deleting ifname[%s]\n", __FUNCTION__,ifname));
+                pthread_mutex_unlock(&gmEthGInfo_mutex);
+                return ANSC_STATUS_FAILURE;
+            }
+            /* Copy last Entry into new place */
+            gpstEthGInfo[IfIndex].Upstream = tmpEthGInfo.Upstream;
+            gpstEthGInfo[IfIndex].WanStatus = tmpEthGInfo.WanStatus;
+            gpstEthGInfo[IfIndex].LinkStatus = tmpEthGInfo.LinkStatus;
+            gpstEthGInfo[IfIndex].WanValidated = tmpEthGInfo.WanValidated;
+            gpstEthGInfo[IfIndex].Enable = tmpEthGInfo.Enable;
+            strncpy(gpstEthGInfo[IfIndex].Name, tmpEthGInfo.Name, sizeof(tmpEthGInfo.Name));
+            strncpy(gpstEthGInfo[IfIndex].Path, tmpEthGInfo.Path, sizeof(tmpEthGInfo.Path));
+            strncpy(gpstEthGInfo[IfIndex].LowerLayers, tmpEthGInfo.LowerLayers, sizeof(tmpEthGInfo.LowerLayers));
+
+            gTotal--; // Decrement
+
+            pthread_mutex_unlock(&gmEthGInfo_mutex);
+        }
+    }
+
+    CcspTraceError(("CosDmlEthPortUpdateGlobalInfo Success ifname[%s] Operation[%s] gTotal[%d]\n", ifname,
+                     (Oper==ETH_ADD_TABLE)?"ETH_ADD_TABLE":"ETH_DEL_TABLE",gTotal));
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+/* *CosaDmlEthLinePrepareGlobalInfo() */
+static ANSC_STATUS CosDmlEthPortPrepareGlobalInfo()
+{
+    INT iLoopCount = 0;
+    INT Totalinterfaces = 0;
+
+    Totalinterfaces = CosaDmlEthGetTotalNoOfInterfaces();
+
+    //Allocate memory for Eth Global Status Information
+    gpstEthGInfo = (PCOSA_DML_ETH_PORT_GLOBAL_CONFIG *)AnscAllocateMemory(sizeof(COSA_DML_ETH_PORT_GLOBAL_CONFIG) * Totalinterfaces);
+
+    //Return failure if allocation failiure
+    if (NULL == gpstEthGInfo)
     {
         return ANSC_STATUS_FAILURE;
     }
 
-    //Get Link status.
-    if (ANSC_STATUS_SUCCESS == CosaDmlEthPortGetLinkStatus(nIndex, &linkstatus))
+    memset(gpstEthGInfo, 0, sizeof(gpstEthGInfo) * Totalinterfaces);
+    //Assign default value
+    for (iLoopCount = 0; iLoopCount < Totalinterfaces; ++iLoopCount)
     {
-        pEthLink->LinkStatus = linkstatus;
+        gpstEthGInfo[iLoopCount].Upstream = FALSE;
+        gpstEthGInfo[iLoopCount].WanStatus = ETH_WAN_DOWN;
+        gpstEthGInfo[iLoopCount].LinkStatus = ETH_LINK_STATUS_DOWN;
+        gpstEthGInfo[iLoopCount].WanValidated = TRUE; //Make default as True.
+        gpstEthGInfo[iLoopCount].Enable = FALSE; //Make default as False.
+        snprintf(gpstEthGInfo[iLoopCount].Name, sizeof(gpstEthGInfo[iLoopCount].Name), "eth%d", iLoopCount);
+        snprintf(gpstEthGInfo[iLoopCount].Path, sizeof(gpstEthGInfo[iLoopCount].Path), "%s%d", ETHERNET_IF_PATH, iLoopCount + 1);
+        snprintf(gpstEthGInfo[iLoopCount].LowerLayers, sizeof(gpstEthGInfo[iLoopCount].LowerLayers), "%s%d", ETHERNET_IF_LOWERLAYERS, iLoopCount + 1);
     }
 
-    if (ANSC_STATUS_SUCCESS == CosaDmlEthPortGetWanStatus(nIndex, &wan_status))
-    {
-        pEthLink->WanStatus = wan_status;
-    }
-
-    snprintf(pEthLink->Name, sizeof(pEthLink->Name), "eth%d", nIndex);
     return ANSC_STATUS_SUCCESS;
 }
 
-ANSC_STATUS CosaDmlEthPortSetUpstream(INT IfIndex, BOOL Upstream)
+ANSC_STATUS CosaDmlTriggerExternalEthPortLinkStatus(char *ifname, BOOL status)
+{
+    ANSC_STATUS   retStatus;
+    INT           IfIndex = -1;
+
+    CcspTraceInfo(("%s.%d Enter \n",__FUNCTION__,__LINE__));
+
+    if (ifname == NULL)
+    {
+        CcspTraceError(("%s Invalid data \n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    retStatus = CosaDmlEthPortGetIndexFromIfName(ifname, &IfIndex);
+
+    if ( (ANSC_STATUS_FAILURE == retStatus ) || ( -1 == IfIndex ) )
+    {
+        CcspTraceError(("%s Failed to get index for %s\n", __FUNCTION__,ifname));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    if (IfIndex < TOTAL_NUMBER_OF_INTERNAL_INTERFACES)
+    {
+        CcspTraceError(("%s Invalid or Default index[%d] cant be triggerred \n", __FUNCTION__, IfIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+
+    if (status == TRUE)
+    {
+        CosaDmlEthPortLinkStatusCallback(ifname,UP);
+        CcspTraceInfo(("Successfully updated PhyStatus to Up for [%s] interface \n",ifname));
+    }
+    else
+    {
+        CosaDmlEthPortLinkStatusCallback(ifname,DOWN);
+        CcspTraceInfo(("Successfully updated PhyStatus to Down for [%s] interface \n",ifname));
+    }
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS CosaDmlEthPortSetUpstream(char *ifname, BOOL Upstream)
 {
     ETH_SM_PRIVATE_INFO stSMPrivateInfo = {0};
+    ANSC_STATUS   retStatus;
+    INT           IfIndex = -1;
+
+    if (ifname == NULL)
+    {
+        CcspTraceError(("%s Invalid data \n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    retStatus = CosaDmlEthPortGetIndexFromIfName(ifname, &IfIndex);
+
+    if ( (ANSC_STATUS_FAILURE == retStatus ) || ( -1 == IfIndex ) )
+    {
+        CcspTraceError(("%s Failed to get index for %s\n", __FUNCTION__,ifname));
+        return ANSC_STATUS_FAILURE;
+    }
 
     //Validate index
     if (IfIndex < 0)
@@ -606,9 +825,26 @@ ANSC_STATUS CosaDmlEthPortSetWanValidated(INT IfIndex, BOOL WanValidated)
     return ANSC_STATUS_SUCCESS;
 }
 
-ANSC_STATUS CosaDmlEthPortGetWanStatus(INT IfIndex, COSA_DML_ETH_WAN_STATUS *wan_status)
+ANSC_STATUS CosaDmlEthPortGetWanStatus(char *ifname, COSA_DML_ETH_WAN_STATUS *wan_status)
 {
-    if (IfIndex < 0 || IfIndex > 4)
+    ANSC_STATUS   retStatus;
+    INT           IfIndex = -1;
+
+    if (ifname == NULL)
+    {
+        CcspTraceError(("%s Invalid data \n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    retStatus = CosaDmlEthPortGetIndexFromIfName(ifname, &IfIndex);
+
+    if ( (ANSC_STATUS_FAILURE == retStatus ) || ( -1 == IfIndex ) )
+    {
+        CcspTraceError(("%s Failed to get index for %s\n", __FUNCTION__,ifname));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    if (IfIndex < 0 )
     {
         CcspTraceError(("%s Invalid index[%d]\n", __FUNCTION__, IfIndex));
         return ANSC_STATUS_FAILURE;
@@ -621,9 +857,26 @@ ANSC_STATUS CosaDmlEthPortGetWanStatus(INT IfIndex, COSA_DML_ETH_WAN_STATUS *wan
     return ANSC_STATUS_SUCCESS;
 }
 
-ANSC_STATUS CosaDmlEthPortSetWanStatus(INT IfIndex, COSA_DML_ETH_WAN_STATUS wan_status)
+ANSC_STATUS CosaDmlEthPortSetWanStatus(char *ifname, COSA_DML_ETH_WAN_STATUS wan_status)
 {
-    if (IfIndex < 0 || IfIndex > 4)
+    ANSC_STATUS   retStatus;
+    INT           IfIndex = -1;
+
+    if (ifname == NULL)
+    {
+        CcspTraceError(("%s Invalid data \n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    retStatus = CosaDmlEthPortGetIndexFromIfName(ifname, &IfIndex);
+
+    if ( (ANSC_STATUS_FAILURE == retStatus ) || ( -1 == IfIndex ) )
+    {
+        CcspTraceError(("%s Failed to get index for %s\n", __FUNCTION__,ifname));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    if (IfIndex < 0)
     {
         CcspTraceError(("%s Invalid index[%d]\n", __FUNCTION__, IfIndex));
         return ANSC_STATUS_FAILURE;
@@ -636,9 +889,101 @@ ANSC_STATUS CosaDmlEthPortSetWanStatus(INT IfIndex, COSA_DML_ETH_WAN_STATUS wan_
     return ANSC_STATUS_SUCCESS;
 }
 
-ANSC_STATUS CosaDmlEthPortGetLinkStatus(INT IfIndex, COSA_DML_ETH_LINK_STATUS *LinkStatus)
+ANSC_STATUS CosaDmlEthPortSetLowerLayers(char *ifname, char *newLowerLayers)
 {
-    if (IfIndex < 0 || IfIndex > 4)
+    ANSC_STATUS   retStatus;
+    INT           IfIndex = -1;
+
+    if (ifname == NULL || newLowerLayers == NULL)
+    {
+        CcspTraceError(("%s Invalid data \n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    retStatus = CosaDmlEthPortGetIndexFromIfName(ifname, &IfIndex);
+
+    if ( (ANSC_STATUS_FAILURE == retStatus ) || ( -1 == IfIndex ) )
+    {
+        CcspTraceError(("%s Failed to get index for %s\n", __FUNCTION__,ifname));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    if (IfIndex < TOTAL_NUMBER_OF_INTERNAL_INTERFACES)
+    {
+        CcspTraceError(("%s Invalid or Default index[%d]\n", __FUNCTION__, IfIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    pthread_mutex_lock(&gmEthGInfo_mutex);
+    strncpy(gpstEthGInfo[IfIndex].LowerLayers,newLowerLayers, sizeof(gpstEthGInfo[IfIndex].LowerLayers));
+    pthread_mutex_unlock(&gmEthGInfo_mutex);
+
+    CcspTraceError(("%s name[%s] updated successfully[%d]\n", __FUNCTION__, newLowerLayers,IfIndex));
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS CosaDmlEthPortSetName(char *ifname, char *newIfname)
+{
+    ANSC_STATUS   retStatus;
+    INT           IfIndex = -1;
+
+    if (ifname == NULL || newIfname == NULL)
+    {
+        CcspTraceError(("%s Invalid data \n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    /* check newIfname already exists */
+    retStatus = CosaDmlEthPortGetIndexFromIfName(newIfname, &IfIndex);
+
+    if ( (ANSC_STATUS_FAILURE != retStatus ) || ( -1 != IfIndex ) )
+    {
+        CcspTraceError(("%s Already interface %s exists\n", __FUNCTION__,newIfname));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    retStatus = CosaDmlEthPortGetIndexFromIfName(ifname, &IfIndex);
+
+    if ( (ANSC_STATUS_FAILURE == retStatus ) || ( -1 == IfIndex ) )
+    {
+        CcspTraceError(("%s Failed to get index for %s\n", __FUNCTION__,ifname));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    if (IfIndex < TOTAL_NUMBER_OF_INTERNAL_INTERFACES)
+    {
+        CcspTraceError(("%s Invalid or Default index[%d]\n", __FUNCTION__, IfIndex));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    pthread_mutex_lock(&gmEthGInfo_mutex);
+    strncpy(gpstEthGInfo[IfIndex].Name,newIfname, sizeof(gpstEthGInfo[IfIndex].Name));
+    pthread_mutex_unlock(&gmEthGInfo_mutex);
+
+    CcspTraceError(("%s name[%s] updated successfully[%d]\n", __FUNCTION__, newIfname,IfIndex));
+    return ANSC_STATUS_SUCCESS;
+}
+ANSC_STATUS CosaDmlEthPortGetLinkStatus(char *ifname, COSA_DML_ETH_LINK_STATUS *LinkStatus)
+{
+    ANSC_STATUS   retStatus;
+    INT           IfIndex = -1;
+
+    if (ifname == NULL)
+    {
+        CcspTraceError(("%s Invalid data \n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    retStatus = CosaDmlEthPortGetIndexFromIfName(ifname, &IfIndex);
+
+    if ( (ANSC_STATUS_FAILURE == retStatus ) || ( -1 == IfIndex ) )
+    {
+        CcspTraceError(("%s Failed to get index for %s\n", __FUNCTION__,ifname));
+        return ANSC_STATUS_FAILURE;
+    }
+
+
+    if (IfIndex < 0 )
     {
         CcspTraceError(("%s Invalid index[%d]\n", __FUNCTION__, IfIndex));
         return ANSC_STATUS_FAILURE;
@@ -737,37 +1082,6 @@ ANSC_STATUS CosaDmlEthPortGetCopyOfGlobalInfoForGivenIfName(char *ifname, PCOSA_
     pthread_mutex_unlock(&gmEthGInfo_mutex);
 
     return (ANSC_STATUS_SUCCESS);
-}
-
-/* *CosaDmlEthLinePrepareGlobalInfo() */
-static ANSC_STATUS CosDmlEthPortPrepareGlobalInfo()
-{
-    INT iLoopCount = 0;
-    INT Totalinterfaces = 0;
-
-    Totalinterfaces = CosaDmlEthGetTotalNoOfInterfaces();
-
-    //Allocate memory for Eth Global Status Information
-    gpstEthGInfo = (PCOSA_DML_ETH_PORT_GLOBAL_CONFIG *)AnscAllocateMemory(sizeof(COSA_DML_ETH_PORT_GLOBAL_CONFIG) * Totalinterfaces);
-
-    //Return failure if allocation failiure
-    if (NULL == gpstEthGInfo)
-    {
-        return ANSC_STATUS_FAILURE;
-    }
-
-    memset(gpstEthGInfo, 0, sizeof(gpstEthGInfo) * Totalinterfaces);
-    //Assign default value
-    for (iLoopCount = 0; iLoopCount < Totalinterfaces; ++iLoopCount)
-    {
-        gpstEthGInfo[iLoopCount].Upstream = FALSE;
-        gpstEthGInfo[iLoopCount].WanStatus = ETH_WAN_DOWN;
-        gpstEthGInfo[iLoopCount].LinkStatus = ETH_LINK_STATUS_DOWN;
-        gpstEthGInfo[iLoopCount].WanValidated = TRUE; //Make default as True.
-        snprintf(gpstEthGInfo[iLoopCount].Name, sizeof(gpstEthGInfo[iLoopCount].Name), "eth%d", iLoopCount);
-        snprintf(gpstEthGInfo[iLoopCount].Path, sizeof(gpstEthGInfo[iLoopCount].Path), "%s%d", ETHERNET_IF_PATH, iLoopCount + 1);
-    }
-    return ANSC_STATUS_SUCCESS;
 }
 
 /* Send link information to the message queue. */
@@ -1251,12 +1565,6 @@ static ANSC_STATUS CosaDmlEthGetLowerLayersInstanceInOtherAgent(COSA_ETH_NOTIFY_
     }
 
     return ANSC_STATUS_SUCCESS;
-}
-
-static INT CosaDmlEthGetTotalNoOfInterfaces(VOID)
-{
-    //TODO - READ FROM HAL.
-    return TOTAL_NUMBER_OF_INTERFACES;
 }
 
 /* Create and Enbale Ethernet.Link. */

@@ -70,13 +70,23 @@
 #include "sys_definitions.h"
 #include "ccsp_hal_ethsw.h"
 
+#define DML_ETHIF_INIT(Eth)                           \
+    (Eth)->Enable = FALSE;                            \
+    (Eth)->Upstream = FALSE;                          \
+    (Eth)->WanStatus = ETH_WAN_DOWN;                  \
+    (Eth)->LinkStatus = ETH_LINK_STATUS_DOWN;         \
+    (Eth)->WanValidated = FALSE;                      \
+
+
 #define COSA_DATAMODEL_ETHERNET_CLASS_CONTENT          \
     /* duplication of the base object class content */ \
     COSA_BASE_CONTENT                                  \
     COSA_DATAMODEL_ETH_WAN_AGENT EthWanCfg;            \
     COSA_DML_ETH_LOG_STATUS LogStatus;                 \
     UINT ulTotalNoofEthInterfaces;                 \
-    PCOSA_DML_ETH_PORT_CONFIG pEthLink
+    SLIST_HEADER Q_EthList;                        \
+    ULONG ulPtNextInstanceNumber;                  \
+    ULONG MaxInstanceNumber;                       \
 
 typedef  struct
 _COSA_DATAMODEL_ETHERNET_CLASS_CONTENT

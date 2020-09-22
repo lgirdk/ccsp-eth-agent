@@ -126,13 +126,16 @@
       	</object>
     <object>
       <name>X_RDK_Interface</name>
-      <objectType>staticTable</objectType>
+      <objectType>writableTable</objectType>
       <maxInstance>128</maxInstance>
       <functions>
         <func_GetEntryCount>EthInterface_GetEntryCount</func_GetEntryCount>
         <func_GetEntry>EthInterface_GetEntry</func_GetEntry>
+        <func_AddEntry>EthInterface_AddEntry</func_AddEntry>
+        <func_DelEntry>EthInterface_DelEntry</func_DelEntry>
         <func_GetParamBoolValue>EthInterface_GetParamBoolValue</func_GetParamBoolValue>
         <func_GetParamStringValue>EthInterface_GetParamStringValue</func_GetParamStringValue>
+        <func_SetParamStringValue>EthInterface_SetParamStringValue</func_SetParamStringValue>
         <func_SetParamUlongValue>EthInterface_SetParamUlongValue</func_SetParamUlongValue>
         <func_GetParamUlongValue>EthInterface_GetParamUlongValue</func_GetParamUlongValue>
         <func_SetParamBoolValue>EthInterface_SetParamBoolValue</func_SetParamBoolValue>
@@ -155,8 +158,9 @@
         </parameter>
         <parameter>
           <name>Name</name>
-          <type>string(64))</type>
+          <type>string(64)</type>
           <syntax>string</syntax>
+          <writable>true</writable>
         </parameter>
         <parameter>
           <name>Status</name>
@@ -167,6 +171,18 @@
           <name>WanStatus</name>
           <type>string: Up(1),Down(2)</type>
           <syntax>uint32/mapped</syntax>
+          <writable>true</writable>
+        </parameter>
+        <parameter>
+          <name>Enable</name>
+          <type>boolean</type>
+          <syntax>bool</syntax>
+          <writable>true</writable>
+        </parameter>
+        <parameter>
+          <name>LowerLayers</name>
+          <type>string(128)</type>
+          <syntax>string</syntax>
           <writable>true</writable>
         </parameter>
       </parameters>
