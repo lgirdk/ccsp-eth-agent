@@ -656,41 +656,26 @@ EthernetWAN_SetParamStringValue
     ERR_CHK(rc);
     if ((!ind) && (rc == EOK))
     {
-	rc = strcmp_s("DOCSIS",strlen("DOCSIS"),pString,&ind);
-        ERR_CHK(rc);
-        if ((!ind) && (rc == EOK))
+        if((strcmp_s("DOCSIS",strlen("DOCSIS"),pString,&ind) == EOK) && (ind == 0))
 	{
 		bValue = FALSE;
-	}
-	else
-        {
-           rc = strcmp_s("Ethernet",strlen("Ethernet"),pString,&ind);
-           ERR_CHK(rc);
-           if ((!ind) && (rc == EOK))
-           {
-		bValue = TRUE;
-	   }
-        }
-
-        rc = strcmp_s("DOCSIS",strlen("DOCSIS"),pString,&ind);
-        ERR_CHK(rc);
-        if ((!ind) && (rc == EOK))
-	{
 		wan_mode = WAN_MODE_DOCSIS;
+        }
+        else if((strcmp_s("Ethernet",strlen("Ethernet"),pString,&ind) == EOK) && (ind == 0))
+        {
+		bValue = TRUE;
+		wan_mode = WAN_MODE_ETH;
+        }
+	else if((strcmp_s("Auto",strlen("Auto"),pString,&ind) == EOK) && (ind == 0))
+	{
+		wan_mode = WAN_MODE_AUTO;
 	}
 	else
-        {
-           rc = strcmp_s("Ethernet",strlen("Ethernet"),pString,&ind);
-           ERR_CHK(rc);
-           if ((!ind) && (rc == EOK))
-	   {
-		wan_mode = WAN_MODE_ETH;
-	   }
-	   else
-	   {
-		wan_mode = WAN_MODE_AUTO;
-	   }
-        }
+	{
+		CcspTraceWarning(("SelectedOperationalMode - %s is not valid\n", pString));
+		return FALSE;
+	}
+
         snprintf(buf, sizeof(buf), "%d", wan_mode);
 	if (syscfg_set(NULL, "selected_wan_mode", buf) != 0) 
         {
