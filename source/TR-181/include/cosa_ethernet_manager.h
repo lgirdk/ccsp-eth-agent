@@ -17,39 +17,6 @@
  * limitations under the License.
 */
 
-/**********************************************************************
-
-    module: cosa_ethernet_manager.h
-
-        For CCSP Component:  eth agent
-
-    ---------------------------------------------------------------
-
-    copyright:
-
-        Comcast, Corp., 2019
-        All Rights Reserved.
-
-    ---------------------------------------------------------------
-
-    description:
-
-        This sample implementation file gives the function call prototypes and
-        structure definitions used for the RDK-Broadband
-        Ethernet Manager
-
-
-    ---------------------------------------------------------------
-
-    environment:
-
-        This layer is intended to controls Ethernet state machine
-        through an open API.
-
-    ---------------------------------------------------------------
-
-**********************************************************************/
-
 #ifndef __COSA_ETH_MANAGER_H__
 #define __COSA_ETH_MANAGER_H__
 
