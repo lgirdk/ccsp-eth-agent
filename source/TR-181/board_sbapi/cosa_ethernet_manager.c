@@ -17,45 +17,6 @@
  * limitations under the License.
 */
 
-/**************************************************************************
-
-    module: cosa_ethernet_manager.c
-
-        For COSA Data Model Library Development
-
-    -------------------------------------------------------------------
-
-    copyright:
-
-        Comcast Corp., 2019
-        All Rights Reserved.
-
-    -------------------------------------------------------------------
-
-    description:
-
-        State machine to manage a Ethernet interface.
-
-    -------------------------------------------------------------------
-
-    environment:
-
-        platform independent
-
-    -------------------------------------------------------------------
-
-    author:
-
-        COSA XML TOOL CODE GENERATOR 1.0
-
-    -------------------------------------------------------------------
-
-    revision:
-
-        13/11/2019    initial revision.
-
-**************************************************************************/
-
 #if defined (FEATURE_RDKB_WAN_MANAGER)
 /* ---- Include Files ---------------------------------------- */
 #include "cosa_ethernet_manager.h"
