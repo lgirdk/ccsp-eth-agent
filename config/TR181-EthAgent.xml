@@ -171,6 +171,8 @@
         </parameter>
       </parameters>
     </object>
+  </objects>
+  </object>
     <object>
       <name>X_RDKCENTRAL-COM_EthernetWAN</name>
       <objectType>object</objectType>
@@ -201,7 +203,5 @@
     </object>
 
 
-  </objects>
-  </object>
   </objects>
 </dataModelInfo>
