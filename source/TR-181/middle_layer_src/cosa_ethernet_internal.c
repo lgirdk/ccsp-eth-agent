@@ -454,7 +454,7 @@ void Ethernet_Log(void)
 
 #if defined(_CBR_PRODUCT_REQ_)
     total_port = 8;
-#elif defined(_XB6_PRODUCT_REQ_)
+#elif defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
     total_port = 2;
 #else
     total_port = 4;
@@ -647,7 +647,7 @@ static void EthTelemetryPush()
 
 #if defined(_CBR_PRODUCT_REQ_)
     total_port = 8;
-#elif defined(_XB6_PRODUCT_REQ_)
+#elif defined(_XB6_PRODUCT_REQ_) && !defined(_XB7_PRODUCT_REQ_)
     total_port = 2;
 #else
     total_port = 4;
