@@ -303,12 +303,29 @@ int main(int argc, char* argv[])
 
     cmd_dispatch('e');
 
-    #ifndef DISABLE_LOGAGENT
-    RDKLogEnable = GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_LoggerEnable");
-    RDKLogLevel = (char)GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_LogLevel");
-    ETHAGENT_RDKLogLevel = GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_EthAgent_LogLevel");
-    ETHAGENT_RDKLogEnable = (char)GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_EthAgent_LoggerEnable");
-    #endif
+    syscfg_init();
+    CcspTraceInfo(("ETH_DBG:-------Read Log Info\n"));
+    char buffer[5] = {0};
+    if( 0 == syscfg_get( NULL, "X_RDKCENTRAL-COM_LoggerEnable" , buffer, sizeof( buffer ) ) &&  ( buffer[0] != '\0' ) )
+    {
+        RDKLogEnable = (BOOL)atoi(buffer);
+    }
+    memset(buffer, 0, sizeof(buffer));
+    if( 0 == syscfg_get( NULL, "X_RDKCENTRAL-COM_LogLevel" , buffer, sizeof( buffer ) ) &&  ( buffer[0] != '\0' ) )
+    {
+        RDKLogLevel = (ULONG )atoi(buffer);
+    }
+    memset(buffer, 0, sizeof(buffer));
+    if( 0 == syscfg_get( NULL, "X_RDKCENTRAL-COM_EthAgent_LogLevel" , buffer, sizeof( buffer ) ) &&  ( buffer[0] != '\0' ) )
+    {
+        ETHAGENT_RDKLogLevel = (ULONG)atoi(buffer);
+    }
+    memset(buffer, 0, sizeof(buffer));
+    if( 0 == syscfg_get( NULL, "X_RDKCENTRAL-COM_EthAgent_LoggerEnable" , buffer, sizeof( buffer ) ) &&  ( buffer[0] != '\0' ) )
+    {
+        ETHAGENT_RDKLogEnable = (BOOL)atoi(buffer);
+    }
+    CcspTraceInfo(("ETH_DBG:-------Log Info values RDKLogEnable:%d,RDKLogLevel:%u,ETHAGENT_RDKLogLevel:%u,ETHAGENT_RDKLogEnable:%d\n",RDKLogEnable,RDKLogLevel,ETHAGENT_RDKLogLevel, ETHAGENT_RDKLogEnable ));
 
     while ( cmdChar != 'q' )
     {
@@ -344,12 +361,31 @@ CcspTraceInfo(("\nAfter daemonize before signal\n"));
 CcspTraceInfo(("\nbefore cmd_dispatch command\n"));
 
     cmd_dispatch('e');
-#ifndef DISABLE_LOGAGENT
-    RDKLogEnable = GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_LoggerEnable");
-    RDKLogLevel = (char)GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_LogLevel");
-    ETHAGENT_RDKLogLevel = GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_EthAgent_LogLevel");
-    ETHAGENT_RDKLogEnable = (char)GetLogInfo(bus_handle,"eRT.","Device.LogAgent.X_RDKCENTRAL-COM_EthAgent_LoggerEnable");
-#endif
+
+    syscfg_init();
+    CcspTraceInfo(("ETH_DBG:-------Read Log Info\n"));
+    char buffer[5] = {0};
+    if( 0 == syscfg_get( NULL, "X_RDKCENTRAL-COM_LoggerEnable" , buffer, sizeof( buffer ) ) &&  ( buffer[0] != '\0' ) )
+    {
+        RDKLogEnable = (BOOL)atoi(buffer);
+    }
+    memset(buffer, 0, sizeof(buffer));
+    if( 0 == syscfg_get( NULL, "X_RDKCENTRAL-COM_LogLevel" , buffer, sizeof( buffer ) ) &&  ( buffer[0] != '\0' ) )
+    {
+        RDKLogLevel = (ULONG )atoi(buffer);
+    }
+    memset(buffer, 0, sizeof(buffer));
+    if( 0 == syscfg_get( NULL, "X_RDKCENTRAL-COM_EthAgent_LogLevel" , buffer, sizeof( buffer ) ) &&  ( buffer[0] != '\0' ) )
+    {
+        ETHAGENT_RDKLogLevel = (ULONG)atoi(buffer);
+    }
+    memset(buffer, 0, sizeof(buffer));
+    if( 0 == syscfg_get( NULL, "X_RDKCENTRAL-COM_EthAgent_LoggerEnable" , buffer, sizeof( buffer ) ) &&  ( buffer[0] != '\0' ) )
+    {
+        ETHAGENT_RDKLogEnable = (BOOL)atoi(buffer);
+    }
+    CcspTraceInfo(("ETH_DBG:-------Log Info values RDKLogEnable:%d,RDKLogLevel:%u,ETHAGENT_RDKLogLevel:%u,ETHAGENT_RDKLogEnable:%d\n",RDKLogEnable,RDKLogLevel,ETHAGENT_RDKLogLevel, ETHAGENT_RDKLogEnable ));
+
 #ifdef _COSA_SIM_
     subSys = "";        /* PC simu use empty string as subsystem */
 #else
