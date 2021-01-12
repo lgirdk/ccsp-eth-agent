@@ -649,6 +649,7 @@ EthernetWAN_SetParamStringValue
     BOOL  bValue = FALSE;
     char buf[8]={0};
     int wan_mode = 0;
+    BOOL bridge_mode_enabled = FALSE;
     errno_t rc = -1;
     int            ind = -1;
     /* check the parameter name and set the corresponding value */
@@ -656,13 +657,21 @@ EthernetWAN_SetParamStringValue
     ERR_CHK(rc);
     if ((!ind) && (rc == EOK))
     {
-        if((strcmp_s("DOCSIS",strlen("DOCSIS"),pString,&ind) == EOK) && (ind == 0))
-	{
-		bValue = FALSE;
-		wan_mode = WAN_MODE_DOCSIS;
+        rc = strcmp_s("DOCSIS",strlen("DOCSIS"),pString,&ind);
+        ERR_CHK(rc);
+        if ((!ind) && (rc == EOK))
+        {
+            bValue = FALSE;
+            wan_mode = WAN_MODE_DOCSIS;
         }
         else if((strcmp_s("Ethernet",strlen("Ethernet"),pString,&ind) == EOK) && (ind == 0))
         {
+           is_usg_in_bridge_mode(&bridge_mode_enabled);
+           ERR_CHK(rc);
+           if ((rc == EOK) && bridge_mode_enabled) {
+               CcspTraceWarning(("EthernetWAN mode is not supported in bridge mode.\n"));
+               return FALSE;
+           }
 		bValue = TRUE;
 		wan_mode = WAN_MODE_ETH;
         }
