@@ -144,6 +144,8 @@
 /* ETH WAN Fallback Interface Name - Should eventually move away from Compile Time */
 #if defined (_XB7_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_)
 #define ETHWAN_DEF_INTF_NAME "eth3"
+#elif defined (_CBR2_PRODUCT_REQ_)
+#define ETHWAN_DEF_INTF_NAME "eth5"
 #elif defined (INTEL_PUMA7)
 #define ETHWAN_DEF_INTF_NAME "nsgmii0"
 #else
