@@ -1768,6 +1768,7 @@ ANSC_STATUS is_usg_in_bridge_mode(BOOL *pBridgeMode)
 
 int CosaUtilGetIpv6AddrInfo (char * ifname, ipv6_addr_info_t ** pp_info, int * p_num)
 {
+    UNREFERENCED_PARAMETER(ifname);
     *p_num = 0;
     *pp_info = NULL;
     return 0;
