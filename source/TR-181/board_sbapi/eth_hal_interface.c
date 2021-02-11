@@ -23,6 +23,7 @@
 #include "ansc_string_util.h"
 #include "ccsp_hal_ethsw.h"
 #include "safec_lib_common.h"
+#include "secure_wrapper.h"
 
 #define ARP_CACHE "/tmp/arp.txt"
 #define DNSMASQ_CACHE "/tmp/dns.txt"
@@ -57,8 +58,7 @@ int ValidateClient(char *mac)
 	FILE *fp2 = NULL;
         errno_t rc = -1;
 		//Need to ignore brlan1 - XHS clients when during CB case
-        snprintf(buf, sizeof(buf), "ip nei show | grep -v brlan1 | grep -i %s | grep -i REACHABLE > %s",mac,ARP_CACHE);
-        system(buf);
+        v_secure_system("ip nei show | grep -v brlan1 | grep -i %s | grep -i REACHABLE > " ARP_CACHE, mac);
 	if ( (fp1 = fopen(ARP_CACHE, "r")) == NULL )
 	{
         	return ret;
@@ -77,8 +77,7 @@ int ValidateClient(char *mac)
 	else
 	{
 				//Need to ignore brlan1 - XHS clients when during CB case
-        		snprintf(buf1, sizeof(buf1), "cat %s | grep -v 172.16.12. | grep -i %s > %s",DNSMASQ_FILE,mac,DNSMASQ_CACHE);
-       			system(buf1);
+        		v_secure_system("cat " DNSMASQ_FILE " | grep -v 172.16.12. | grep -i %s > " DNSMASQ_CACHE, mac);
 		        if ( (fp2 = fopen(DNSMASQ_CACHE, "r")) == NULL )
 		        {
 				        printf("not able to open dnsmasq cache file\n");

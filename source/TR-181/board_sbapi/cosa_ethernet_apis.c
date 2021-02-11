@@ -98,6 +98,7 @@
 #include <linux/version.h>
 #include "cosa_ethernet_internal.h"
 #include "ccsp_hal_ethsw.h"
+#include "secure_wrapper.h"
 
 #if defined (FEATURE_RDKB_WAN_MANAGER)
 #include "cosa_ethernet_manager.h"
@@ -450,19 +451,16 @@ CosaDmlEthWanSetEnable
 	{
 	   if(bEnable == FALSE)
 	   {
-		system("ifconfig erouter0 down");
+		v_secure_system("ifconfig erouter0 down");
 		// NOTE: Eventually ETHWAN_DEF_INTF_NAME should be replaced with GWP_GetEthWanInterfaceName()
-		sprintf(command, "ip link set erouter0 name %s", ETHWAN_DEF_INTF_NAME);
-		CcspTraceWarning(("****************value of command = %s**********************\n", command));
-		system(command);
-		system("ip link set dummy-rf name erouter0");
+		v_secure_system("ip link set erouter0 name " ETHWAN_DEF_INTF_NAME);
+                CcspTraceWarning(("****************value of command = ip link set erouter0 name %s**********************\n", ETHWAN_DEF_INTF_NAME));
+		v_secure_system("ip link set dummy-rf name erouter0");
 		rc =  memset_s(command,sizeof(command),0,sizeof(command));
                 ERR_CHK(rc);
                 /*Coverity Fix  CID: 132495 DC.STRING_BUFFER*/
-		snprintf(command,sizeof(command), "ifconfig %s up;ifconfig erouter0 up", ETHWAN_DEF_INTF_NAME);
-		CcspTraceWarning(("****************value of command = %s**********************\n", command));
-		system(command);
-		
+                v_secure_system("ifconfig " ETHWAN_DEF_INTF_NAME" up;ifconfig erouter0 up");
+                CcspTraceWarning(("****************value of command = ifconfig %s**********************\n", ETHWAN_DEF_INTF_NAME));
 	   } 
 	}
 
@@ -482,11 +480,11 @@ CosaDmlEthWanSetEnable
                 }
 		if(bEnable)
 		{
-			system("touch /nvram/ETHWAN_ENABLE");
+			v_secure_system("touch /nvram/ETHWAN_ENABLE");
 		}
 		else
 		{
-			system("rm /nvram/ETHWAN_ENABLE");
+			v_secure_system("rm /nvram/ETHWAN_ENABLE");
 		}
                 if(bNonrootEnabled){
 		    init_capability();
