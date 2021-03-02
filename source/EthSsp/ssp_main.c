@@ -230,6 +230,37 @@ void sig_handler(int sig)
 }
 
 #endif
+
+#ifndef INCLUDE_BREAKPAD
+static int is_core_dump_opened(void)
+{
+    FILE *fp;
+    char path[256];
+    char line[1024];
+    char *start, *tok, *sp;
+#define TITLE   "Max core file size"
+
+    snprintf(path, sizeof(path), "/proc/%d/limits", getpid());
+    if ((fp = fopen(path, "rb")) == NULL)
+        return 0;
+
+    while (fgets(line, sizeof(line), fp) != NULL) {
+        if ((start = strstr(line, TITLE)) == NULL)
+            continue;
+
+        start += strlen(TITLE);
+        if ((tok = strtok_r(start, " \t\r\n", &sp)) == NULL)
+            break;
+
+        fclose(fp);
+        return (tok[0] == '0' && tok[1] == '\0') ? 0 : 1;
+    }
+
+    fclose(fp);
+    return 0;
+}
+#endif
+
 int main(int argc, char* argv[])
 {
     BOOL                            bRunAsDaemon       = TRUE;
