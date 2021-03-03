@@ -71,7 +71,7 @@
 /**********************************************************************
                 STRUCTURE AND CONSTANT DEFINITIONS
 **********************************************************************/
-#if defined (FEATURE_RDKB_WAN_MANAGER)
+#if defined (FEATURE_RDKB_WAN_AGENT)
 #define ETHERNET_IF_PATH                  "Device.Ethernet.X_RDKCENTRAL-COM_Interface."
 
 //VLAN Agent - ETHERNET.LINK
@@ -95,7 +95,34 @@
 #define WAN_IF_NAME_PARAM_NAME            "Device.X_RDK-Central_COM_WanAgent.Interface.%d.Name"
 
 #define ETH_IF_PHY_PATH                   "Device.Ethernet.X_RDKCENTRAL-COM_Interface.%d"
-#endif //#if defined (FEATURE_RDKB_WAN_MANAGER)
+
+#elif defined (FEATURE_RDKB_WAN_MANAGER)
+#define ETHERNET_IF_PATH                  "Device.Ethernet.X_RDK_Interface."
+#define ETHERNET_IF_LOWERLAYERS           "Device.Ethernet.X_RDK_Interface."
+
+//VLAN Agent - ETHERNET.LINK
+#define VLAN_DBUS_PATH                    "/com/cisco/spvtg/ccsp/vlanmanager"
+#define VLAN_COMPONENT_NAME               "eRT.com.cisco.spvtg.ccsp.vlanmanager"
+
+#define VLAN_ETH_LINK_TABLE_NAME          "Device.X_RDK_Ethernet.Link."
+#define VLAN_ETH_NOE_PARAM_NAME           "Device.X_RDK_Ethernet.LinkNumberOfEntries"
+#define VLAN_ETH_LINK_PARAM_ALIAS         "Device.X_RDK_Ethernet.Link.%d.Alias"
+#define VLAN_ETH_LINK_PARAM_NAME          "Device.X_RDK_Ethernet.Link.%d.Name"
+#define VLAN_ETH_LINK_PARAM_LOWERLAYERS   "Device.X_RDK_Ethernet.Link.%d.LowerLayers"
+#define VLAN_ETH_LINK_PARAM_ENABLE        "Device.X_RDK_Ethernet.Link.%d.Enable"
+
+//WAN Agent
+#define WAN_DBUS_PATH                     "/com/cisco/spvtg/ccsp/wanmanager"
+#define WAN_COMPONENT_NAME                "eRT.com.cisco.spvtg.ccsp.wanmanager"
+#define WAN_NOE_PARAM_NAME                "Device.X_RDK_WanManager.CPEInterfaceNumberOfEntries"
+#define WAN_PHY_STATUS_PARAM_NAME         "Device.X_RDK_WanManager.CPEInterface.%d.Phy.Status"
+#define WAN_PHY_PATH_PARAM_NAME           "Device.X_RDK_WanManager.CPEInterface.%d.Phy.Path"
+#define WAN_LINK_STATUS_PARAM_NAME        "Device.X_RDK_WanManager.CPEInterface.%d.Wan.LinkStatus"
+#define WAN_STATUS_PARAM_NAME             "Device.X_RDK_WanManager.CPEInterface.%d.Wan.Status"
+#define WAN_IF_NAME_PARAM_NAME            "Device.X_RDK_WanManager.CPEInterface.%d.Name"
+
+#define ETH_IF_PHY_PATH                   "Device.Ethernet.X_RDK_Interface.%d"
+#endif //FEATURE_RDKB_WAN_MANAGER
 
 typedef struct _Eth_host_t
 {
@@ -137,17 +164,32 @@ _COSA_DML_ETH_WAN_STATUS
     ETH_WAN_DOWN
 } COSA_DML_ETH_WAN_STATUS;
 
+#if defined(FEATURE_RDKB_WAN_MANAGER)
+typedef enum
+_COSA_DML_ETH_TABLE_OPER
+{
+    ETH_ADD_TABLE = 1,
+    ETH_DEL_TABLE
+} COSA_DML_ETH_TABLE_OPER;
+#endif // FEATURE_RDKB_WAN_MANAGER
+
 /* Structure to hold port configuration data. */
 typedef struct
 _COSA_DML_ETH_PORT_CONFIG
 {
     ULONG ulInstanceNumber; /* Instance number. */
     CHAR Name[64]; /* Interface name. eth0, eth1 etc */
+#ifdef FEATURE_RDKB_WAN_MANAGER
+    BOOL Enable;
+#endif
     COSA_DML_ETH_LINK_STATUS LinkStatus; /* Link status - up/down */
     COSA_DML_ETH_WAN_STATUS WanStatus; /* Wan link status - Up/down */
     BOOL Upstream; /* Indicates interface is used for WAN. */
     BOOL WanValidated; /* Is it is a valid WAN interface */
     CHAR Path[128]; /* contains current table path */
+#ifdef FEATURE_RDKB_WAN_MANAGER
+    CHAR LowerLayers[128]; /* contains LowerLayers */
+#endif
 } COSA_DML_ETH_PORT_CONFIG, *PCOSA_DML_ETH_PORT_CONFIG;
 
 /* Structure to hold global data used for wan connection management. */
@@ -156,10 +198,16 @@ _COSA_DML_ETH_PORT_GLOBAL_CONFIG
 {
     BOOL Upstream;
     CHAR Name[64];                       /* Name of interface. */
+#ifdef FEATURE_RDKB_WAN_MANAGER
+    BOOL Enable;
+#endif
     COSA_DML_ETH_LINK_STATUS LinkStatus; /* Link status of interface. */
     COSA_DML_ETH_WAN_STATUS WanStatus; /* Wan link status. */
     BOOL WanValidated;
     CHAR Path[128]; /* contains current table path */
+#ifdef FEATURE_RDKB_WAN_MANAGER
+    CHAR LowerLayers[128]; /* contains LowerLayers */
+#endif
 } COSA_DML_ETH_PORT_GLOBAL_CONFIG, *PCOSA_DML_ETH_PORT_GLOBAL_CONFIG;
 
 /* Enum wan status. */
@@ -191,14 +239,13 @@ CosaDmlEthPortInit
         PANSC_HANDLE                phContext
     );
 
+#if defined (FEATURE_RDKB_WAN_AGENT)
 ANSC_STATUS CosaDmlEthGetPortCfg( INT nIndex, PCOSA_DML_ETH_PORT_CONFIG pEthLink);
 ANSC_STATUS CosaDmlEthPortSetUpstream( INT IfIndex, BOOL Upstream );
 ANSC_STATUS CosaDmlEthPortSetWanValidated(INT IfIndex, BOOL WanValidated);
 ANSC_STATUS CosaDmlEthPortGetWanStatus( INT IfIndex, COSA_DML_ETH_WAN_STATUS *wan_status );
 ANSC_STATUS CosaDmlEthPortSetWanStatus( INT IfIndex, COSA_DML_ETH_WAN_STATUS wan_status);
 ANSC_STATUS CosaDmlEthPortGetLinkStatus( INT IfIndex, COSA_DML_ETH_LINK_STATUS *LinkStatus );
-
-#if defined (FEATURE_RDKB_WAN_MANAGER)
 INT CosaDmlEthPortLinkStatusCallback( CHAR *ifname, CHAR* state );
 ANSC_STATUS CosaDmlEthPortGetCopyOfGlobalInfoForGivenIfName(char* ifName, PCOSA_DML_ETH_PORT_GLOBAL_CONFIG pGlobalInfo );
 ANSC_STATUS CosaDmlEthSetWanStatusForWanAgent(char *ifname, char *WanStatus);
@@ -206,9 +253,25 @@ ANSC_STATUS CosaDmlEthCreateEthLink(char *l2ifName, char *Path);
 ANSC_STATUS CosaDmlEthDeleteEthLink(char *ifName, char *Path);
 ANSC_STATUS CosaDmlEthGetPhyStatusForWanAgent( char *ifname, char *PhyStatus );
 ANSC_STATUS CosaDmlEthSetPhyStatusForWanAgent( char *ifname, char *PhyStatus );
-#endif //#if defined (FEATURE_RDKB_WAN_MANAGER)
-
-void
-Ethernet_Hosts_Sync(void);
+#elif defined(FEATURE_RDKB_WAN_MANAGER)
+ANSC_STATUS CosaDmlEthGetPortCfg( INT nIndex, PCOSA_DML_ETH_PORT_CONFIG pEthLink);
+ANSC_STATUS CosaDmlEthPortSetUpstream( CHAR *ifname, BOOL Upstream );
+ANSC_STATUS CosaDmlEthPortSetWanValidated(INT IfIndex, BOOL WanValidated);
+ANSC_STATUS CosaDmlEthPortGetWanStatus( CHAR *ifname, COSA_DML_ETH_WAN_STATUS *wan_status );
+ANSC_STATUS CosaDmlEthPortSetWanStatus( CHAR *ifname, COSA_DML_ETH_WAN_STATUS wan_status);
+ANSC_STATUS CosaDmlEthPortSetLowerLayers(char *ifname, char *newLowerLayers);
+ANSC_STATUS CosaDmlTriggerExternalEthPortLinkStatus(char *ifname, BOOL status);
+ANSC_STATUS CosaDmlEthPortGetLinkStatus( CHAR *ifname, COSA_DML_ETH_LINK_STATUS *LinkStatus );
+ANSC_STATUS CosaDmlEthPortSetName( CHAR *ifname, CHAR *newIfname);
+INT CosaDmlEthPortLinkStatusCallback( CHAR *ifname, CHAR* state );
+ANSC_STATUS CosaDmlEthPortGetCopyOfGlobalInfoForGivenIfName(char* ifName, PCOSA_DML_ETH_PORT_GLOBAL_CONFIG pGlobalInfo );
+ANSC_STATUS CosaDmlEthSetWanLinkStatusForWanManager(char *ifname, char *WanStatus);
+ANSC_STATUS CosaDmlEthCreateEthLink(char *l2ifName, char *Path);
+ANSC_STATUS CosaDmlEthDeleteEthLink(char *ifName, char *Path);
+ANSC_STATUS CosaDmlEthGetPhyStatusForWanManager( char *ifname, char *PhyStatus );
+ANSC_STATUS CosaDmlEthSetPhyStatusForWanManager( char *ifname, char *PhyStatus );
+ANSC_STATUS CosDmlEthPortUpdateGlobalInfo(PANSC_HANDLE phContext, CHAR *ifname, COSA_DML_ETH_TABLE_OPER Oper );
+#endif
+void Ethernet_Hosts_Sync(void);
 INT CosaDmlEth_AssociatedDevice_callback(eth_device_t *eth_dev);
 #endif

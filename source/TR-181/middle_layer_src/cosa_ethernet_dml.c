@@ -691,12 +691,12 @@ EthernetWAN_SetParamStringValue
         }
         else if((strcmp_s("Ethernet",strlen("Ethernet"),pString,&ind) == EOK) && (ind == 0))
         {
-           is_usg_in_bridge_mode(&bridge_mode_enabled);
-           ERR_CHK(rc);
-           if ((rc == EOK) && bridge_mode_enabled) {
+            is_usg_in_bridge_mode(&bridge_mode_enabled);
+            ERR_CHK(rc);
+            if ((rc == EOK) && bridge_mode_enabled) {
                CcspTraceWarning(("EthernetWAN mode is not supported in bridge mode.\n"));
                return FALSE;
-           }
+	    }
 		bValue = TRUE;
 		wan_mode = WAN_MODE_ETH;
         }
@@ -1128,6 +1128,713 @@ EthLogging_Rollback
 }
 
 /**********************************************************************
+    caller:     owner of this object
+
+    prototype:
+        BOOL
+        AutowanFeatureSupport_GetParamBoolValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                BOOL*                       pBool
+            );
+
+    description:
+        This function is called to retrieve Boolean parameter value;
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                BOOL*                       pBool
+                The buffer of returned boolean value;
+
+    return:     TRUE if succeeded.
+**********************************************************************/
+BOOL
+AutowanFeatureSupport_GetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL*                       pBool
+    )
+{
+    UNREFERENCED_PARAMETER(hInsContext);
+    errno_t        rc =    -1;
+    int            ind = -1;
+    /*This parameter is created for the purpose of whether the AUTOWAN feature is enabled inside the UI.*/
+    rc = strcmp_s("X_RDKCENTRAL-COM_AutowanFeatureSupport", strlen("X_RDKCENTRAL-COM_AutowanFeatureSupport"), ParamName,&ind);
+    ERR_CHK(rc);
+    if( (ind == 0) && (rc == EOK))
+    {
+#if defined(AUTOWAN_ENABLE)
+        *pBool =  1;
+#else
+        *pBool =  0;
+#endif /* AUTOWAN_ENABLE */
+         return TRUE;
+    }
+    return FALSE;
+}
+
+#if defined(FEATURE_RDKB_WAN_MANAGER)
+/**********************************************************************
+
+    caller:     owner of this object
+
+    prototype:
+
+        ANSC_HANDLE
+        EthRdkInterface_GetEntry
+            (
+                ANSC_HANDLE                 hInsContext,
+                ULONG                       nIndex,
+                ULONG*                      pInsNumber
+            );
+
+    description:
+
+        This function is called to retrieve the entry specified by the index.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                ULONG                       nIndex,
+                The index of this entry;
+
+                ULONG*                      pInsNumber
+                The output instance number;
+
+    return:     The handle to identify the entry
+
+**********************************************************************/
+ANSC_HANDLE
+EthRdkInterface_GetEntry
+    (
+        ANSC_HANDLE                 hInsContext,
+        ULONG                       nIndex,
+        ULONG*                      pInsNumber
+    )
+{
+    UNREFERENCED_PARAMETER(hInsContext);
+    PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
+    PSINGLE_LINK_ENTRY              pSListEntry       = NULL;
+    PCOSA_CONTEXT_LINK_OBJECT       pCxtLink          = NULL;
+
+    pSListEntry       = AnscSListGetEntryByIndex(&pMyObject->Q_EthList, nIndex);
+
+    if ( pSListEntry )
+    {
+        pCxtLink      = ACCESS_COSA_CONTEXT_LINK_OBJECT(pSListEntry);
+        *pInsNumber   = pCxtLink->InstanceNumber;
+    }
+    return (ANSC_HANDLE)pSListEntry;
+}
+
+/**********************************************************************
+
+    caller:     owner of this object
+
+    prototype:
+
+        ULONG
+        EthRdkInterface_GetEntryCount
+            (
+                ANSC_HANDLE                 hInsContext
+            );
+
+    description:
+
+        This function is called to retrieve the count of the table.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+    return:     The count of the table
+
+**********************************************************************/
+ULONG
+EthRdkInterface_GetEntryCount
+    (
+        ANSC_HANDLE                 hInsContext
+    )
+{
+    UNREFERENCED_PARAMETER(hInsContext);
+    PCOSA_DATAMODEL_ETHERNET   pMyObject   = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
+    return AnscSListQueryDepth( &pMyObject->Q_EthList );
+}
+
+ULONG EthRdkInterface_DelEntry ( ANSC_HANDLE hInsContext, ANSC_HANDLE hInstance )
+{
+    ANSC_STATUS               returnStatus      = ANSC_STATUS_SUCCESS;
+    PCOSA_DATAMODEL_ETHERNET    pEthLink = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
+    PCOSA_CONTEXT_LINK_OBJECT      pEthCxtLink       = (PCOSA_CONTEXT_LINK_OBJECT)hInstance;
+    PCOSA_DML_ETH_PORT_CONFIG             p_EthLink         = (PCOSA_DML_ETH_PORT_CONFIG)pEthCxtLink->hContext;
+    UNREFERENCED_PARAMETER(hInsContext);
+
+    pEthCxtLink = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    if ( ( p_EthLink->Enable == TRUE ) ||
+         ( ANSC_STATUS_SUCCESS != CosDmlEthPortUpdateGlobalInfo((PANSC_HANDLE)pEthLink,  p_EthLink->Name, ETH_DEL_TABLE ) ) )
+    {
+       CcspTraceError(("[%s][%d] Active or Internal Interface cant be deleted. \n", __FUNCTION__, __LINE__));
+       return ANSC_STATUS_FAILURE;
+    }
+    if ( pEthCxtLink->bNew )
+    {
+        /* Set bNew to FALSE to indicate this node is not going to save to SysRegistry */
+        pEthCxtLink->bNew = FALSE;
+    }
+    if ( AnscSListPopEntryByLink(&pEthLink->Q_EthList, &pEthCxtLink->Linkage) )
+    {
+        AnscFreeMemory(pEthCxtLink->hContext);
+        AnscFreeMemory(pEthCxtLink);
+    }
+    return returnStatus;
+}
+ANSC_HANDLE EthRdkInterface_AddEntry( ANSC_HANDLE hInsContext, ULONG* pInsNumber )
+{
+    PCOSA_DATAMODEL_ETHERNET    gpEthLink      = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
+    PCOSA_DML_ETH_PORT_CONFIG   p_EthLink      = NULL;
+    PCOSA_CONTEXT_LINK_OBJECT   pEthCxtLink    = NULL;
+    UNREFERENCED_PARAMETER(hInsContext);
+
+    p_EthLink = (PCOSA_DML_ETH_PORT_CONFIG)AnscAllocateMemory(sizeof(COSA_DML_ETH_PORT_CONFIG));
+    if ( !p_EthLink )
+    {
+        return NULL;
+    }
+    memset(p_EthLink, 0, sizeof(COSA_DML_ETH_PORT_CONFIG));
+    pEthCxtLink = (PCOSA_CONTEXT_LINK_OBJECT)AnscAllocateMemory(sizeof(COSA_CONTEXT_LINK_OBJECT));
+    if ( !pEthCxtLink )
+    {
+        goto EXIT;
+    }
+    /* now we have this link content */
+    pEthCxtLink->hContext = (ANSC_HANDLE)p_EthLink;
+    pEthCxtLink->bNew     = TRUE;
+    /* Get InstanceNumber and Default values */
+    InitEthIfaceEntry(NULL, p_EthLink);
+    pEthCxtLink->InstanceNumber = p_EthLink->ulInstanceNumber ;
+     *pInsNumber                 = p_EthLink->ulInstanceNumber ;
+    CosaSListPushEntryByInsNum(&gpEthLink->Q_EthList, (PCOSA_CONTEXT_LINK_OBJECT)pEthCxtLink);
+    CosDmlEthPortUpdateGlobalInfo((PANSC_HANDLE)gpEthLink, p_EthLink->Name, ETH_ADD_TABLE );
+    return (ANSC_HANDLE)pEthCxtLink;
+EXIT:
+    AnscFreeMemory(p_EthLink);
+    return NULL;
+}
+
+/**********************************************************************
+
+    caller:     owner of this object
+
+    prototype:
+
+        BOOL
+        EthRdkInterface_GetParamBoolValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                BOOL*                       pBool
+            );
+
+    description:
+        This function is called to retrieve Boolean parameter value;
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                BOOL*                       pBool
+                The buffer of returned boolean value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+EthRdkInterface_GetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL*                       pBool
+   )
+{
+    /* check the parameter name and return the corresponding value */
+    PCOSA_CONTEXT_LINK_OBJECT   pCxtLink      = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_ETH_PORT_CONFIG   pEthLink      = (PCOSA_DML_ETH_PORT_CONFIG)pCxtLink->hContext;
+    /* check the parameter name and return the corresponding value */
+    if( AnscEqualString(ParamName, "Enable", TRUE) )
+    {
+        *pBool = pEthLink->Enable;
+        return TRUE;
+    }
+    if( AnscEqualString(ParamName, "Upstream", TRUE) )
+    {
+        *pBool = pEthLink->Upstream;
+        return TRUE;
+    }
+    if( AnscEqualString(ParamName, "WanValidated", TRUE) )
+    {
+        *pBool = pEthLink->WanValidated;
+        return TRUE;
+    }
+     return FALSE;
+}
+
+/**********************************************************************
+
+    caller:     owner of this object
+
+    prototype:
+
+        ULONG
+        EthRdkInterface_GetParamStringValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                char*                       pValue,
+                ULONG*                      pUlSize
+            );
+
+    description:
+
+        This function is called to retrieve string parameter value;
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                char*                       pValue,
+                The string value buffer;
+
+                ULONG*                      pUlSize
+                The buffer of length of string value;
+                Usually size of 1023 will be used.
+                If it's not big enough, put required size here and return 1;
+
+    return:     0 if succeeded;
+                1 if short of buffer size; (*pUlSize = required size)
+                -1 if not supported.
+
+**********************************************************************/
+ULONG
+EthRdkInterface_GetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pValue,
+        ULONG*                      pUlSize
+    )
+{
+    PCOSA_CONTEXT_LINK_OBJECT   pCxtLink      = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_ETH_PORT_CONFIG   pEthLink      = (PCOSA_DML_ETH_PORT_CONFIG)pCxtLink->hContext;
+    if( AnscEqualString(ParamName, "Name", TRUE) )
+    {
+       /* collect value */
+       if ( ( sizeof( pEthLink->Name ) - 1 ) < *pUlSize )
+       {
+           AnscCopyString( pValue,  pEthLink->Name);
+           return 0;
+       }
+       else
+       {
+           *pUlSize = sizeof( pEthLink->Name );
+           return 1;
+       }
+    }
+    if( AnscEqualString(ParamName, "LowerLayers", TRUE) )
+    {
+       /* collect value */
+       if ( ( sizeof( pEthLink->LowerLayers ) - 1 ) < *pUlSize )
+       {
+           AnscCopyString( pValue,  pEthLink->LowerLayers);
+           return 0;
+       }
+       else
+       {
+           *pUlSize = sizeof( pEthLink->LowerLayers );
+           return 1;
+       }
+    }
+    return FALSE;
+}
+
+
+/**********************************************************************
+
+    caller:     owner of this object
+
+    prototype:
+
+        BOOL
+        EthRdkInterface_SetParamStringValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                char*                       pString
+            );
+
+    description:
+
+        This function is called to set string parameter value;
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                char*                       pString
+                The updated string value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+EthRdkInterface_SetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pString
+    )
+{
+    UNREFERENCED_PARAMETER(hInsContext);
+    UNREFERENCED_PARAMETER(ParamName);
+    UNREFERENCED_PARAMETER(pString);
+    PCOSA_CONTEXT_LINK_OBJECT   pCxtLink        = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_ETH_PORT_CONFIG   pEthLink        = (PCOSA_DML_ETH_PORT_CONFIG)pCxtLink->hContext;
+
+    /* check the parameter name and return the corresponding value */
+    if( AnscEqualString(ParamName, "Name", TRUE) )
+    {
+       /* collect value */
+       if ( ANSC_STATUS_SUCCESS == CosaDmlEthPortSetName(pEthLink->Name, pString))
+       {
+           AnscCopyString( pEthLink->Name, pString);
+           return TRUE;
+       }
+       else
+       {
+           return FALSE;
+       }
+    }
+    if( AnscEqualString(ParamName, "LowerLayers", TRUE) )
+    {
+       /* collect value */
+       if ( ANSC_STATUS_SUCCESS == CosaDmlEthPortSetLowerLayers(pEthLink->Name, pString))
+       {
+           AnscCopyString( pEthLink->LowerLayers, pString);
+           return TRUE;
+       }
+       else
+       {
+           return FALSE;
+       }
+    }
+    /* AnscTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+    return FALSE;
+}
+
+/**********************************************************************
+
+    caller:     owner of this object
+
+    prototype:
+
+        BOOL
+        EthRdkInterface_GetParamUlongValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                ULONG*                      puLong
+            );
+
+    description:
+
+        This function is called to retrieve ULONG parameter value;
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                ULONG*                      puLong
+                The buffer of returned ULONG value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+EthRdkInterface_GetParamUlongValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        ULONG*                      puLong
+    )
+{
+    PCOSA_CONTEXT_LINK_OBJECT       pCxtLink      = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_ETH_PORT_CONFIG   pEthLink        = (PCOSA_DML_ETH_PORT_CONFIG)pCxtLink->hContext;
+    /* check the parameter name and return the corresponding value */
+    if( AnscEqualString(ParamName, "Status", TRUE) )
+    {
+        COSA_DML_ETH_LINK_STATUS linkstatus;
+        if (ANSC_STATUS_SUCCESS == CosaDmlEthPortGetLinkStatus(pEthLink->Name, &linkstatus))
+        {
+            pEthLink->LinkStatus = linkstatus;
+        }
+        *puLong = pEthLink->LinkStatus;
+        return TRUE;
+    }
+    if( AnscEqualString(ParamName, "WanStatus", TRUE) )
+    {
+        COSA_DML_ETH_WAN_STATUS wan_status;
+        if (ANSC_STATUS_SUCCESS == CosaDmlEthPortGetWanStatus(pEthLink->Name, &wan_status))
+        {
+            pEthLink->WanStatus = wan_status;
+        }
+        *puLong = pEthLink->WanStatus;
+        return TRUE;
+    }
+    return FALSE;
+}
+
+/**********************************************************************
+
+    caller:     owner of this object
+
+    prototype:
+
+        BOOL
+        EthRdkInterface_SetParamUlongValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                ULONG                       uValue
+            );
+
+    description:
+
+        This function is called to set ULONG parameter value;
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                ULONG                       uValue
+                The updated ULONG value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+EthRdkInterface_SetParamUlongValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        ULONG                       uValue
+    )
+{
+    PCOSA_CONTEXT_LINK_OBJECT   pCxtLink      = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_ETH_PORT_CONFIG   pEthLink      = (PCOSA_DML_ETH_PORT_CONFIG)pCxtLink->hContext;
+    if( AnscEqualString(ParamName, "WanStatus", TRUE) )
+    {
+        if (uValue == pEthLink->WanStatus)
+        {
+            return TRUE; //No need to proceed when same value comes
+        }
+        pEthLink->WanStatus = uValue;
+        CosaDmlEthPortSetWanStatus(pEthLink->Name, pEthLink->WanStatus);
+        return TRUE;
+    }
+    return FALSE;
+}
+
+/**********************************************************************
+
+    caller:     owner of this object
+
+    prototype:
+
+        BOOL
+        EthRdkInterface_SetParamBoolValue
+            (
+                ANSC_HANDLE                 hInsContext,
+                char*                       ParamName,
+                BOOL                        bValue
+            );
+
+    description:
+
+        This function is called to set BOOL parameter value;
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                BOOL                        bValue
+                The updated BOOL value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+BOOL
+EthRdkInterface_SetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL                        bValue
+    )
+{
+    PCOSA_CONTEXT_LINK_OBJECT   pCxtLink      = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
+    PCOSA_DML_ETH_PORT_CONFIG   pEthLink      = (PCOSA_DML_ETH_PORT_CONFIG)pCxtLink->hContext;
+    /* check the parameter name and set the corresponding value */
+    if( AnscEqualString(ParamName, "Upstream", TRUE))
+    {
+        if( bValue == pEthLink->Upstream )
+        {
+            return TRUE;	//No need to proceed when same value comes
+        }
+        pEthLink->Upstream = bValue;
+        CosaDmlEthPortSetUpstream( pEthLink->Name , pEthLink->Upstream );
+        return TRUE;
+    }
+    if( AnscEqualString(ParamName, "Enable", TRUE) )
+    {
+        if( bValue == pEthLink->Enable )
+        {
+            return TRUE;	//No need to proceed when same value comes
+        }
+        CosaDmlTriggerExternalEthPortLinkStatus(pEthLink->Name, bValue);
+        pEthLink->Enable = bValue;
+        return TRUE;
+    }
+    if( AnscEqualString(ParamName, "WanValidated", TRUE) )
+    {
+        if (bValue == pEthLink->WanValidated)
+        {
+            return TRUE;
+        }
+        pEthLink->WanValidated = bValue;
+        CosaDmlEthPortSetWanValidated(( pEthLink->ulInstanceNumber - 1 ), pEthLink->WanValidated );
+        return TRUE;
+    }
+    return FALSE;
+}
+
+/**********************************************************************
+
+    caller:     owner of this object
+
+    prototype:
+
+        BOOL
+        EthRdkInterface_Validate
+        (
+            ANSC_HANDLE                 hInsContext,
+            char*                       pReturnParamName,
+            ULONG*                      puLength
+        )
+    description:
+
+        This function is called to set ULONG parameter value;
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+                char*                       ParamName,
+                The parameter name;
+
+                ULONG                       uValue
+                The updated ULONG value;
+
+    return:     TRUE if succeeded.
+
+**********************************************************************/
+
+BOOL
+EthRdkInterface_Validate
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       pReturnParamName,
+        ULONG*                      puLength
+    )
+{
+    UNREFERENCED_PARAMETER(hInsContext);
+    UNREFERENCED_PARAMETER(pReturnParamName);
+    UNREFERENCED_PARAMETER(puLength);
+    return TRUE;
+}
+
+/**********************************************************************
+    caller:     owner of this object
+
+    prototype:
+        ULONG
+        EthRdkInterface_Commit
+            (
+                ANSC_HANDLE                 hInsContext
+            );
+
+    description:
+        This function is called to finally commit all the update.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+    return:     The status of the operation.
+**********************************************************************/
+ULONG
+EthRdkInterface_Commit
+    (
+        ANSC_HANDLE                 hInsContext
+    )
+{
+    UNREFERENCED_PARAMETER(hInsContext);
+    return 0;
+}
+
+/**********************************************************************
+    caller:     owner of this object
+
+    prototype:
+        ULONG
+        EthRdkInterface_Rollback
+            (
+                ANSC_HANDLE                 hInsContext
+            );
+
+    description:
+        This function is called to roll back the update whenever there's a
+        validation found.
+
+    argument:   ANSC_HANDLE                 hInsContext,
+                The instance handle;
+
+    return:     The status of the operation.
+**********************************************************************/
+ULONG
+EthRdkInterface_Rollback
+    (
+        ANSC_HANDLE                 hInsContext
+    )
+{
+    UNREFERENCED_PARAMETER(hInsContext);
+    return 0;
+}
+
+#elif defined(FEATURE_RDKB_WAN_AGENT)
+/**********************************************************************
 
     caller:     owner of this object
 
@@ -1177,7 +1884,6 @@ EthInterface_GetEntry
         CosaDmlEthGetPortCfg(nIndex, pEthlink);
         return pEthlink;
     }
-
     return NULL; /* return the invlalid handle */
 }
 
@@ -1213,59 +1919,9 @@ EthInterface_GetEntryCount
     PCOSA_DATAMODEL_ETHERNET   pMyObject   = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
 
     return pMyObject->ulTotalNoofEthInterfaces;
+
 }
 
-/**********************************************************************
-    caller:     owner of this object
-
-    prototype:
-        BOOL
-        AutowanFeatureSupport_GetParamBoolValue
-            (
-                ANSC_HANDLE                 hInsContext,
-                char*                       ParamName,
-                BOOL*                       pBool
-            );
-
-    description:
-        This function is called to retrieve Boolean parameter value;
-
-    argument:   ANSC_HANDLE                 hInsContext,
-                The instance handle;
-
-                char*                       ParamName,
-                The parameter name;
-
-                BOOL*                       pBool
-                The buffer of returned boolean value;
-
-    return:     TRUE if succeeded.
-**********************************************************************/
-BOOL
-AutowanFeatureSupport_GetParamBoolValue
-    (
-        ANSC_HANDLE                 hInsContext,
-        char*                       ParamName,
-        BOOL*                       pBool
-    )
-{
-    UNREFERENCED_PARAMETER(hInsContext);
-    errno_t        rc =    -1;
-    int            ind = -1;
-    /*This parameter is created for the purpose of whether the AUTOWAN feature is enabled inside the UI.*/
-    rc = strcmp_s("X_RDKCENTRAL-COM_AutowanFeatureSupport", strlen("X_RDKCENTRAL-COM_AutowanFeatureSupport"), ParamName,&ind);
-    ERR_CHK(rc);
-    if( (ind == 0) && (rc == EOK))
-    {
-#if defined(AUTOWAN_ENABLE)
-        *pBool =  1;
-#else
-        *pBool =  0;
-#endif /* AUTOWAN_ENABLE */
-	 return TRUE;
-    }
-    return FALSE;
-}
 
 /**********************************************************************
 
@@ -1383,10 +2039,8 @@ EthInterface_GetParamStringValue
            return 1;
        }
     }
-
     return FALSE;
 }
-
 
 /**********************************************************************
 
@@ -1430,7 +2084,6 @@ EthInterface_SetParamStringValue
     UNREFERENCED_PARAMETER(ParamName);
     UNREFERENCED_PARAMETER(pString);
     /* check the parameter name and return the corresponding value */
-
     /* AnscTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
 }
@@ -1652,7 +2305,6 @@ EthInterface_SetParamBoolValue
     return:     TRUE if succeeded.
 
 **********************************************************************/
-
 BOOL
 EthInterface_Validate
     (
@@ -1723,3 +2375,4 @@ EthInterface_Rollback
     UNREFERENCED_PARAMETER(hInsContext);
     return 0;
 }
+#endif //FEATURE_RDKB_WAN_MANAGER

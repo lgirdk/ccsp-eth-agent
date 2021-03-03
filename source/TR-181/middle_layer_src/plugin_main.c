@@ -128,7 +128,21 @@ COSA_Init
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthLogging_Rollback", EthLogging_Rollback);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthernetWAN_GetParamStringValue", EthernetWAN_GetParamStringValue);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthernetWAN_SetParamStringValue", EthernetWAN_SetParamStringValue);
-
+#if defined(FEATURE_RDKB_WAN_MANAGER)
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthRdkInterface_GetEntryCount", EthRdkInterface_GetEntryCount);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthRdkInterface_GetEntry", EthRdkInterface_GetEntry);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthRdkInterface_AddEntry", EthRdkInterface_AddEntry);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthRdkInterface_DelEntry", EthRdkInterface_DelEntry);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthRdkInterface_GetParamBoolValue", EthRdkInterface_GetParamBoolValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthRdkInterface_GetParamStringValue", EthRdkInterface_GetParamStringValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthRdkInterface_GetParamUlongValue", EthRdkInterface_GetParamUlongValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthRdkInterface_SetParamBoolValue", EthRdkInterface_SetParamBoolValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthRdkInterface_SetParamUlongValue", EthRdkInterface_SetParamUlongValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthRdkInterface_SetParamStringValue", EthRdkInterface_SetParamStringValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthRdkInterface_Validate", EthRdkInterface_Validate);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthRdkInterface_Commit", EthRdkInterface_Commit);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthRdkInterface_Rollback", EthRdkInterface_Rollback);
+#elif defined(FEATURE_RDKB_WAN_AGENT)
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthInterface_GetEntryCount", EthInterface_GetEntryCount);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthInterface_GetEntry", EthInterface_GetEntry);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthInterface_GetParamBoolValue", EthInterface_GetParamBoolValue);
@@ -136,11 +150,10 @@ COSA_Init
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthInterface_GetParamUlongValue", EthInterface_GetParamUlongValue);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthInterface_SetParamBoolValue", EthInterface_SetParamBoolValue);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthInterface_SetParamUlongValue", EthInterface_SetParamUlongValue);
-    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthInterface_SetParamStringValue", EthInterface_SetParamStringValue);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthInterface_Validate", EthInterface_Validate);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthInterface_Commit", EthInterface_Commit);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthInterface_Rollback", EthInterface_Rollback);
-
+#endif
     g_pDslhDmlAgent                 = pPlugInfo->hDmlAgent;
     pGetParamValueByPathNameProc = (COSAGetParamValueByPathNameProc)pPlugInfo->AcquireFunction("COSAGetParamValueByPathName");
     if( pGetParamValueByPathNameProc != NULL)

@@ -231,12 +231,15 @@ AutowanFeatureSupport_GetParamBoolValue
         BOOL*                       pBool
     );
 
-
+#if defined(FEATURE_RDKB_WAN_AGENT)
 /***********************************************************************
 
  APIs for Object:
 
+#ifdef FEATURE_RDKB_WAN_AGENT
     Ethernet.X_RDKCENTRAL-COM_Interface.{i}
+#elif FEATURE_RDKB_WAN_MANAGER
+    Ethernet.X_RDK_Interface.{i}
 
     *  EthInterface_GetEntryCount
     *  EthInterface_GetEntry
@@ -330,4 +333,118 @@ EthInterface_SetParamUlongValue
     char *ParamName,
     ULONG uValue
     );
+
+#elif defined(FEATURE_RDKB_WAN_MANAGER)
+/***********************************************************************
+
+ APIs for Object:
+
+    Ethernet.X_RDK_Interface.{i}
+
+    *  EthRdkInterface_GetEntryCount
+    *  EthRdkInterface_GetEntry
+    *  EthRdkInterface_GetParamBoolValue
+    *  EthRdkInterface_SetParamBoolValue
+    *  EthRdkInterface_SetParamStringValue
+    *  EthRdkInterface_Validate
+    *  EthRdkInterface_Commit
+    *  EthRdkInterface_Rollback
+
+***********************************************************************/
+ULONG
+EthRdkInterface_GetEntryCount
+    (
+        ANSC_HANDLE
+    );
+
+ANSC_HANDLE
+EthRdkInterface_GetEntry
+    (
+        ANSC_HANDLE                 hInsContext,
+        ULONG                       nIndex,
+        ULONG*                      pInsNumber
+    );
+
+BOOL
+EthRdkInterface_GetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL*                       pBool
+    );
+
+ULONG
+EthRdkInterface_GetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pValue,
+        ULONG*                      pUlSize
+    );
+
+BOOL
+EthRdkInterface_SetParamBoolValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL                        bValue
+    );
+
+BOOL
+EthRdkInterface_SetParamStringValue
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        char*                       pString
+    );
+ANSC_HANDLE 
+EthRdkInterface_AddEntry 
+    ( 
+        ANSC_HANDLE hInsContext,
+        ULONG* pInsNumber 
+    );
+
+ULONG 
+EthRdkInterface_DelEntry
+    ( 
+        ANSC_HANDLE hInsContext,
+        ANSC_HANDLE hInstance 
+    );
+
+BOOL
+EthRdkInterface_Validate
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       pReturnParamName,
+        ULONG*                      puLength
+    );
+
+ULONG
+EthRdkInterface_Commit
+    (
+        ANSC_HANDLE                 hInsContext
+    );
+
+ULONG
+EthRdkInterface_Rollback
+    (
+        ANSC_HANDLE                 hInsContext
+    );
+
+BOOL
+EthRdkInterface_GetParamUlongValue
+    (
+    ANSC_HANDLE hInsContext,
+    char *ParamName,
+    ULONG *puLong
+    );
+
+BOOL
+EthRdkInterface_SetParamUlongValue
+    (
+    ANSC_HANDLE hInsContext,
+    char *ParamName,
+    ULONG uValue
+    );
+#endif  // FEATURE_RDKB_WAN_MANAGER    
 #endif

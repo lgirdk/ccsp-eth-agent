@@ -390,7 +390,7 @@ CcspTraceInfo(("\nbefore cmd_dispatch command\n"));
         ETHAGENT_RDKLogEnable = (BOOL)atoi(buffer);
     }
     CcspTraceInfo(("ETH_DBG:-------Log Info values RDKLogEnable:%d,RDKLogLevel:%u,ETHAGENT_RDKLogLevel:%u,ETHAGENT_RDKLogEnable:%d\n",RDKLogEnable,RDKLogLevel,ETHAGENT_RDKLogLevel, ETHAGENT_RDKLogEnable ));
-
+ 
 #ifdef _COSA_SIM_
     subSys = "";        /* PC simu use empty string as subsystem */
 #else

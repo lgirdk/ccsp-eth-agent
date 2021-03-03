@@ -70,20 +70,38 @@
 #include "sys_definitions.h"
 #include "ccsp_hal_ethsw.h"
 
+#ifdef FEATURE_RDKB_WAN_MANAGER
+#define DML_ETHIF_INIT(Eth)                           \
+    (Eth)->Enable = FALSE;                            \
+    (Eth)->Upstream = FALSE;                          \
+    (Eth)->WanStatus = ETH_WAN_DOWN;                  \
+    (Eth)->LinkStatus = ETH_LINK_STATUS_DOWN;         \
+    (Eth)->WanValidated = FALSE;
+
 #define COSA_DATAMODEL_ETHERNET_CLASS_CONTENT          \
     /* duplication of the base object class content */ \
     COSA_BASE_CONTENT                                  \
     COSA_DATAMODEL_ETH_WAN_AGENT EthWanCfg;            \
     COSA_DML_ETH_LOG_STATUS LogStatus;                 \
     UINT ulTotalNoofEthInterfaces;                 \
-    PCOSA_DML_ETH_PORT_CONFIG pEthLink;
+    SLIST_HEADER Q_EthList;                        \
+    ULONG ulPtNextInstanceNumber;                  \
+    ULONG MaxInstanceNumber;
+#else
+#define COSA_DATAMODEL_ETHERNET_CLASS_CONTENT          \
+     /* duplication of the base object class content */ \
+     COSA_BASE_CONTENT                                  \
+     COSA_DATAMODEL_ETH_WAN_AGENT EthWanCfg;            \
+     COSA_DML_ETH_LOG_STATUS LogStatus;                 \
+     UINT ulTotalNoofEthInterfaces;                 \
+     PCOSA_DML_ETH_PORT_CONFIG pEthLink;
+#endif //FEATURE_RDKB_WAN_MANAGER
 
 typedef  struct
 _COSA_DATAMODEL_ETHERNET_CLASS_CONTENT
 {
     COSA_DATAMODEL_ETHERNET_CLASS_CONTENT
-}
-COSA_DATAMODEL_ETHERNET, *PCOSA_DATAMODEL_ETHERNET;
+}COSA_DATAMODEL_ETHERNET, *PCOSA_DATAMODEL_ETHERNET;
 
 void CosaEthTelemetryxOpsLogSettingsSync();
 
@@ -108,4 +126,7 @@ CosaEthernetRemove
         ANSC_HANDLE                 hThisObject
     );
 
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+ANSC_STATUS InitEthIfaceEntry(ANSC_HANDLE hDml, PCOSA_DML_ETH_PORT_CONFIG pEntry);
+#endif
 #endif

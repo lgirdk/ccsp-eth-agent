@@ -1,0 +1,13 @@
+{
+  "module": "ethhal",
+  "version": "0.0.1",  
+  "action": "publishEvent",
+  "reqId" : "100006",
+  "params":
+  [
+    { 
+      "name":"Device.Ethernet.X_RDK_Interface.4.Status",
+      "value": "Up"
+    }
+  ]
+}

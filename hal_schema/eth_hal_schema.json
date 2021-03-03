@@ -1,0 +1,178 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://gerrit.teamccp.com/rdk/rdkb/components/opensource/ccsp/halinterface/generic/ethangent_json/eth_hal_schema.json",
+  "title": "ETH HAL Schema",
+  "description": "ETH HAL JSON Schema definitions. DO NOT modify the contents of this schema file. RDK community team make necessary changes and release",
+
+  "definitions": {
+
+    "schemaVersion" : {
+      "description": "Supported version of the schema. DO NOT modify the value of the version string. HAL operation cannot be performed without correct supported version.",
+      "type": "string",
+      "const": "0.0.1"
+    },
+
+    "moduleName" : {
+        "description": "Module name to be used in JSON message",
+        "type": "string",
+        "const": "ethhal"
+    },
+
+    "action": {
+      "description": "List of action strings that can be used in a JSON message that is exchanged between RDK Manager & Vendor Software.",
+      "type": "string",
+      "enum": [
+        "subscribeEvent",
+        "publishEvent",
+        "result"
+      ]
+    },
+
+    "result": {
+      "type": "object",
+      "properties": {
+        "Status": { "$ref": "#/definitions/resultStatusEnumList" }
+      },
+      "additionalProperties": false,
+      "required": [ "Status" ]
+    },
+    "subscribeEvent": {
+      "description": "RDK Manager uses this action to subscribe any event that it wants to receive from the Vendor Software",
+      "anyOf": [
+        { "$ref": "#/definitions/subscribeEventSupportedList" }
+      ],
+      "required": [ "name", "notificationType" ]
+    },
+
+    "publishEvent": {
+      "description": "Vendor Software uses this action to publish events that are subscribed by the RDK Manager",
+      "anyOf": [
+          { "$ref": "#/definitions/subscribeEventSupportedList" }
+      ],
+      "required": [ "name", "value" ]
+    },
+
+    "notificationType": {
+      "type": "string",
+      "enum": [
+        "interval",
+        "onChange"
+      ],
+      "default": "onChange"
+    },
+
+    "resultStatusEnumList": {
+      "description": "Result string for any action that is requested",
+      "type": "string",
+      "enum": [
+        "Success",
+        "Failed",
+        "Invalid Argument",
+        "Not Supported"
+      ],
+      "default": "Success"
+    },
+    "subscribeEventSupportedList": {
+      "description": "Supported data model parameter list for subscribeEvent and publishEvent actions",
+      "anyOf": [
+          { "$ref": "#/definitions/EthInterfaceStatus" }
+      ]
+    },
+
+    "EthInterfaceStatus": {
+      "description": "Definition for subscribeEvent that requires additional property of 'notificationType' ",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^Device\\.Ethernet\\.X_RDK_Interface\\.\\d+\\.Status$"
+        },
+	"value": { "$ref": "#/definitions/linkStatusEnumList" },
+        "notificationType": { "$ref":"#/definitions/notificationType" }
+      }
+    },
+
+    "linkStatusEnumList": {
+      "type": "string",
+      "enum": [
+        "Up",
+        "Down",
+        "Unknown",
+        "Dormant",
+        "NotPresent",
+        "LowerLayerDown",
+        "Error"
+      ]
+    },
+
+  "type": "object",
+  "description": "JSON HAL message format used exchanged between RDK Manager and Vendor Software",
+  "required": [
+    "module",
+    "version",
+    "action",
+    "reqId"
+  ],
+  "properties": {
+    "module": {   "$ref": "#/definitions/moduleName"   },
+    "version": {  "$ref": "#/definitions/schemaVersion" },
+    "reqId": {
+      "type": "string",
+      "pattern": "^[0-9]+$"
+    },
+    "action": { "$ref": "#/definitions/action" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "action": { "const": "subscribeEvent" } }
+      },
+      "then": {
+        "properties": {
+          "params": {
+            "type": "array",
+            "uniqueItems": true,
+            "minItems": 1,
+            "items": { "$ref": "#/definitions/subscribeEvent" }
+          }
+        },
+        "required": [ "params" ]
+      }
+    },
+
+    {
+      "if": {
+        "properties": { "action": { "const": "publishEvent" } }
+      },
+      "then": {
+        "properties": {
+          "params": {
+            "type": "array",
+            "uniqueItems": true,
+            "minItems": 1,
+            "items": { "$ref": "#/definitions/publishEvent" }
+          }
+        },
+        "required": [ "params" ]
+      }
+    },
+    {
+      "if": {
+        "properties": { "action": { "const": "result" } }
+      },
+      "then": {
+        "properties": {
+          "Result": {
+            "type": "object",
+            "$ref": "#/definitions/result"
+          }
+        },
+        "required": [ "Result" ]
+      }
+    }
+
+  ]
+  }
+}
+

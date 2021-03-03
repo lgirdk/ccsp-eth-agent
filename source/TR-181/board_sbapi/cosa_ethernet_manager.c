@@ -17,7 +17,7 @@
  * limitations under the License.
 */
 
-#if defined (FEATURE_RDKB_WAN_MANAGER)
+#if defined (FEATURE_RDKB_WAN_MANAGER) || defined (FEATURE_RDKB_WAN_AGENT)
 /* ---- Include Files ---------------------------------------- */
 #include "cosa_ethernet_manager.h"
 #include "cosa_ethernet_apis.h"
@@ -323,7 +323,11 @@ static ethSmState_t Transition_EthWanLinkFound(PETH_SM_PRIVATE_INFO pstInfo)
      * Notify VLAN Agent to create Ethernet.Link and Enable it.
      * Eg: L2 Interface ->eth3  , l3 Interface -> erouter0
      */
+#if defined(FEATURE_RDKB_WAN_AGENT)
     if (ANSC_STATUS_SUCCESS != CosaDmlEthCreateEthLink(pstInfo->Name, stGlobalInfo.Path))
+#elif defined(FEATURE_RDKB_WAN_MANAGER)
+    if (ANSC_STATUS_SUCCESS != CosaDmlEthCreateEthLink(pstInfo->Name, stGlobalInfo.LowerLayers))
+#endif
     {
         CcspTraceError(("%s Failed to create Ethernet link \n", __FUNCTION__));
     }
@@ -341,11 +345,14 @@ static ethSmState_t Transition_EthWanLinkUp(PETH_SM_PRIVATE_INFO pstInfo)
     /*
     *   Notify to WANAgent for Up event
     */
+#if defined (FEATURE_RDKB_WAN_AGENT)
     if (ANSC_STATUS_SUCCESS != CosaDmlEthSetWanStatusForWanAgent(pstInfo->Name, "Up"))
+#elif defined(FEATURE_RDKB_WAN_MANAGER)
+    if (ANSC_STATUS_SUCCESS != CosaDmlEthSetWanLinkStatusForWanManager(pstInfo->Name, "Up"))
+#endif
     {
         CcspTraceError(("%s Failed to set LinkUp to WAN\n", __FUNCTION__));
     }
-
     CcspTraceInfo(("[%s] State = [%s]\n", __FUNCTION__, PrintEnumToString(STATE_ETH_WAN_LINK_UP)));
     return STATE_ETH_WAN_LINK_UP;
 }
@@ -367,18 +374,25 @@ static ethSmState_t Transition_EthPhyInterfaceDown(PETH_SM_PRIVATE_INFO pstInfo)
     /**
      * Notify VLANAgent to delete Ethernet.Link.
      */
+#if defined (FEATURE_RDKB_WAN_AGENT)
     if (ANSC_STATUS_SUCCESS != CosaDmlEthDeleteEthLink(pstInfo->Name,stGlobalInfo.Path))
+#elif defined(FEATURE_RDKB_WAN_MANAGER)
+    if (ANSC_STATUS_SUCCESS != CosaDmlEthDeleteEthLink(pstInfo->Name,stGlobalInfo.LowerLayers))
+#endif
     {
         CcspTraceError(("%s Failed to delete eth link", __FUNCTION__));
     }
     /**
      * Notify WANAgent about the wan state.
      */
+#if defined(FEATURE_RDKB_WAN_AGENT)
     if (ANSC_STATUS_SUCCESS != CosaDmlEthSetWanStatusForWanAgent(pstInfo->Name, "Down"))
+#elif defined (FEATURE_RDKB_WAN_MANAGER)
+    if (ANSC_STATUS_SUCCESS != CosaDmlEthSetWanLinkStatusForWanManager(pstInfo->Name, "Down"))
+#endif
     {
         CcspTraceError(("%s Failed to set LinkDown to WAN\n", __FUNCTION__));
     }
-
     /**
      * TODO: Move base  interface into LAN bridge.
      */
@@ -422,4 +436,4 @@ static char *PrintEnumToString(const ethSmState_t state)
         break;
     }
 }
-#endif //#if defined (FEATURE_RDKB_WAN_MANAGER)
+#endif //#if defined (FEATURE_RDKB_WAN_MANAGER) || defined (FEATURE_RDKB_WAN_AGENT)

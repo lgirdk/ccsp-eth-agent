@@ -76,8 +76,9 @@
 #include <sys/stat.h>
 #include "safec_lib_common.h"
 #include "syscfg/syscfg.h"
+#include "eth_hal.h"
 
-#if defined (FEATURE_RDKB_WAN_MANAGER)
+#if defined (FEATURE_RDKB_WAN_MANAGER) || defined (FEATURE_RDKB_WAN_AGENT)
 #include "cosa_ethernet_manager.h"
 #endif //#if defined (FEATURE_RDKB_WAN_MANAGER)
 
@@ -103,7 +104,7 @@ CosaDmlEthWanGetCfg
 static void CosaEthernetLogger(void);
 static int CosaEthTelemetryInit(void);
 
-#if defined (FEATURE_RDKB_WAN_MANAGER)
+#if defined(FEATURE_RDKB_WAN_MANAGER) || defined (FEATURE_RDKB_WAN_AGENT)
 static int checkIfSystemReady(void);
 static void waitUntilSystemReady(void);
 
@@ -225,18 +226,26 @@ CosaEthernetInitialize
     ANSC_STATUS                     returnStatus        = ANSC_STATUS_SUCCESS;
     PCOSA_DATAMODEL_ETHERNET        pMyObject           = (PCOSA_DATAMODEL_ETHERNET)hThisObject;
     syscfg_init();
-#if defined (FEATURE_RDKB_WAN_MANAGER)
+#if defined (FEATURE_RDKB_WAN_MANAGER) || defined(FEATURE_RDKB_WAN_AGENT)
     waitUntilSystemReady();
-#endif //#if defined (FEATURE_RDKB_WAN_MANAGER)
+#endif //#if defined (FEATURE_RDKB_WAN_MANAGER) || defined(FEATURE_RDKB_WAN_AGENT)
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+    AnscSListInitializeHeader( &pMyObject->Q_EthList );
+    pMyObject->ulPtNextInstanceNumber   = 1;
+#endif //FEATURE_RDKB_WAN_MANAGER
+
     CosaDmlEthGetLogStatus(&pMyObject->LogStatus);
     CosaEthernetLogger();
     CcspHalExtSw_ethAssociatedDevice_callback_register(CosaDmlEth_AssociatedDevice_callback);
     CosaDmlEthWanGetCfg(&pMyObject->EthWanCfg);
 
+#if defined(FEATURE_RDKB_WAN_MANAGER)
     CosaDmlEthInit(NULL, (PANSC_HANDLE)pMyObject);
-#if defined (FEATURE_RDKB_WAN_MANAGER)
+    eth_hal_registerLinkEventCallback(CosaDmlEthPortLinkStatusCallback); //Register cb for link event.
+#elif defined(FEATURE_RDKB_WAN_AGENT)
+    CosaDmlEthInit(NULL, (PANSC_HANDLE)pMyObject);
     CcspHalEthSw_RegisterLinkEventCallback(CosaDmlEthPortLinkStatusCallback); //Register cb for link event.
-#endif //#if defined (FEATURE_RDKB_WAN_MANAGER)
+#endif
     CosaEthTelemetryxOpsLogSettingsSync();
     if (CosaEthTelemetryInit() < 0) {
         CcspTraceError(("RDK_LOG_ERROR, CcspEth %s : CosaEthTelemetryInit create Error!!!\n", __FUNCTION__));
@@ -706,7 +715,7 @@ static void EthTelemetryPush()
 	    {
 		CcspTraceWarning(("Alloc Failed\n"));
 	    }
-	}
+        }
     }
 
     if (output_struct) {
@@ -800,3 +809,44 @@ int CosaEthTelemetryInit()
 
     return ANSC_STATUS_SUCCESS;
 }
+
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+ANSC_STATUS InitEthIfaceEntry(ANSC_HANDLE hDml, PCOSA_DML_ETH_PORT_CONFIG pEntry)
+{
+    UNREFERENCED_PARAMETER(hDml);
+    ANSC_STATUS                     returnStatus      = ANSC_STATUS_SUCCESS;
+    PCOSA_DATAMODEL_ETHERNET    pEthernet = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
+    /*
+        For dynamic and writable table, we don't keep the Maximum InstanceNumber.
+        If there is delay_added entry, we just jump that InstanceNumber.
+    */
+    do
+    {
+        if ( pEthernet->ulPtNextInstanceNumber == 0 )
+        {
+            pEthernet->ulPtNextInstanceNumber   = 1;
+        }
+
+        if ( !CosaSListGetEntryByInsNum(&pEthernet->Q_EthList, pEthernet->ulPtNextInstanceNumber) )
+        {
+            break;
+        }
+        else
+        {
+            pEthernet->ulPtNextInstanceNumber++;
+        }
+    }while(1);
+
+    pEntry->ulInstanceNumber            = pEthernet->ulPtNextInstanceNumber;
+
+    DML_ETHIF_INIT(pEntry);
+
+    _ansc_sprintf( pEntry->Path, "Device.Ethernet.X_RDK_Interface.%lu", pEntry->ulInstanceNumber );
+    _ansc_sprintf( pEntry->LowerLayers, "Device.Ethernet.X_RDK_Interface.%lu", pEntry->ulInstanceNumber );
+    _ansc_sprintf( pEntry->Name, "eth%lu", pEntry->ulInstanceNumber - 1 );
+
+    pEthernet->ulPtNextInstanceNumber++;
+
+    return returnStatus;
+}
+#endif // FEATURE_RDKB_WAN_MANAGER
