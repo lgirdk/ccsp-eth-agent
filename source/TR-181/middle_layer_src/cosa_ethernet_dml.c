@@ -70,8 +70,16 @@
 #include "cosa_ethernet_dml.h"
 #include "safec_lib_common.h"
 #include "cosa_ethernet_apis.h"
+#include "syscfg/syscfg.h"
 
 extern ANSC_HANDLE g_EthObject;
+ANSC_STATUS is_usg_in_bridge_mode(BOOL *pBridgeMode);
+
+ANSC_STATUS
+CosaDmlEthWanSetEnable
+    (
+        BOOL                       bEnable
+    );
 
 /***********************************************************************
  IMPORTANT NOTE:
@@ -155,6 +163,8 @@ Ethernet_GetParamBoolValue
         BOOL*                       pBool
     )
 {
+    UNREFERENCED_PARAMETER(hInsContext);
+    UNREFERENCED_PARAMETER(pBool);
     errno_t rc = -1;
     int ind = -1;
     /* check the parameter name and return the corresponding value */
@@ -208,6 +218,8 @@ Ethernet_SetParamBoolValue
         BOOL                        bValue
     )
 {
+    UNREFERENCED_PARAMETER(hInsContext);
+    UNREFERENCED_PARAMETER(bValue);
     errno_t rc = -1;
     int ind = -1;
     rc = strcmp_s("X_RDKCENTRAL-COM_EthHost_Sync",strlen("X_RDKCENTRAL-COM_EthHost_Sync"),ParamName,&ind);
@@ -267,6 +279,7 @@ EthWan_GetParamBoolValue
         BOOL*                       pBool
     )
 {
+    UNREFERENCED_PARAMETER(hInsContext);
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
     errno_t rc       = -1;
     int     ind      = -1;
@@ -316,7 +329,8 @@ EthWan_GetParamUlongValue
         char*                       ParamName,
         ULONG*                      puLong
     )
-{    
+{   
+    UNREFERENCED_PARAMETER(hInsContext); 
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
     errno_t rc       = -1;
     int     ind      = -1;
@@ -368,8 +382,9 @@ EthWan_SetParamBoolValue
         BOOL                         bValue
     )
 {
-    PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
+    UNREFERENCED_PARAMETER(hInsContext);
 #if !defined(AUTOWAN_ENABLE)
+    PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
     errno_t rc       = -1;
     int     ind      = -1;
     rc = strcmp_s("Enabled",strlen("Enabled"),ParamName,&ind);
@@ -405,6 +420,9 @@ EthWan_SetParamBoolValue
 			}
 		}
     }
+#else
+    UNREFERENCED_PARAMETER(ParamName);
+    UNREFERENCED_PARAMETER(bValue);
 #endif
     return FALSE;
 }
@@ -449,6 +467,10 @@ EthernetWAN_GetParamStringValue
         ULONG*                      pUlSize
     )
 {
+    UNREFERENCED_PARAMETER(hInsContext);
+    UNREFERENCED_PARAMETER(pUlSize);
+    UNREFERENCED_PARAMETER(pValue);
+    UNREFERENCED_PARAMETER(ParamName);
 #ifdef AUTOWAN_ENABLE
     char buf[8]={0};
     int wan_mode = 0;
@@ -645,6 +667,9 @@ EthernetWAN_SetParamStringValue
         char*                       pString
     )
 {
+    UNREFERENCED_PARAMETER(hInsContext);
+    UNREFERENCED_PARAMETER(pString);
+    UNREFERENCED_PARAMETER(ParamName);
 #ifdef AUTOWAN_ENABLE
     BOOL  bValue = FALSE;
     char buf[8]={0};
@@ -785,6 +810,7 @@ EthLogging_GetParamBoolValue
         BOOL*                       pBool
     )
 {
+    UNREFERENCED_PARAMETER(hInsContext);
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
     errno_t rc       = -1;
     int     ind      = -1;
@@ -835,6 +861,7 @@ EthLogging_GetParamUlongValue
         ULONG*                      puLong
     )
 {    
+    UNREFERENCED_PARAMETER(hInsContext);
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
     errno_t        rc = -1;
     int            ind = -1;
@@ -885,6 +912,7 @@ EthLogging_SetParamBoolValue
         BOOL                        bValue
     )
 {
+    UNREFERENCED_PARAMETER(hInsContext);
     char buf[8]={0};
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
     errno_t rc = -1;
@@ -968,6 +996,7 @@ EthLogging_SetParamUlongValue
         ULONG                       uValue
     )
 {
+    UNREFERENCED_PARAMETER(hInsContext);
     char buf[16]={0};
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
     errno_t        rc = -1;
@@ -977,7 +1006,7 @@ EthLogging_SetParamUlongValue
     if( (ind == 0) && (rc == EOK))
 
     {
-        sprintf(buf, "%d", uValue);
+        sprintf(buf, "%lu", uValue);
 
         if (syscfg_set(NULL, "eth_log_period", buf) != 0) 
         {
@@ -1035,6 +1064,9 @@ EthLogging_Validate
         ULONG*                      puLength
     )
 {
+    UNREFERENCED_PARAMETER(hInsContext);
+    UNREFERENCED_PARAMETER(pReturnParamName);
+    UNREFERENCED_PARAMETER(puLength);
     return TRUE;
 }
 
@@ -1062,6 +1094,7 @@ EthLogging_Commit
         ANSC_HANDLE                 hInsContext
     )
 {
+    UNREFERENCED_PARAMETER(hInsContext);
     return 0;
 }
 
@@ -1090,6 +1123,7 @@ EthLogging_Rollback
         ANSC_HANDLE                 hInsContext
     )
 {
+    UNREFERENCED_PARAMETER(hInsContext);
     return 0;
 }
 
@@ -1131,6 +1165,7 @@ EthInterface_GetEntry
         ULONG*                      pInsNumber
     )
 {
+    UNREFERENCED_PARAMETER(hInsContext);
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
 
     if ( ( pMyObject->pEthLink  ) && ( nIndex < pMyObject->ulTotalNoofEthInterfaces ) )
@@ -1174,6 +1209,7 @@ EthInterface_GetEntryCount
         ANSC_HANDLE                 hInsContext
     )
 {
+    UNREFERENCED_PARAMETER(hInsContext);
     PCOSA_DATAMODEL_ETHERNET   pMyObject   = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
 
     return pMyObject->ulTotalNoofEthInterfaces;
@@ -1213,6 +1249,7 @@ AutowanFeatureSupport_GetParamBoolValue
         BOOL*                       pBool
     )
 {
+    UNREFERENCED_PARAMETER(hInsContext);
     errno_t        rc =    -1;
     int            ind = -1;
     /*This parameter is created for the purpose of whether the AUTOWAN feature is enabled inside the UI.*/
@@ -1389,8 +1426,9 @@ EthInterface_SetParamStringValue
         char*                       pString
     )
 {
-    PCOSA_DML_ETH_PORT_CONFIG   pEthLink   = (PCOSA_DML_ETH_PORT_CONFIG)hInsContext;
-
+    UNREFERENCED_PARAMETER(hInsContext);
+    UNREFERENCED_PARAMETER(ParamName);
+    UNREFERENCED_PARAMETER(pString);
     /* check the parameter name and return the corresponding value */
 
     /* AnscTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
@@ -1623,6 +1661,9 @@ EthInterface_Validate
         ULONG*                      puLength
     )
 {
+    UNREFERENCED_PARAMETER(hInsContext);
+    UNREFERENCED_PARAMETER(pReturnParamName);
+    UNREFERENCED_PARAMETER(puLength);
     return TRUE;
 }
 
@@ -1650,6 +1691,7 @@ EthInterface_Commit
         ANSC_HANDLE                 hInsContext
     )
 {
+    UNREFERENCED_PARAMETER(hInsContext);
     return 0;
 }
 
@@ -1678,5 +1720,6 @@ EthInterface_Rollback
         ANSC_HANDLE                 hInsContext
     )
 {
+    UNREFERENCED_PARAMETER(hInsContext);
     return 0;
 }

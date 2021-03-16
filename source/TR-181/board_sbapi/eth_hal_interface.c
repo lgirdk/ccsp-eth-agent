@@ -375,6 +375,7 @@ void CcspHalExtSw_SendNotificationForAllHosts( void )
 /* CcspHalExtSw_AssociatedDeviceMonitorThread(  ) */
 void* CcspHalExtSw_AssociatedDeviceMonitorThread( void *arg )
 {
+    UNREFERENCED_PARAMETER(arg);
 	//Monitor Associated Devices based on periodical time
     while( 1 )
     {
@@ -442,7 +443,7 @@ void* CcspHalExtSw_AssociatedDeviceMonitorThread( void *arg )
 				// Reset isDeleteAllDone variable to proceed further from next iteration
 				isDeleteAllDone = FALSE;
 
-				for( iLoopCount = 0; iLoopCount < ulTotalEthDeviceCount; iLoopCount++ )
+				for( iLoopCount = 0; iLoopCount < (int)ulTotalEthDeviceCount; iLoopCount++ )
 				{ 
 					char tmp_mac_id[ 18 ];
 				

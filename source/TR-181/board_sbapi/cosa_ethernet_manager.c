@@ -202,7 +202,6 @@ static ethSmState_t State_EthDisconnected(PETH_SM_PRIVATE_INFO pstInfo)
 {
 
     COSA_DML_ETH_PORT_GLOBAL_CONFIG stGlobalInfo;
-    INT ifIndex = -1;
 
     memset(&stGlobalInfo, 0, sizeof(stGlobalInfo));
 
@@ -231,7 +230,6 @@ static ethSmState_t State_EthDisconnected(PETH_SM_PRIVATE_INFO pstInfo)
 static ethSmState_t State_EthValidatingLink(PETH_SM_PRIVATE_INFO pstInfo)
 {
     COSA_DML_ETH_PORT_GLOBAL_CONFIG stGlobalInfo;
-    INT ifIndex = -1;
 
     memset(&stGlobalInfo, 0, sizeof(stGlobalInfo));
 
@@ -256,7 +254,6 @@ static ethSmState_t State_EthValidatingLink(PETH_SM_PRIVATE_INFO pstInfo)
 static ethSmState_t State_EthVLANConfiguring(PETH_SM_PRIVATE_INFO pstInfo)
 {
     COSA_DML_ETH_PORT_GLOBAL_CONFIG stGlobalInfo = {0};
-    INT ifIndex = -1;
 
     if (ANSC_STATUS_SUCCESS != CosaDmlEthPortGetCopyOfGlobalInfoForGivenIfName(pstInfo->Name, &stGlobalInfo))
     {
@@ -279,7 +276,6 @@ static ethSmState_t State_EthVLANConfiguring(PETH_SM_PRIVATE_INFO pstInfo)
 static ethSmState_t State_EthWanLinkUp(PETH_SM_PRIVATE_INFO pstInfo)
 {
     COSA_DML_ETH_PORT_GLOBAL_CONFIG stGlobalInfo;
-    INT ifIndex = -1;
 
     memset(&stGlobalInfo, 0, sizeof(stGlobalInfo));
 
@@ -305,6 +301,7 @@ static ethSmState_t Transition_Start()
 
 static ethSmState_t Transition_EthPhyInterfaceUp(PETH_SM_PRIVATE_INFO pstInfo)
 {
+    UNREFERENCED_PARAMETER(pstInfo);
     CcspTraceInfo(("[%s] State from [%s] to [%s] \n", __FUNCTION__, PrintEnumToString(geCurrentState), PrintEnumToString(STATE_ETH_VALIDATING_LINK)));
     return STATE_ETH_VALIDATING_LINK;
 }
@@ -313,9 +310,6 @@ static ethSmState_t Transition_EthWanLinkFound(PETH_SM_PRIVATE_INFO pstInfo)
 {
     CcspTraceInfo(("[%s] State from [%s] to [%s]\n", __FUNCTION__, PrintEnumToString(geCurrentState), PrintEnumToString(STATE_ETH_VLAN_CONFIGURING)));
     COSA_DML_ETH_PORT_GLOBAL_CONFIG stGlobalInfo;
-    INT ret = 0;
-    CHAR region[16] = {0};
-    INT ifIndex = -1;
 
     memset(&stGlobalInfo, 0, sizeof(stGlobalInfo));
 
@@ -394,6 +388,7 @@ static ethSmState_t Transition_EthPhyInterfaceDown(PETH_SM_PRIVATE_INFO pstInfo)
 
 static ethSmState_t TransitionExit(PETH_SM_PRIVATE_INFO pstInfo)
 {
+    UNREFERENCED_PARAMETER(pstInfo);
     CcspTraceInfo(("[%s] State from [%s] to [%s]\n", __FUNCTION__, PrintEnumToString(geCurrentState), PrintEnumToString(STATE_EXIT)));
     /*
      *  1. Exit fro state machine
