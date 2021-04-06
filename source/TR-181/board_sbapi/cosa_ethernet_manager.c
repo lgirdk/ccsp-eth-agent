@@ -403,6 +403,14 @@ static ethSmState_t Transition_EthPhyInterfaceDown(PETH_SM_PRIVATE_INFO pstInfo)
 static ethSmState_t TransitionExit(PETH_SM_PRIVATE_INFO pstInfo)
 {
     UNREFERENCED_PARAMETER(pstInfo);
+
+#if defined(FEATURE_RDKB_WAN_MANAGER)
+    if (ANSC_STATUS_SUCCESS != CosaDmlEthSetWanLinkStatusForWanManager(pstInfo->Name, "Down"))
+    {
+        CcspTraceError(("%s Failed to set LinkStatus to WAN \n", __FUNCTION__));
+    }
+#endif
+
     CcspTraceInfo(("[%s] State from [%s] to [%s]\n", __FUNCTION__, PrintEnumToString(geCurrentState), PrintEnumToString(STATE_EXIT)));
     /*
      *  1. Exit fro state machine
