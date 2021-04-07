@@ -97,6 +97,12 @@
 #define ETH_IF_PHY_PATH                   "Device.Ethernet.X_RDKCENTRAL-COM_Interface.%d"
 
 #elif defined (FEATURE_RDKB_WAN_MANAGER)
+
+#define WAN_INTERFACE_NAME         "erouter0"
+/*TODO: The hardcoded names will be removed from ethagent once the
+wanmanager could able to handle vlan interface creation and management */
+#define PPPoE_VLAN_INTERFACE_NAME  "vlan101"
+
 #define ETHERNET_IF_PATH                  "Device.Ethernet.X_RDK_Interface."
 #define ETHERNET_IF_LOWERLAYERS           "Device.Ethernet.X_RDK_Interface."
 
@@ -108,6 +114,7 @@
 #define VLAN_ETH_NOE_PARAM_NAME           "Device.X_RDK_Ethernet.LinkNumberOfEntries"
 #define VLAN_ETH_LINK_PARAM_ALIAS         "Device.X_RDK_Ethernet.Link.%d.Alias"
 #define VLAN_ETH_LINK_PARAM_NAME          "Device.X_RDK_Ethernet.Link.%d.Name"
+#define VLAN_ETH_LINK_PARAM_BASEINTERFACE "Device.X_RDK_Ethernet.Link.%d.X_RDK_BaseInterface"
 #define VLAN_ETH_LINK_PARAM_LOWERLAYERS   "Device.X_RDK_Ethernet.Link.%d.LowerLayers"
 #define VLAN_ETH_LINK_PARAM_ENABLE        "Device.X_RDK_Ethernet.Link.%d.Enable"
 
@@ -122,6 +129,10 @@
 #define WAN_IF_NAME_PARAM_NAME            "Device.X_RDK_WanManager.CPEInterface.%d.Name"
 
 #define ETH_IF_PHY_PATH                   "Device.Ethernet.X_RDK_Interface.%d"
+
+#define WAN_IF_PPP_ENABLE_PARAM           "Device.X_RDK_WanManager.CPEInterface.%d.PPP.Enable"
+#define WAN_IF_PPP_LINKTYPE_PARAM         "Device.X_RDK_WanManager.CPEInterface.%d.PPP.LinkType"
+
 #endif //FEATURE_RDKB_WAN_MANAGER
 
 typedef struct _Eth_host_t

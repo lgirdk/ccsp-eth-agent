@@ -215,11 +215,12 @@ static INT CosaDmlEthGetTotalNoOfInterfaces ( VOID );
 static ANSC_STATUS CosaDmlEthSetParamValues(char *pComponent, char *pBus, char *pParamName, char *pParamVal, enum dataType_e type, unsigned int bCommitFlag);
 #elif defined (FEATURE_RDKB_WAN_MANAGER)
 static ANSC_STATUS CosaDmlEthSetParamValues(const char *pComponent, const char *pBus, const char *pParamName, const char *pParamVal, enum dataType_e type, unsigned int bCommitFlag);
+static ANSC_STATUS DmlEthCheckIfaceConfiguredAsPPPoE( char *ifname, BOOL *isPppoeIface);
 #ifdef _SR300_PRODUCT_REQ_
 static ANSC_STATUS  GetWan_InterfaceName (char* wanoe_ifacename, int length);
 #endif // _SR300_PRODUCT_REQ_
 INT gTotal = TOTAL_NUMBER_OF_INTERNAL_INTERFACES;
-#endif
+#endif //FEATURE_RDKB_WAN_MANAGER
 
 void Notify_To_LMLite(Eth_host_t *host)
 {
@@ -1923,7 +1924,9 @@ ANSC_STATUS CosaDmlEthCreateEthLink(char *l2ifName, char *Path)
     char acSetParamName[256];
     INT LineIndex = -1,
         iVLANInstance = -1;
-
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+    BOOL isPppoeIface = FALSE;
+#endif //FEATURE_RDKB_WAN_MANAGER
     //Validate buffer
     if (NULL == l2ifName || NULL == Path)
     {
@@ -1940,7 +1943,13 @@ ANSC_STATUS CosaDmlEthCreateEthLink(char *l2ifName, char *Path)
 
     //Get Instance for corresponding lower layer
     CosaDmlEthGetLowerLayersInstanceInOtherAgent(NOTIFY_TO_VLAN_AGENT,Path, &iVLANInstance);
-
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+    if (ANSC_STATUS_SUCCESS != DmlEthCheckIfaceConfiguredAsPPPoE(l2ifName, &isPppoeIface))
+    {
+        CcspTraceError(("%s - DmlEthCheckIfaceConfiguredAsPPPoE() failed \n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+#endif //FEATURE_RDKB_WAN_MANAGER
     //Create VLAN Link.
     //Index is not present. so needs to create a PTM instance
     if (-1 == iVLANInstance)
@@ -1975,8 +1984,20 @@ ANSC_STATUS CosaDmlEthCreateEthLink(char *l2ifName, char *Path)
     //Set Name
     memset(acSetParamName, 0, sizeof(acSetParamName));
     snprintf(acSetParamName, sizeof(acSetParamName), VLAN_ETH_LINK_PARAM_NAME, iVLANInstance);
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+    if (isPppoeIface)
+        CosaDmlEthSetParamValues(VLAN_COMPONENT_NAME, VLAN_DBUS_PATH, acSetParamName, PPPoE_VLAN_INTERFACE_NAME, ccsp_string, FALSE);
+    else
+        CosaDmlEthSetParamValues(VLAN_COMPONENT_NAME, VLAN_DBUS_PATH, acSetParamName, WAN_INTERFACE_NAME, ccsp_string, FALSE);
+#else //FEATURE_RDKB_WAN_AGENT
     CosaDmlEthSetParamValues(VLAN_COMPONENT_NAME, VLAN_DBUS_PATH, acSetParamName, l2ifName, ccsp_string,FALSE);
-
+#endif //FEATURE_RDKB_WAN_MANAGER
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+    //Set Base interface
+    memset(acSetParamName, 0, sizeof(acSetParamName));
+    snprintf(acSetParamName, sizeof(acSetParamName), VLAN_ETH_LINK_PARAM_BASEINTERFACE, iVLANInstance);
+    CosaDmlEthSetParamValues(VLAN_COMPONENT_NAME, VLAN_DBUS_PATH, acSetParamName, l2ifName, ccsp_string,FALSE);
+#endif //FEATURE_RDKB_WAN_MANAGER
     //Set Lowerlayers
     memset(acSetParamName, 0, sizeof(acSetParamName));
     snprintf(acSetParamName, sizeof(acSetParamName), VLAN_ETH_LINK_PARAM_LOWERLAYERS, iVLANInstance);
@@ -2145,7 +2166,6 @@ ANSC_STATUS CosaDmlEthGetPhyStatusForWanManager(char *ifname, char *PhyStatus)
 
     return ANSC_STATUS_SUCCESS;
 }
-
 #if defined (FEATURE_RDKB_WAN_MANAGER)
 #ifdef _SR300_PRODUCT_REQ_
 /**
@@ -2199,5 +2219,78 @@ void EthWanLinkDown_callback() {
     }
 }
 #endif //_SR300_PRODUCT_REQ_
+/**
+ * @note API to check the given interface is configured to use as a PPPoE interface
+*/
+static ANSC_STATUS DmlEthCheckIfaceConfiguredAsPPPoE( char *ifname, BOOL *isPppoeIface)
+{
+    char acTmpReturnValue[DATAMODEL_PARAM_LENGTH] = {0};
+    char acTmpQueryParam[DATAMODEL_PARAM_LENGTH] = {0};
+    INT iLoopCount, iTotalNoofEntries;
+    char *endPtr = NULL;
+
+    *isPppoeIface = FALSE;
+
+    if (ANSC_STATUS_FAILURE == CosaDmlEthGetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH, WAN_NOE_PARAM_NAME, acTmpReturnValue))
+    {
+        CcspTraceError(("[%s][%d]Failed to get param value\n", __FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+    //Total interface count
+    iTotalNoofEntries = strtol(acTmpReturnValue, &endPtr, 10);
+    if(*endPtr)
+    {
+        CcspTraceError(("Unable to convert '%s' to base 10", acTmpReturnValue ));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    if (0 >= iTotalNoofEntries)
+    {
+        return ANSC_STATUS_SUCCESS;
+    }
+
+    //Traverse table
+    for (iLoopCount = 0; iLoopCount < iTotalNoofEntries; iLoopCount++)
+    {
+        //Query for WAN interface name
+        snprintf(acTmpQueryParam, sizeof(acTmpQueryParam), WAN_IF_NAME_PARAM_NAME, iLoopCount + 1);
+        memset(acTmpReturnValue, 0, sizeof(acTmpReturnValue));
+        if (ANSC_STATUS_FAILURE == CosaDmlEthGetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH, acTmpQueryParam, acTmpReturnValue))
+        {
+            CcspTraceError(("[%s][%d] Failed to get param value\n", __FUNCTION__, __LINE__));
+            continue;
+        }
+
+        //Compare WAN interface name
+        if (0 == strcmp(acTmpReturnValue, ifname))
+        {
+            //Query for PPP Enable data model
+            snprintf(acTmpQueryParam, sizeof(acTmpQueryParam), WAN_IF_PPP_ENABLE_PARAM, iLoopCount + 1);
+            memset(acTmpReturnValue, 0, sizeof(acTmpReturnValue));
+            if (ANSC_STATUS_FAILURE == CosaDmlEthGetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH,
+                                                            acTmpQueryParam, acTmpReturnValue))
+            {
+                CcspTraceError(("[%s][%d] Failed to get param value\n", __FUNCTION__, __LINE__));
+            }
+            if (0 == strcmp(acTmpReturnValue, "true"))
+            {
+                //Query for PPP LinkType data model
+                snprintf(acTmpQueryParam, sizeof(acTmpQueryParam), WAN_IF_PPP_LINKTYPE_PARAM, iLoopCount + 1);
+                memset(acTmpReturnValue, 0, sizeof(acTmpReturnValue));
+                if (ANSC_STATUS_FAILURE == CosaDmlEthGetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH,
+                                                                acTmpQueryParam, acTmpReturnValue))
+                {
+                    CcspTraceError(("[%s][%d] Failed to get param value\n", __FUNCTION__, __LINE__));
+                }
+                if (0 == strcmp(acTmpReturnValue, "PPPoE"))
+                {
+                    *isPppoeIface = TRUE;
+                }
+            }
+            break;
+        }
+    }
+    return ANSC_STATUS_SUCCESS;
+}
 #endif // defined (FEATURE_RDKB_WAN_MANAGER)
 #endif // defined (FEATURE_RDKB_WAN_MANAGER) || defined (FEATURE_RDKB_WAN_AGENT)
