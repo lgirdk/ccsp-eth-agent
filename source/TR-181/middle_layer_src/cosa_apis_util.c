@@ -501,7 +501,6 @@ CosaUtilGetLowerLayers
                  if ((!ind) && (rc == EOK))
                 {
                   parameterValStruct_t varStruct;
-                  ulEntryNameLen   = sizeof(ucEntryNameValue);
                   ulNumOfEntries = 0;
                   rc = strcpy_s(ucEntryParamName,sizeof(ucEntryParamName),"Device.WiFi.SSIDNumberOfEntries");
                   if(rc != EOK)
@@ -513,6 +512,7 @@ CosaUtilGetLowerLayers
                  
                   varStruct.parameterName = ucEntryParamName;
                   varStruct.parameterValue = ucEntryNameValue;
+                  ulEntryNameLen = sizeof(ucEntryNameValue);
                 if (COSAGetParamValueByPathName(g_MessageBusHandle,&varStruct,&ulEntryNameLen))
                 {
                     AnscTraceFlow(("<HL>%s not found %s\n",__FUNCTION__,varStruct.parameterName ));
@@ -533,6 +533,7 @@ CosaUtilGetLowerLayers
                         /*Coverity Fix CID:73664 DC.STRING_BUFFER */
                     snprintf(ucEntryParamName,sizeof(ucEntryParamName),"Device.WiFi.SSID.%lu.Name",ulEntryInstanceNum);                    
                         
+                    ulEntryNameLen = sizeof(ucEntryNameValue);
                     if (COSAGetParamValueByPathName(g_MessageBusHandle,&varStruct,&ulEntryNameLen))
                     {
                         AnscTraceFlow(("<HL>%s WiFi instance(%d) not found\n", __FUNCTION__,
@@ -1639,21 +1640,15 @@ CosaUtilGetStaticRouteTable
 ANSC_STATUS is_usg_in_bridge_mode(BOOL *pBridgeMode)
 {
     ULONG ulEntryNameLen;
-    char ucEntryParamName[256] = {0};
     char ucEntryNameValue[256] = {0};
     parameterValStruct_t varStruct;
-    ulEntryNameLen   = sizeof(ucEntryNameValue);
     errno_t        rc = -1;
     int            ind = -1;
-    rc = strcpy_s(ucEntryParamName,sizeof(ucEntryParamName),"Device.X_CISCO_COM_DeviceControl.LanManagementEntry.1.LanMode");
-    if(rc != EOK)
-    {
-         ERR_CHK(rc);
-         return ANSC_STATUS_FAILURE;
-    }
-    varStruct.parameterName = ucEntryParamName;
+
+    varStruct.parameterName = "Device.X_CISCO_COM_DeviceControl.LanManagementEntry.1.LanMode";
     varStruct.parameterValue = ucEntryNameValue;
 
+    ulEntryNameLen = sizeof(ucEntryNameValue);
     if (ANSC_STATUS_SUCCESS == COSAGetParamValueByPathName(g_MessageBusHandle,&varStruct,&ulEntryNameLen))
     {
         rc = strcmp_s( "bridge-static",strlen( "bridge-static"),varStruct.parameterValue,&ind);
