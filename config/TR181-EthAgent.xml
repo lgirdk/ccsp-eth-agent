@@ -107,15 +107,17 @@
       	    <functions>
                <func_GetParamBoolValue>EthWan_GetParamBoolValue</func_GetParamBoolValue>
                <func_GetParamUlongValue>EthWan_GetParamUlongValue</func_GetParamUlongValue>
-               <func_SetParamBoolValue>EthWan_SetParamBoolValue</func_SetParamBoolValue>
-            </functions>
-            <parameters>
+<?ifndef AUTOWAN_ENABLE?>
+	       <func_SetParamBoolValue>EthWan_SetParamBoolValue</func_SetParamBoolValue>
+<?endif?>
+	       </functions>
+       	       <parameters>
                <parameter>
                    <name>Enabled</name>
           	   <type>boolean</type>
           	   <syntax>bool</syntax>
           	   <writable>true</writable>
-        	</parameter>
+	       </parameter>
                <parameter>
                    <name>Port</name>
           	   <type>unsignedInt</type>
@@ -123,7 +125,8 @@
           	   <writable>false</writable>
                </parameter>
       	    </parameters>
-      	</object>
+    </object>
+<?ifdef FEATURE_RDKB_WAN_AGENT?>
     <object>
       <name>X_RDKCENTRAL-COM_Interface</name>
       <objectType>staticTable</objectType>
@@ -171,6 +174,8 @@
         </parameter>
       </parameters>
     </object>
+<?endif?>
+<?ifdef FEATURE_RDKB_WAN_MANAGER?>
     <object>
       <name>X_RDK_Interface</name>
       <objectType>writableTable</objectType>
@@ -234,8 +239,10 @@
         </parameter>
       </parameters>
     </object>
+<?endif?>
   </objects>
   </object>
+<?ifdef AUTOWAN_ENABLE?>
     <object>
       <name>X_RDKCENTRAL-COM_EthernetWAN</name>
       <objectType>object</objectType>
@@ -264,7 +271,7 @@
         </parameter>
       </parameters>
     </object>
-
+<?endif?>
 
   </objects>
 </dataModelInfo>

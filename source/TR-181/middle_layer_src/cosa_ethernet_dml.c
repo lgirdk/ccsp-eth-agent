@@ -373,6 +373,7 @@ EthWan_GetParamUlongValue
 
     return:     TRUE if succeeded.
 **********************************************************************/
+#if !defined(AUTOWAN_ENABLE)
 BOOL
 EthWan_SetParamBoolValue
 
@@ -383,7 +384,6 @@ EthWan_SetParamBoolValue
     )
 {
     UNREFERENCED_PARAMETER(hInsContext);
-#if !defined(AUTOWAN_ENABLE)
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
     errno_t rc       = -1;
     int     ind      = -1;
@@ -420,12 +420,9 @@ EthWan_SetParamBoolValue
 			}
 		}
     }
-#else
-    UNREFERENCED_PARAMETER(ParamName);
-    UNREFERENCED_PARAMETER(bValue);
-#endif
     return FALSE;
 }
+#endif
 /**********************************************************************  
     caller:     owner of this object 
     prototype: 
@@ -458,6 +455,7 @@ EthWan_SetParamBoolValue
 #define WAN_MODE_DOCSIS		2
 #define WAN_MODE_UNKNOWN	3
 
+#ifdef AUTOWAN_ENABLE
 ULONG
 EthernetWAN_GetParamStringValue
     (
@@ -471,7 +469,6 @@ EthernetWAN_GetParamStringValue
     UNREFERENCED_PARAMETER(pUlSize);
     UNREFERENCED_PARAMETER(pValue);
     UNREFERENCED_PARAMETER(ParamName);
-#ifdef AUTOWAN_ENABLE
     char buf[8]={0};
     int wan_mode = 0;
     errno_t rc       = -1;
@@ -634,7 +631,6 @@ EthernetWAN_GetParamStringValue
 
         return 0;
     }
-#endif
     /* AnscTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return -1;
 }
@@ -670,7 +666,6 @@ EthernetWAN_SetParamStringValue
     UNREFERENCED_PARAMETER(hInsContext);
     UNREFERENCED_PARAMETER(pString);
     UNREFERENCED_PARAMETER(ParamName);
-#ifdef AUTOWAN_ENABLE
     BOOL  bValue = FALSE;
     char buf[8]={0};
     int wan_mode = 0;
@@ -756,10 +751,10 @@ EthernetWAN_SetParamStringValue
         }
 
     }
-#endif
     /* AnscTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
 }
+#endif
 
 /***********************************************************************
 APIs for Object:

@@ -117,7 +117,9 @@ COSA_Init
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Ethernet_GetParamBoolValue",  Ethernet_GetParamBoolValue);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Ethernet_SetParamBoolValue",  Ethernet_SetParamBoolValue);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthWan_GetParamBoolValue", EthWan_GetParamBoolValue);
+#if !defined(AUTOWAN_ENABLE)
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthWan_SetParamBoolValue", EthWan_SetParamBoolValue);
+#endif
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthWan_GetParamUlongValue", EthWan_GetParamUlongValue);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthLogging_GetParamBoolValue", EthLogging_GetParamBoolValue);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthLogging_GetParamUlongValue", EthLogging_GetParamUlongValue);
@@ -126,8 +128,10 @@ COSA_Init
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthLogging_Validate", EthLogging_Validate);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthLogging_Commit", EthLogging_Commit);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthLogging_Rollback", EthLogging_Rollback);
+#if defined(AUTOWAN_ENABLE)
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthernetWAN_GetParamStringValue", EthernetWAN_GetParamStringValue);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthernetWAN_SetParamStringValue", EthernetWAN_SetParamStringValue);
+#endif
 #if defined(FEATURE_RDKB_WAN_MANAGER)
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthRdkInterface_GetEntryCount", EthRdkInterface_GetEntryCount);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthRdkInterface_GetEntry", EthRdkInterface_GetEntry);
