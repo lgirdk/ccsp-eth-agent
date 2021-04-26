@@ -56,7 +56,7 @@
 /***************************************************************************************
 * GLOBAL SYMBOLS
 ****************************************************************************************/
-static void *eventcb(const char *msg, const int len);
+static void eventcb(const char *msg, const int len);
 
 /* Callback function for EthAgent.*/
 ethsw_ethLinkEventCallback eth_link_event_cb_for_eth_agent = NULL; //Callback function for EthAgent.
@@ -177,7 +177,7 @@ void eth_hal_registerLinkEventCallback(ethsw_ethLinkEventCallback callback_proc)
     CcspTraceError(("eth_hal_registerLinkEventCallback being called \n"));
 }
 
-static void *eventcb(const char *msg, const int len)
+static void eventcb (const char *msg, const int len)
 {
     json_object *msg_param = NULL;
     json_object *msg_param_val = NULL;
@@ -185,12 +185,14 @@ static void *eventcb(const char *msg, const int len)
     char event_val[256] = {'\0'};
 
     if(msg == NULL) {
-        return NULL;
+        return;
     }
 
     /* Parse message and find event received. */
     json_object *jobj = json_tokener_parse(msg);
-    CHECK(jobj);
+    if (NULL == jobj) {
+		return;
+	}
 
     if (json_object_object_get_ex(jobj, JSON_RPC_FIELD_PARAMS, &msg_param))
     {
@@ -199,7 +201,7 @@ static void *eventcb(const char *msg, const int len)
         {
             CcspTraceError(("Failed to get params data from subscription json message \n"));
             FREE_JSON_OBJECT(jobj);
-            return NULL;
+            return;
         }
 
         if (json_object_object_get_ex(jsubs_param_array, "name", &msg_param_val))
@@ -211,7 +213,7 @@ static void *eventcb(const char *msg, const int len)
         {
             CcspTraceError(("Failed to get event name data from subscription json message \n"));
             FREE_JSON_OBJECT(jobj);
-            return NULL;
+            return;
         }
 
         if (json_object_object_get_ex(jsubs_param_array, "value", &msg_param_val))
@@ -223,7 +225,7 @@ static void *eventcb(const char *msg, const int len)
         {
             CcspTraceError(("Failed to get event value data from subscription json message \n"));
             FREE_JSON_OBJECT(jobj);
-            return NULL;
+            return;
         }
     }
 
@@ -238,13 +240,13 @@ static void *eventcb(const char *msg, const int len)
     }
 
     FREE_JSON_OBJECT(jobj);
-    return NULL;
+    return;
 }
 
 static int subscribe_eth_link_event()
 {
     int rc = RETURN_ERR;
-    rc = json_hal_client_subscribe_event((event_callback)eventcb, ETH_LINKSTATUS, "onChange");
+    rc = json_hal_client_subscribe_event(eventcb, ETH_LINKSTATUS, "onChange");
     return rc;
 }
 #endif //FEATURE_RDKB_WAN_MANAGER

@@ -241,7 +241,16 @@ CosaEthernetInitialize
 
 #if defined(FEATURE_RDKB_WAN_MANAGER)
     CosaDmlEthInit(NULL, (PANSC_HANDLE)pMyObject);
+#ifdef _SR300_PRODUCT_REQ_
+    //Register callbacks with ethsw-hal for link events.
+    appCallBack obj;
+    memset (&obj, 0, sizeof(appCallBack));
+    obj.pGWP_act_EthWanLinkDown = EthWanLinkDown_callback;
+    obj.pGWP_act_EthWanLinkUP   = EthWanLinkUp_callback;
+    GWP_RegisterEthWan_Callback ( &obj );
+#else
     eth_hal_registerLinkEventCallback(CosaDmlEthPortLinkStatusCallback); //Register cb for link event.
+#endif // _SR300_PRODUCT_REQ_
 #elif defined(FEATURE_RDKB_WAN_AGENT)
     CosaDmlEthInit(NULL, (PANSC_HANDLE)pMyObject);
     CcspHalEthSw_RegisterLinkEventCallback(CosaDmlEthPortLinkStatusCallback); //Register cb for link event.

@@ -120,6 +120,9 @@
 #define TOTAL_NUMBER_OF_INTERNAL_INTERFACES 4
 #define DATAMODEL_PARAM_LENGTH 256
 #include "eth_hal.h"
+#define WANOE_IFACENAME_LENGTH 32
+#define WANOE_IFACE_UP "UP"
+#define WANOE_IFACE_DOWN "DOWN"
 #endif //FEATURE_RDKB_WAN_MANAGER
 #define TOTAL_NUMBER_OF_INTERFACES 4
 #define COSA_ETH_EVENT_QUEUE_NAME "/ETH_event_queue"
@@ -212,6 +215,9 @@ static INT CosaDmlEthGetTotalNoOfInterfaces ( VOID );
 static ANSC_STATUS CosaDmlEthSetParamValues(char *pComponent, char *pBus, char *pParamName, char *pParamVal, enum dataType_e type, unsigned int bCommitFlag);
 #elif defined (FEATURE_RDKB_WAN_MANAGER)
 static ANSC_STATUS CosaDmlEthSetParamValues(const char *pComponent, const char *pBus, const char *pParamName, const char *pParamVal, enum dataType_e type, unsigned int bCommitFlag);
+#ifdef _SR300_PRODUCT_REQ_
+static ANSC_STATUS  GetWan_InterfaceName (char* wanoe_ifacename, int length);
+#endif // _SR300_PRODUCT_REQ_
 INT gTotal = TOTAL_NUMBER_OF_INTERNAL_INTERFACES;
 #endif
 
@@ -590,12 +596,21 @@ CosaDmlEthInit(
         }
     }
 #elif defined (FEATURE_RDKB_WAN_MANAGER)
-     //Initialise eth-hal to get event notification from lower layer.
+#ifdef _SR300_PRODUCT_REQ_
+    //Initialise ethsw-hal to get event notification from lower layer.
+    if (CcspHalEthSwInit() != RETURN_OK)
+    {
+        CcspTraceError(("Hal initialization failed \n"));
+        return ANSC_STATUS_FAILURE;
+    }
+#else
+    //Initialise eth-hal to get event notification from lower layer.
     if (eth_hal_init() != RETURN_OK)
     {
         CcspTraceError(("Hal initialization failed \n"));
         return ANSC_STATUS_FAILURE;
     }
+#endif // _SR300_PRODUCT_REQ_
     //ETH Port Init.
     CosaDmlEthPortInit((PANSC_HANDLE)pMyObject);
     if(CosaDmlGetWanOEInterfaceName(WanOEInterface, sizeof(WanOEInterface)) == ANSC_STATUS_SUCCESS) {
@@ -1211,7 +1226,7 @@ INT CosaDmlEthPortLinkStatusCallback(CHAR *ifname, CHAR *state)
 
     COSA_DML_ETH_LINK_STATUS link_status;
 
-    if (strncmp(state, UP, 2) == 0)
+    if (strncasecmp(state, UP, 2) == 0)
     {
         link_status = ETH_LINK_STATUS_UP;
     }
@@ -2130,4 +2145,59 @@ ANSC_STATUS CosaDmlEthGetPhyStatusForWanManager(char *ifname, char *PhyStatus)
 
     return ANSC_STATUS_SUCCESS;
 }
+
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+#ifdef _SR300_PRODUCT_REQ_
+/**
+ * @Note Utility API to get WANOE interface from HAL layer.
+ */
+static ANSC_STATUS  GetWan_InterfaceName (char* wanoe_ifacename, int length) {
+    if (NULL == wanoe_ifacename || length == 0) {
+        CcspTraceError(("[%s][%d] Invalid argument  \n", __FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    char wanoe_ifname[WANOE_IFACENAME_LENGTH] = {0};
+    if (RETURN_OK != GWP_GetEthWanInterfaceName((unsigned char*)wanoe_ifname, sizeof(wanoe_ifname))) {
+        CcspTraceError(("[%s][%d] Failed to get wanoe interface name \n", __FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    strncpy (wanoe_ifacename,wanoe_ifname,length);
+    return ANSC_STATUS_SUCCESS;
+}
+
+/**
+ * @Note Callback invoked upon wanoe interface link up from HAL.
+ */
+void EthWanLinkUp_callback() {
+    char wanoe_ifname[WANOE_IFACENAME_LENGTH] = {0};
+
+    if (ANSC_STATUS_SUCCESS == GetWan_InterfaceName (wanoe_ifname, sizeof(wanoe_ifname))) {
+        CcspTraceInfo (("[%s][%d] WANOE [%s] interface link up event received \n", __FUNCTION__,__LINE__,wanoe_ifname));
+        if ( TRUE == CosaDmlEthPortLinkStatusCallback (wanoe_ifname, WANOE_IFACE_UP)) {
+            CcspTraceInfo (("[%s][%d] Successfully posted WANOE [%s] interface link up event to message queue\n", __FUNCTION__,__LINE__,wanoe_ifname));
+        }else {
+            CcspTraceError (("[%s][%d] Failed to post WANOE [%s] interface link up event to message queue\n", __FUNCTION__,__LINE__,wanoe_ifname));
+        }
+    }
+}
+
+/**
+ * @Note Callback invoked upon wanoe interface link up from HAL.
+ */
+void EthWanLinkDown_callback() {
+    char wanoe_ifname[WANOE_IFACENAME_LENGTH] = {0};
+
+    if (ANSC_STATUS_SUCCESS == GetWan_InterfaceName (wanoe_ifname, sizeof(wanoe_ifname))) {
+        CcspTraceInfo (("[%s][%d] WANOE [%s] interface link down event received \n", __FUNCTION__,__LINE__,wanoe_ifname));
+        if ( TRUE == CosaDmlEthPortLinkStatusCallback (wanoe_ifname, WANOE_IFACE_DOWN)) {
+            CcspTraceInfo (("[%s][%d] Successfully posted WANOE [%s] interface link down event to message queue\n", __FUNCTION__,__LINE__,wanoe_ifname));
+        }else {
+            CcspTraceError (("[%s][%d] Failed to post WANOE [%s] interface link down event to message queue\n", __FUNCTION__,__LINE__,wanoe_ifname));
+        }
+    }
+}
+#endif //_SR300_PRODUCT_REQ_
+#endif // defined (FEATURE_RDKB_WAN_MANAGER)
 #endif // defined (FEATURE_RDKB_WAN_MANAGER) || defined (FEATURE_RDKB_WAN_AGENT)

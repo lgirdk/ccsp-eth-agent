@@ -271,6 +271,10 @@ ANSC_STATUS CosaDmlEthDeleteEthLink(char *ifName, char *Path);
 ANSC_STATUS CosaDmlEthGetPhyStatusForWanManager( char *ifname, char *PhyStatus );
 ANSC_STATUS CosaDmlEthSetPhyStatusForWanManager( char *ifname, char *PhyStatus );
 ANSC_STATUS CosDmlEthPortUpdateGlobalInfo(PANSC_HANDLE phContext, CHAR *ifname, COSA_DML_ETH_TABLE_OPER Oper );
+#ifdef _SR300_PRODUCT_REQ_
+void EthWanLinkUp_callback();
+void EthWanLinkDown_callback();
+#endif //_SR300_PRODUCT_REQ_
 #endif
 void Ethernet_Hosts_Sync(void);
 INT CosaDmlEth_AssociatedDevice_callback(eth_device_t *eth_dev);
