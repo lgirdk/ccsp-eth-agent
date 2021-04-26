@@ -121,6 +121,7 @@ wanmanager could able to handle vlan interface creation and management */
 //WAN Agent
 #define WAN_DBUS_PATH                     "/com/cisco/spvtg/ccsp/wanmanager"
 #define WAN_COMPONENT_NAME                "eRT.com.cisco.spvtg.ccsp.wanmanager"
+#define WAN_COMP_NAME_WITHOUT_SUBSYSTEM   "com.cisco.spvtg.ccsp.wanmanager"
 #define WAN_NOE_PARAM_NAME                "Device.X_RDK_WanManager.CPEInterfaceNumberOfEntries"
 #define WAN_PHY_STATUS_PARAM_NAME         "Device.X_RDK_WanManager.CPEInterface.%d.Phy.Status"
 #define WAN_PHY_PATH_PARAM_NAME           "Device.X_RDK_WanManager.CPEInterface.%d.Phy.Path"
@@ -133,6 +134,44 @@ wanmanager could able to handle vlan interface creation and management */
 
 #define WAN_IF_PPP_ENABLE_PARAM           "Device.X_RDK_WanManager.CPEInterface.%d.PPP.Enable"
 #define WAN_IF_PPP_LINKTYPE_PARAM         "Device.X_RDK_WanManager.CPEInterface.%d.PPP.LinkType"
+
+#define WAN_BOOTINFORM_CUSTOMCONFIG_PARAM_NAME "Device.X_RDK_WanManager.CPEInterface.%d.EnableCustomConfig"
+#define WAN_BOOTINFORM_CUSTOMCONFIGPATH_PARAM_NAME "Device.X_RDK_WanManager.CPEInterface.%d.CustomConfigPath"
+#define WAN_BOOTINFORM_CUSTOMCONFIGPATH_PARAM_VALUE "Device.X_CISCO_COM_CableModem."
+#define WAN_BOOTINFORM_CONFIGWANENABLE_PARAM_NAME "Device.X_RDK_WanManager.CPEInterface.%d.ConfigureWanEnable"
+#define WAN_BOOTINFORM_OPERSTATUSENABLE_PARAM_NAME "Device.X_RDK_WanManager.CPEInterface.%d.EnableOperStatusMonitor"
+#define WAN_BOOTINFORM_PHYPATH_PARAM_NAME "Device.X_RDK_WanManager.CPEInterface.%d.Phy.Path"
+#define WAN_BOOTINFORM_INTERFACE_PARAM_NAME "Device.X_RDK_WanManager.CPEInterface.%d.Wan.Name"
+#define WAN_IF_NAME_PRIMARY "erouter0"
+#define WAN_PHYPATH_VALUE "Device.X_RDKCENTRAL-COM_EthernetWAN."
+#define WAN_ETH_INTERFACE_INSTANCE_NUM     2
+#define ETHWAN_DOCSIS_INF_NAME "cm0"
+#define PHY_STATUS_MONITOR_MAX_TIMEOUT 240
+#define PHY_STATUS_QUERY_INTERVAL 2
+
+typedef struct _WAN_PARAM_INFO
+{
+    CHAR paramName[256];
+    CHAR paramValue[256];
+    enum dataType_e paramType;
+}WAN_PARAM_INFO;
+
+enum WANBOOTINFORM_MSG
+{
+    MSG_WAN_NAME = 0,
+    MSG_PHY_PATH,
+    MSG_CONFIGURE_WAN,
+    MSG_CUSTOMCONFIG_ENABLE,
+    MSG_CUSTOMCONFIG_PATH,
+    MSG_OPER_STATUS,
+    MSG_TOTAL_NUM
+};
+typedef struct _WAN_BOOTINFORM_MSG
+{
+    WAN_PARAM_INFO param[MSG_TOTAL_NUM];
+    INT iNumOfParam;
+    INT iWanInstanceNumber;
+}WAN_BOOTINFORM_MSG;
 
 #endif //FEATURE_RDKB_WAN_MANAGER
 
@@ -149,6 +188,8 @@ _COSA_DATAMODEL_ETH_WAN_AGENT_CONTENT
 {
     BOOLEAN                Enable;
     ULONG             	    Port;
+    BOOLEAN                MonitorPhyStatusAndNotify;
+    char                   wanInstanceNumber[4];
 }
 COSA_DATAMODEL_ETH_WAN_AGENT, *PCOSA_DATAMODEL_ETH_WAN_AGENT;
 
@@ -250,7 +291,13 @@ CosaDmlEthPortInit
     (
         PANSC_HANDLE                phContext
     );
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+ANSC_STATUS EthwanEnableWithoutReboot(BOOL bEnable);
+BOOL CosaDmlEthWanLinkStatus();
+ANSC_STATUS CosaDmlConfigureEthWan(BOOL bEnable);
+ANSC_STATUS CosaDmlEthWanPhyStatusMonitor(void *arg);
 
+#endif
 #if defined (FEATURE_RDKB_WAN_AGENT)
 ANSC_STATUS CosaDmlEthGetPortCfg( INT nIndex, PCOSA_DML_ETH_PORT_CONFIG pEthLink);
 ANSC_STATUS CosaDmlEthPortSetUpstream( INT IfIndex, BOOL Upstream );

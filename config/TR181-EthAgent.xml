@@ -249,6 +249,8 @@
       <functions>
         <func_GetParamStringValue>EthernetWAN_GetParamStringValue</func_GetParamStringValue>
         <func_SetParamStringValue>EthernetWAN_SetParamStringValue</func_SetParamStringValue>
+        <func_GetParamBoolValue>EthernetWAN_GetParamBoolValue</func_GetParamBoolValue>
+        <func_SetParamBoolValue>EthernetWAN_SetParamBoolValue</func_SetParamBoolValue>
       </functions>
       <parameters>
         <parameter>
@@ -268,8 +270,20 @@
           <type>string(32)</type>
           <syntax>string</syntax>
           <writable>false</writable>
-        </parameter>
-      </parameters>
+      </parameter>
+      <parameter>
+          <name>ConfigureWan</name>
+          <type>boolean</type>
+          <syntax>bool</syntax>
+          <writable>true</writable>
+      </parameter>
+      <parameter>
+          <name>RequestPhyStatus</name>
+          <type>string</type>
+          <syntax>string</syntax>
+          <writable>true</writable>
+      </parameter>
+     </parameters>
     </object>
 <?endif?>
 

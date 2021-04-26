@@ -104,6 +104,7 @@ static void CosaEthernetLogger(void);
 static int CosaEthTelemetryInit(void);
 
 #if defined(FEATURE_RDKB_WAN_MANAGER) || defined (FEATURE_RDKB_WAN_AGENT)
+#if !defined(AUTOWAN_ENABLE) // This is not needed when auto wan is enabled for TCXBX platforms
 static int checkIfSystemReady(void);
 static void waitUntilSystemReady(void);
 
@@ -138,6 +139,7 @@ static void waitUntilSystemReady()
         sleep(5);
     }
 }
+#endif
 #endif //#if defined (FEATURE_RDKB_WAN_MANAGER)
 
 /**********************************************************************
@@ -226,7 +228,9 @@ CosaEthernetInitialize
     PCOSA_DATAMODEL_ETHERNET        pMyObject           = (PCOSA_DATAMODEL_ETHERNET)hThisObject;
     syscfg_init();
 #if defined (FEATURE_RDKB_WAN_MANAGER) || defined(FEATURE_RDKB_WAN_AGENT)
-    waitUntilSystemReady();
+#if !defined(AUTOWAN_ENABLE) // This is not needed when auto wan is enabled for TCXBX platforms
+        waitUntilSystemReady();
+#endif
 #endif //#if defined (FEATURE_RDKB_WAN_MANAGER) || defined(FEATURE_RDKB_WAN_AGENT)
 #if defined (FEATURE_RDKB_WAN_MANAGER)
     AnscSListInitializeHeader( &pMyObject->Q_EthList );
@@ -247,7 +251,6 @@ CosaEthernetInitialize
     obj.pGWP_act_EthWanLinkDown = EthWanLinkDown_callback;
     obj.pGWP_act_EthWanLinkUP   = EthWanLinkUp_callback;
     GWP_RegisterEthWan_Callback ( &obj );
-
 #elif defined(FEATURE_RDKB_WAN_AGENT)
     CosaDmlEthInit(NULL, (PANSC_HANDLE)pMyObject);
     CcspHalEthSw_RegisterLinkEventCallback(CosaDmlEthPortLinkStatusCallback); //Register cb for link event.

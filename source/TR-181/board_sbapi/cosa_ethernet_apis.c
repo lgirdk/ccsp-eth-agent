@@ -99,6 +99,7 @@
 #include "cosa_ethernet_internal.h"
 #include "ccsp_hal_ethsw.h"
 #include "secure_wrapper.h"
+#include <platform_hal.h>
 
 #if defined (FEATURE_RDKB_WAN_MANAGER)
 #include "cosa_ethernet_manager.h"
@@ -121,9 +122,9 @@
 #define TOTAL_NUMBER_OF_INTERNAL_INTERFACES 4
 #define DATAMODEL_PARAM_LENGTH 256
 #define WANOE_IFACENAME_LENGTH 32
+#endif //FEATURE_RDKB_WAN_MANAGER
 #define WANOE_IFACE_UP "UP"
 #define WANOE_IFACE_DOWN "DOWN"
-#endif //FEATURE_RDKB_WAN_MANAGER
 #define TOTAL_NUMBER_OF_INTERFACES 4
 #define COSA_ETH_EVENT_QUEUE_NAME "/ETH_event_queue"
 #define MAX_QUEUE_MSG_SIZE (512) 
@@ -141,10 +142,26 @@
     } while (0)
 #endif //FEATURE_RDKB_WAN_AGENT || defined(FEATURE_RDKB_WAN_MANAGER)
 
+#if defined (_MACSEC_SUPPORT_)
+#define MACSEC_TIMEOUT_SEC    10
+#endif
+
+
 /**************************************************************************
                         DATA STRUCTURE DEFINITIONS
 **************************************************************************/
+typedef struct
+{
+  uint8_t  hw[6];
+} macaddr_t;
 
+typedef enum WanMode
+{
+    WAN_MODE_AUTO = 0,
+    WAN_MODE_ETH,
+    WAN_MODE_DOCSIS,
+    WAN_MODE_UNKNOWN
+}WanMode_t;
 /**************************************************************************
                         GLOBAL VARIABLES
 **************************************************************************/
@@ -166,6 +183,13 @@
 #define ETH_HOST_PARAMVALUE_TRUE "true"
 #define ETH_HOST_PARAMVALUE_FALSE "false"
 #define ETH_HOST_MAC_LENGTH 17
+/* For LED behavior */
+#define WHITE 0
+#define YELLOW 1
+#define SOLID   0
+#define BLINK   1
+#define RED 3
+
 ANSC_STATUS is_usg_in_bridge_mode(BOOL *pBridgeMode);
 void CcspHalExtSw_SendNotificationForAllHosts( void );
 extern  ANSC_HANDLE bus_handle;
@@ -196,7 +220,7 @@ typedef struct _CosaETHMSGQWanData
     COSA_DML_ETH_LINK_STATUS LinkStatus;
 } CosaETHMSGQWanData;
 
-
+pthread_t bootInformThreadId;
 PCOSA_DML_ETH_PORT_GLOBAL_CONFIG gpstEthGInfo = NULL;
 static pthread_mutex_t gmEthGInfo_mutex = PTHREAD_MUTEX_INITIALIZER;
 static ANSC_STATUS CosDmlEthPortPrepareGlobalInfo();
@@ -210,7 +234,10 @@ static void *CosaDmlEthEventHandlerThread(void *arg);
 static ANSC_STATUS CosaDmlEthPortGetIndexFromIfName( char *ifname, INT *IfIndex );
 static INT CosaDmlEthGetTotalNoOfInterfaces ( VOID );
 #endif //#if defined (FEATURE_RDKB_WAN_AGENT) || defined (FEATURE_RDKB_WAN_MANAGER)
-
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+void getWanMacAddress(macaddr_t* macAddr,char *pIfname);
+int EthWanSetLED (int color, int state, int interval);
+#endif
 #if defined (FEATURE_RDKB_WAN_AGENT)
 static ANSC_STATUS CosaDmlEthSetParamValues(char *pComponent, char *pBus, char *pParamName, char *pParamVal, enum dataType_e type, unsigned int bCommitFlag);
 #elif defined (FEATURE_RDKB_WAN_MANAGER)
@@ -433,6 +460,449 @@ void* CosaDmlEthWanChangeHandling( void* buff )
     return buff;
 }
 
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+
+ANSC_STATUS EthwanEnableWithoutReboot(BOOL bEnable)
+{
+    CcspTraceError(("Func %s Entered arg %d\n",__FUNCTION__,bEnable));
+    
+    if(bEnable == FALSE)
+    {
+        v_secure_system("ip link set %s down",WAN_IF_NAME_PRIMARY);
+        v_secure_system("ip link set %s name %s",WAN_IF_NAME_PRIMARY,ETHWAN_DEF_INTF_NAME);
+        v_secure_system("ip link set dummy-rf name %s",WAN_IF_NAME_PRIMARY);
+        v_secure_system("ip link set %s up;ip link set %s up",ETHWAN_DEF_INTF_NAME,WAN_IF_NAME_PRIMARY);
+    } 
+
+    CcspHalExtSw_setEthWanPort ( ETHWAN_DEF_INTF_NUM );
+
+    if ( RETURN_OK == CcspHalExtSw_setEthWanEnable( bEnable ) ) 
+    {
+        //pthread_t tid;        
+        char buf[ 8 ];
+        memset( buf, 0, sizeof( buf ) );
+        snprintf( buf, sizeof( buf ), "%s", bEnable ? "true" : "false" );
+        if(bEnable)
+        {
+            v_secure_system("touch /nvram/ETHWAN_ENABLE");
+        }
+        else
+        {
+            v_secure_system("rm /nvram/ETHWAN_ENABLE");
+        }
+
+        if ( syscfg_set( NULL, "eth_wan_enabled", buf ) != 0 )
+        {
+            CcspTraceError(( "syscfg_set failed for eth_wan_enabled\n" ));
+            return RETURN_ERR;
+        }
+        else
+        {
+            if ( syscfg_commit() != 0 )
+            {
+                CcspTraceError(( "syscfg_commit failed for eth_wan_enabled\n" ));
+                return RETURN_ERR;
+            }
+
+        }
+    }
+    CcspTraceError(("Func %s Exited arg %d\n",__FUNCTION__,bEnable));
+ 
+    return ANSC_STATUS_SUCCESS;
+}
+
+BOOL CosaDmlEthWanLinkStatus()
+{
+    CCSP_HAL_ETHSW_PORT         port;
+    INT                         status;
+    CCSP_HAL_ETHSW_LINK_RATE    LinkRate;
+    CCSP_HAL_ETHSW_DUPLEX_MODE  DuplexMode;
+    CCSP_HAL_ETHSW_LINK_STATUS  LinkStatus;
+
+    port = ETHWAN_DEF_INTF_NUM;
+
+    port += CCSP_HAL_ETHSW_EthPort1; /* ETH WAN HALs start from 0 but Ethernet Switch HALs start with 1*/
+
+    status = CcspHalEthSwGetPortStatus(port, &LinkRate, &DuplexMode, &LinkStatus);
+
+    if ( status == RETURN_OK )
+    {
+       return TRUE;
+    }
+    return FALSE;
+}
+
+static void checkComponentHealthStatus(char * compName, char * dbusPath, char *status, int *retStatus)
+{
+    int ret = 0, val_size = 0;
+    parameterValStruct_t **parameterval = NULL;
+    char *parameterNames[1] = {};
+    char tmp[256];
+    char str[256];
+    char l_Subsystem[128] = { 0 };
+
+    sprintf(tmp,"%s.%s",compName, "Health");
+    parameterNames[0] = tmp;
+
+    strncpy(l_Subsystem, "eRT.",sizeof(l_Subsystem));
+    snprintf(str, sizeof(str), "%s%s", l_Subsystem, compName);
+    CcspTraceDebug(("str is:%s\n", str));
+
+    ret = CcspBaseIf_getParameterValues(bus_handle, str, dbusPath,  parameterNames, 1, &val_size, &parameterval);
+    CcspTraceDebug(("ret = %d val_size = %d\n",ret,val_size));
+    if(ret == CCSP_SUCCESS)
+    {
+        CcspTraceDebug(("parameterval[0]->parameterName : %s parameterval[0]->parameterValue : %s\n",parameterval[0]->parameterName,parameterval[0]->parameterValue));
+        strcpy(status, parameterval[0]->parameterValue);
+        CcspTraceDebug(("status of component:%s\n", status));
+    }
+    free_parameterValStruct_t (bus_handle, val_size, parameterval);
+
+    *retStatus = ret;
+}
+
+
+static void waitForWanMgrComponentReady()
+{
+    char status[32] = {'\0'};
+    int count = 0;
+    int ret = -1;
+    while(1)
+    {
+        checkComponentHealthStatus(WAN_COMP_NAME_WITHOUT_SUBSYSTEM, WAN_DBUS_PATH, status,&ret);
+        if(ret == CCSP_SUCCESS && (strcmp(status, "Green") == 0))
+        {
+            CcspTraceInfo(("%s component health is %s, continue\n", WAN_COMPONENT_NAME, status));
+            break;
+        }
+        else
+        {
+            count++;
+            if(count%5 == 0)
+            {
+                CcspTraceError(("%s component Health, ret:%d, waiting\n", WAN_COMPONENT_NAME, ret));
+            }
+            sleep(5);
+        }
+    }
+}
+
+INT InitBootInformInfo(WAN_BOOTINFORM_MSG *pMsg)
+{
+    BOOL bEthWanEnable = FALSE;
+    CHAR wanName[64];
+    CHAR ethWanName[64];
+    CHAR out_value[64];
+    CHAR acSetParamName[256];
+    INT iWANInstance = 0;
+    if (!pMsg)
+        return -1;
+    if ( 0 == access( "/nvram/ETHWAN_ENABLE" , F_OK ) )
+    {
+        bEthWanEnable = TRUE;
+    }
+
+    memset(out_value,0,sizeof(out_value));
+    memset(wanName,0,sizeof(wanName));
+    memset(ethWanName,0,sizeof(ethWanName));
+    syscfg_get(NULL, "wan_physical_ifname", out_value, sizeof(out_value));
+
+    if(0 != strnlen(out_value,sizeof(out_value)))
+    {
+        snprintf(wanName, sizeof(wanName), "%s", out_value);
+    }
+    else
+    {
+        snprintf(wanName, sizeof(wanName), "%s", WAN_IF_NAME_PRIMARY);
+    }
+
+    pMsg->iWanInstanceNumber = WAN_ETH_INTERFACE_INSTANCE_NUM;
+    pMsg->iNumOfParam = MSG_TOTAL_NUM;
+
+    if ( (0 != GWP_GetEthWanInterfaceName((unsigned char*)ethWanName, sizeof(ethWanName)))
+            || (0 == strnlen(ethWanName,sizeof(ethWanName)))
+            || (0 == strncmp(ethWanName,"disable",sizeof(ethWanName)))
+       )
+    {
+        /* Fallback case needs to set it default */
+        snprintf(ethWanName ,sizeof(ethWanName), "%s", ETHWAN_DEF_INTF_NAME);
+    }
+
+
+    if (bEthWanEnable == TRUE)
+    {
+        strncpy(pMsg->param[MSG_WAN_NAME].paramValue,wanName,sizeof(pMsg->param[MSG_WAN_NAME].paramValue));
+    }
+    else
+    {
+        strncpy(pMsg->param[MSG_WAN_NAME].paramValue,ethWanName,sizeof(pMsg->param[MSG_WAN_NAME].paramValue));
+    }
+ 
+    CosaDmlEthGetLowerLayersInstanceInOtherAgent(NOTIFY_TO_WAN_AGENT, ethWanName, &iWANInstance);
+
+    if (-1 != iWANInstance)
+    {
+        pMsg->iWanInstanceNumber = iWANInstance;
+    }
+
+    memset(acSetParamName, 0, sizeof(acSetParamName));
+    snprintf(acSetParamName, sizeof(acSetParamName), WAN_BOOTINFORM_INTERFACE_PARAM_NAME,  pMsg->iWanInstanceNumber);
+    strncpy(pMsg->param[MSG_WAN_NAME].paramName,acSetParamName,sizeof(pMsg->param[MSG_WAN_NAME].paramName));
+    pMsg->param[MSG_WAN_NAME].paramType = ccsp_string;
+
+    memset(acSetParamName, 0, sizeof(acSetParamName));
+    snprintf(acSetParamName, sizeof(acSetParamName), WAN_BOOTINFORM_PHYPATH_PARAM_NAME,  pMsg->iWanInstanceNumber);
+    strncpy(pMsg->param[MSG_PHY_PATH].paramName,acSetParamName,sizeof(pMsg->param[MSG_PHY_PATH].paramName));
+    strncpy(pMsg->param[MSG_PHY_PATH].paramValue,WAN_PHYPATH_VALUE,sizeof(pMsg->param[MSG_PHY_PATH].paramValue));
+    pMsg->param[MSG_PHY_PATH].paramType = ccsp_string;
+
+    memset(acSetParamName, 0, sizeof(acSetParamName));
+    snprintf(acSetParamName, sizeof(acSetParamName), WAN_BOOTINFORM_OPERSTATUSENABLE_PARAM_NAME,  pMsg->iWanInstanceNumber);
+    strncpy(pMsg->param[MSG_OPER_STATUS].paramName,acSetParamName,sizeof(pMsg->param[MSG_OPER_STATUS].paramName));
+    strncpy(pMsg->param[MSG_OPER_STATUS].paramValue,"false",sizeof(pMsg->param[MSG_OPER_STATUS].paramValue));
+    pMsg->param[MSG_OPER_STATUS].paramType = ccsp_boolean;
+
+    memset(acSetParamName, 0, sizeof(acSetParamName));
+    snprintf(acSetParamName, sizeof(acSetParamName), WAN_BOOTINFORM_CONFIGWANENABLE_PARAM_NAME,  pMsg->iWanInstanceNumber);
+    strncpy(pMsg->param[MSG_CONFIGURE_WAN].paramName,acSetParamName,sizeof(pMsg->param[MSG_CONFIGURE_WAN].paramName));
+    strncpy(pMsg->param[MSG_CONFIGURE_WAN].paramValue,"true",sizeof(pMsg->param[MSG_CONFIGURE_WAN].paramValue));
+    pMsg->param[MSG_CONFIGURE_WAN].paramType = ccsp_boolean;
+
+    memset(acSetParamName, 0, sizeof(acSetParamName));
+    snprintf(acSetParamName, sizeof(acSetParamName), WAN_BOOTINFORM_CUSTOMCONFIG_PARAM_NAME,  pMsg->iWanInstanceNumber);
+    strncpy(pMsg->param[MSG_CUSTOMCONFIG_ENABLE].paramName,acSetParamName,sizeof(pMsg->param[MSG_CUSTOMCONFIG_ENABLE].paramName));
+    strncpy(pMsg->param[MSG_CUSTOMCONFIG_ENABLE].paramValue,"true",sizeof(pMsg->param[MSG_CUSTOMCONFIG_ENABLE].paramValue));
+    pMsg->param[MSG_CUSTOMCONFIG_ENABLE].paramType = ccsp_boolean;
+
+    memset(acSetParamName, 0, sizeof(acSetParamName));
+    snprintf(acSetParamName, sizeof(acSetParamName), WAN_BOOTINFORM_CUSTOMCONFIGPATH_PARAM_NAME,  pMsg->iWanInstanceNumber);
+    strncpy(pMsg->param[MSG_CUSTOMCONFIG_PATH].paramName,acSetParamName,sizeof(pMsg->param[MSG_CUSTOMCONFIG_PATH].paramName));
+    strncpy(pMsg->param[MSG_CUSTOMCONFIG_PATH].paramValue,WAN_BOOTINFORM_CUSTOMCONFIGPATH_PARAM_VALUE,sizeof(pMsg->param[MSG_CUSTOMCONFIG_PATH].paramValue));
+    pMsg->param[MSG_CUSTOMCONFIG_PATH].paramType = ccsp_string;
+
+   
+    return 0;
+}
+
+void* ThreadBootInformMsg(void *arg)
+{
+    WAN_BOOTINFORM_MSG msg = {0};
+    INT retryMax = 60;
+    INT retryCount = 0;
+    BOOL retryBootInform = FALSE;
+    pthread_detach(pthread_self());
+    waitForWanMgrComponentReady();
+    InitBootInformInfo(&msg);
+    while (1)
+    {
+        INT index = 0;
+        for (index = 0; index < msg.iNumOfParam; ++index)
+        {
+            ANSC_STATUS ret = CosaDmlEthSetParamValues(WAN_COMPONENT_NAME,
+                    WAN_DBUS_PATH,
+                    msg.param[index].paramName,
+                    msg.param[index].paramValue,
+                    msg.param[index].paramType,
+                    TRUE);
+            if (ret == ANSC_STATUS_FAILURE)
+            {
+                retryBootInform = TRUE;
+                break;
+            }
+        }
+        if (FALSE == retryBootInform)
+        {
+            break;
+        }
+        if (retryCount > retryMax)
+            break;
+        ++retryCount;
+        sleep(1);
+    }
+    return arg;
+}
+
+void* ThreadMonitorPhyAndNotify(void *arg)
+{
+    PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)arg;
+    INT EthWanInstanceNumber = WAN_ETH_INTERFACE_INSTANCE_NUM;
+    pthread_detach(pthread_self());
+    if (pMyObject)
+    {
+        PCOSA_DATAMODEL_ETH_WAN_AGENT pEthWanCfg = (PCOSA_DATAMODEL_ETH_WAN_AGENT)&pMyObject->EthWanCfg;
+        if (pEthWanCfg)
+        {
+            INT counter = 0;
+            BOOL phyStatus = FALSE;
+            char acSetParamName[256];
+            char acTmpPhyStatus[32] = {0};
+
+            if (pEthWanCfg->wanInstanceNumber)
+            {
+                EthWanInstanceNumber = atoi(pEthWanCfg->wanInstanceNumber);
+            }
+
+            while(1)
+            {
+                // ethoff file only for debugging to simulate link down case.
+                if ( 0 == access( "/tmp/ethoff" , F_OK ) )
+                 {
+                    phyStatus = FALSE;
+                    sleep(1);
+                    continue;                    
+                 }
+                if (CosaDmlEthWanLinkStatus() == TRUE)
+                {
+                    phyStatus = TRUE;
+                    break;
+                }
+                if (counter >= PHY_STATUS_MONITOR_MAX_TIMEOUT)
+                {
+                    break;
+                }
+                sleep(PHY_STATUS_QUERY_INTERVAL);
+                counter+=PHY_STATUS_QUERY_INTERVAL;
+            }
+            memset(acSetParamName, 0, sizeof(acSetParamName));
+            snprintf(acSetParamName, sizeof(acSetParamName), WAN_PHY_STATUS_PARAM_NAME, EthWanInstanceNumber);
+
+            if (phyStatus == TRUE)
+            {
+                 snprintf(acTmpPhyStatus, sizeof(acTmpPhyStatus), "%s", "Up");
+            }
+            else
+            {
+                 snprintf(acTmpPhyStatus, sizeof(acTmpPhyStatus), "%s", "Down");
+            }
+            CosaDmlEthSetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH, acSetParamName, acTmpPhyStatus, ccsp_string, TRUE);
+            pEthWanCfg->MonitorPhyStatusAndNotify = FALSE;
+        }
+    }
+    return arg;
+}
+
+ANSC_STATUS
+CosaDmlEthWanPhyStatusMonitor(void *args)
+{
+    PCOSA_DATAMODEL_ETHERNET pObject = (PCOSA_DATAMODEL_ETHERNET) args;
+ 	pthread_t tidMonitor;
+    pthread_create ( &tidMonitor, NULL, &ThreadMonitorPhyAndNotify, pObject);
+    return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS CosaDmlConfigureEthWan(BOOL bEnable)
+{
+    char wanPhyName[64] = {0};
+    char out_value[64] = {0};
+    char buf[64] = {0};
+    char ethwan_ifname[64] = {0};
+    int lastKnownWanMode = -1;
+    CcspTraceError(("Func %s Entered arg %d\n",__FUNCTION__,bEnable));
+
+    if (syscfg_get(NULL, "last_wan_mode", buf, sizeof(buf)) == 0)
+    {
+        lastKnownWanMode = atoi(buf);
+    }
+
+    syscfg_get(NULL, "wan_physical_ifname", out_value, sizeof(out_value));
+
+
+    if(0 != strnlen(out_value,sizeof(out_value)))
+    {
+        snprintf(wanPhyName, sizeof(wanPhyName), "%s", out_value);
+    }
+    else
+    {
+        snprintf(wanPhyName, sizeof(wanPhyName), "%s", WAN_IF_NAME_PRIMARY);
+    }
+    CcspTraceError(("%s - In Arg %d Last KnownMode %d \n",__FUNCTION__,bEnable,lastKnownWanMode));
+
+    if (bEnable == TRUE)
+    {
+
+        if ( (0 != GWP_GetEthWanInterfaceName((unsigned char*)ethwan_ifname, sizeof(ethwan_ifname)))
+                || (0 == strnlen(ethwan_ifname,sizeof(ethwan_ifname)))
+                || (0 == strncmp(ethwan_ifname,"disable",sizeof(ethwan_ifname)))
+           )
+        {
+            /* Fallback case needs to set it default */
+            snprintf(ethwan_ifname ,sizeof(ethwan_ifname), "%s", ETHWAN_DEF_INTF_NAME);
+        }
+
+        v_secure_system("brctl delif brlan0 %s",ethwan_ifname);
+
+        macaddr_t macAddr;
+        getWanMacAddress(&macAddr,wanPhyName);
+        char wan_mac[18];// = {0};
+        snprintf(wan_mac, sizeof(wan_mac), "%02x:%02x:%02x:%02x:%02x:%02x", macAddr.hw[0], macAddr.hw[1], macAddr.hw[2],
+                macAddr.hw[3], macAddr.hw[4], macAddr.hw[5]);
+
+        // detach EWAN interface from brlan0
+        v_secure_system("ip link set dev %s nomaster", ethwan_ifname);
+        v_secure_system("ip link set %s down", ethwan_ifname);
+
+        // EWAN interface needs correct MAC before starting MACsec
+        // This could probably be done once since MAC shouldn't change.
+        v_secure_system("ip link set %s address %s", ethwan_ifname, wan_mac);
+        v_secure_system("ifconfig %s up", ethwan_ifname);
+
+#if defined (_MACSEC_SUPPORT_)
+        CcspTraceInfo(("%s - Starting MACsec on %d with %d second timeout\n",__FUNCTION__,ETHWAN_DEF_INTF_NUM,MACSEC_TIMEOUT_SEC));
+        if ( RETURN_ERR == platform_hal_StartMACsec(ETHWAN_DEF_INTF_NUM, MACSEC_TIMEOUT_SEC)) {
+            CcspTraceError(("%s - MACsec start returning error\n",__FUNCTION__));
+        }
+#endif
+
+        EthwanEnableWithoutReboot(TRUE);
+
+        /* ETH WAN Interface must be retrieved a second time in case MACsec
+           modified the interfaces. */
+        memset(ethwan_ifname,0,sizeof(ethwan_ifname));
+        if ( (0 != GWP_GetEthWanInterfaceName((unsigned char*)ethwan_ifname, sizeof(ethwan_ifname)))
+                || (0 == strnlen(ethwan_ifname,sizeof(ethwan_ifname)))
+                || (0 == strncmp(ethwan_ifname,"disable",sizeof(ethwan_ifname)))
+           )
+        {
+            /* Fallback case needs to set it default */
+            snprintf(ethwan_ifname , sizeof(ethwan_ifname), "%s", ETHWAN_DEF_INTF_NAME);
+        }
+
+        v_secure_system("ifconfig %s up", ethwan_ifname);
+
+    }
+    else
+    {
+        EthwanEnableWithoutReboot(FALSE);
+#if defined (_MACSEC_SUPPORT_)
+        CcspTraceInfo(("%s - Stopping MACsec on %d\n",__FUNCTION__,ETHWAN_DEF_INTF_NUM));
+        /* Stopping MACsec on Port since DOCSIS Succeeded */
+        if ( RETURN_ERR == platform_hal_StopMACsec(ETHWAN_DEF_INTF_NUM)) {
+            CcspTraceError(("%s - MACsec stop error\n",__FUNCTION__));
+        }
+#endif
+
+        if ( (0 != GWP_GetEthWanInterfaceName((unsigned char*)ethwan_ifname, sizeof(ethwan_ifname)))
+                || (0 == strnlen(ethwan_ifname,sizeof(ethwan_ifname)))
+                || (0 == strncmp(ethwan_ifname,"disable",sizeof(ethwan_ifname)))
+           )
+        {
+            /* Fallback case needs to set it default */
+            snprintf(ethwan_ifname ,sizeof(ethwan_ifname), "%s", ETHWAN_DEF_INTF_NAME);
+        }
+
+        v_secure_system("ifconfig %s down",ethwan_ifname);
+        v_secure_system("ip addr flush dev %s",ethwan_ifname);
+        v_secure_system("ip -6 addr flush dev %s",ethwan_ifname);
+        v_secure_system("sysctl -w net.ipv6.conf.%s.accept_ra=0",ethwan_ifname);
+        v_secure_system("ifconfig %s up",ethwan_ifname);
+        v_secure_system("brctl addif brlan0 %s",ethwan_ifname);
+
+    }
+    CcspTraceError(("Func %s Exited arg %d\n",__FUNCTION__,bEnable));
+    return ANSC_STATUS_SUCCESS;
+}
+#endif
+
 ANSC_STATUS
 CosaDmlEthWanSetEnable
     (
@@ -549,6 +1019,134 @@ CosaDmlEthGetLogStatus
     return ANSC_STATUS_SUCCESS;
 }
 
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+int
+EthWanSetLED
+    (
+        int color,
+        int state,
+        int interval
+    )
+{
+    LEDMGMT_PARAMS ledMgmt;
+    memset(&ledMgmt, 0, sizeof(LEDMGMT_PARAMS));
+
+        ledMgmt.LedColor = color;
+        ledMgmt.State    = state;
+        ledMgmt.Interval = interval;
+#if defined(_XB6_PRODUCT_REQ_)
+        if(RETURN_ERR == platform_hal_setLed(&ledMgmt)) {
+                CcspTraceError(("platform_hal_setLed failed\n"));
+                return 1;
+        }
+#endif
+    return 0;
+}
+
+void getWanMacAddress(macaddr_t* macAddr,char *pIfname)
+{
+    FILE *f = NULL;
+    char line[256], *lineptr = line, fname[128];
+    size_t size;
+    int i, macaddr[18];
+
+    if (pIfname)
+    {
+        snprintf(fname,sizeof(fname), "/sys/class/net/%s/address", pIfname);
+        size = sizeof(line);
+        if ((f = fopen(fname, "r")))
+        {
+            if ((getline(&lineptr, &size, f) >= 0))
+            {
+                sscanf(lineptr, "%02x:%02x:%02x:%02x:%02x:%02x", &macaddr[0], &macaddr[1], &macaddr[2], &macaddr[3], &macaddr[4], &macaddr[5]);
+                for (i = 0; i < 18; i++)
+                    macAddr->hw[i] = (uint8_t) macaddr[i];
+            }
+            fclose(f);
+        }
+    }
+
+    return;
+}
+
+ANSC_STATUS EthWanBridgeInit()
+{
+    char wanPhyName[64] = {0};
+    char out_value[64] = {0};
+    char ethwan_ifname[64] = {0};
+   
+    CcspTraceError(("Func %s Entered\n",__FUNCTION__));
+
+    if (!syscfg_get(NULL, "wan_physical_ifname", out_value, sizeof(out_value)))
+    {
+       strcpy(wanPhyName, out_value);
+       printf("wanPhyName = %s\n", wanPhyName);
+    }
+    else
+    {
+        strcpy(wanPhyName, "erouter0");
+
+    }
+
+	//Get the ethwan interface name from HAL
+	memset( ethwan_ifname , 0, sizeof( ethwan_ifname ) );
+	if ( ( 0 != GWP_GetEthWanInterfaceName((unsigned char*) ethwan_ifname, sizeof(ethwan_ifname) ) ) )
+	{
+		//Fallback case needs to set it default
+		memset( ethwan_ifname , 0, sizeof( ethwan_ifname ) );
+		sprintf( ethwan_ifname , "%s", ETHWAN_DEF_INTF_NAME );
+	}
+
+            CcspTraceError(("Ethwan interface %s \n",ethwan_ifname));
+        macaddr_t macAddr;
+       getWanMacAddress(&macAddr,wanPhyName);
+            char wan_mac[18];// = {0};
+    sprintf(wan_mac, "%02x:%02x:%02x:%02x:%02x:%02x",macAddr.hw[0],macAddr.hw[1],macAddr.hw[2],macAddr.hw[3],macAddr.hw[4],macAddr.hw[5]);
+
+    v_secure_system("ifconfig %s down", ethwan_ifname);
+
+#if !defined(INTEL_PUMA7)
+    v_secure_system("vlan_util del_interface brlan0 %s", ethwan_ifname);
+#endif
+
+#ifdef _COSA_BCM_ARM_
+    v_secure_system("ifconfig %s down; ip link set %s name %s", wanPhyName,wanPhyName,ETHWAN_DOCSIS_INF_NAME);
+#else
+    v_secure_system("ifconfig %s down; ip link set %s name dummy-rf", wanPhyName,wanPhyName);
+#endif
+    v_secure_system("brctl addbr %s; brctl addif %s %s", wanPhyName,wanPhyName,ethwan_ifname);
+
+#if defined(INTEL_PUMA7)
+    v_secure_system("brctl addif %s dpdmta1",wanPhyName);
+    v_secure_system("echo 1 > /sys/devices/virtual/net/%s/bridge/nf_disable_iptables",wanPhyName);
+    v_secure_system("echo 1 > /sys/devices/virtual/net/%s/bridge/nf_disable_ip6tables",wanPhyName);
+    v_secure_system("echo 1 > /sys/devices/virtual/net/%s/bridge/nf_disable_arptables",wanPhyName);
+#endif
+
+    v_secure_system("sysctl -w net.ipv6.conf.%s.autoconf=0", ethwan_ifname); // Fix: RDKB-22835, disabling IPv6 for ethwan port
+    v_secure_system("sysctl -w net.ipv6.conf.%s.disable_ipv6=1", ethwan_ifname); // Fix: RDKB-22835, disabling IPv6 for ethwan port
+    v_secure_system("ifconfig %s hw ether %s", ethwan_ifname,wan_mac);
+    v_secure_system("ip6tables -I OUTPUT -o %s -p icmpv6 -j DROP", ethwan_ifname);
+#ifdef _COSA_BCM_ARM_
+    v_secure_system("ip link set %s up",ETHWAN_DOCSIS_INF_NAME);
+    v_secure_system("brctl addbr %s; brctl addif %s %s", wanPhyName,wanPhyName,ETHWAN_DOCSIS_INF_NAME);
+    v_secure_system("sysctl -w net.ipv6.conf.%s.disable_ipv6=1",ETHWAN_DOCSIS_INF_NAME);
+#endif
+
+    v_secure_system("ifconfig %s down", wanPhyName);
+    v_secure_system("ifconfig %s hw ether %s", wanPhyName,wan_mac);
+    platform_hal_GetBaseMacAddress(wan_mac);
+    v_secure_system("sysevent set eth_wan_mac %s", wan_mac);
+    v_secure_system("ifconfig %s up", wanPhyName);
+
+#ifdef INTEL_PUMA7
+    v_secure_system("ifconfig %s up",ethwan_ifname);
+#endif
+    CcspTraceError(("Func %s Exited\n",__FUNCTION__));
+    return ANSC_STATUS_SUCCESS;
+}
+#endif
+
 ANSC_STATUS
 CosaDmlEthInit(
     ANSC_HANDLE hDml,
@@ -561,12 +1159,52 @@ CosaDmlEthInit(
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)phContext;
     int ifIndex;
 
+#ifdef AUTOWAN_ENABLE 
+    {
+        PCOSA_DATAMODEL_ETH_WAN_AGENT pEthWanCfg = NULL;
+        char buf[64];
+        BOOL ethwanEnabled = FALSE;
+
+        if (pMyObject)
+        {
+            pEthWanCfg = (PCOSA_DATAMODEL_ETH_WAN_AGENT)&pMyObject->EthWanCfg;
+            if (pEthWanCfg)
+            {
+                pEthWanCfg->MonitorPhyStatusAndNotify = FALSE;
+            }
+        }
+        CcspTraceInfo(("pthread create boot inform \n"));
+        pthread_create(&bootInformThreadId, NULL, &ThreadBootInformMsg, NULL);
+
+        if (syscfg_get(NULL, "eth_wan_enabled", buf, sizeof(buf)) == 0)
+        {
+            if ( 0 == strcmp(buf,"true"))
+            {
+                ethwanEnabled = TRUE;
+                CcspTraceError(("Ethwan enabled \n"));
+            }
+        }
+
+        if (TRUE == ethwanEnabled)
+        {
+            EthWanBridgeInit();
+
+            //Initialise ethsw-hal to get event notification from lower layer.
+            if (CcspHalEthSwInit() != RETURN_OK)
+            {
+                CcspTraceError(("Hal initialization failed \n"));
+                return ANSC_STATUS_FAILURE;
+            }
+        }
+    }
+#else
     //Initialise ethsw-hal to get event notification from lower layer.
     if (CcspHalEthSwInit() != RETURN_OK)
     {
         CcspTraceError(("Hal initialization failed \n"));
         return ANSC_STATUS_FAILURE;
     }
+#endif
     //ETH Port Init.
     CosaDmlEthPortInit((PANSC_HANDLE)pMyObject);
 #if defined (FEATURE_RDKB_WAN_AGENT)
@@ -843,12 +1481,12 @@ ANSC_STATUS CosaDmlTriggerExternalEthPortLinkStatus(char *ifname, BOOL status)
     }
     if (status == TRUE)
     {
-        CosaDmlEthPortLinkStatusCallback(ifname,UP);
+        CosaDmlEthPortLinkStatusCallback(ifname,WANOE_IFACE_UP);
         CcspTraceInfo(("Successfully updated PhyStatus to Up for [%s] interface \n",ifname));
     }
     else
     {
-        CosaDmlEthPortLinkStatusCallback(ifname,DOWN);
+        CosaDmlEthPortLinkStatusCallback(ifname,WANOE_IFACE_DOWN);
         CcspTraceInfo(("Successfully updated PhyStatus to Down for [%s] interface \n",ifname));
     }
     return ANSC_STATUS_SUCCESS;
@@ -1196,6 +1834,8 @@ ANSC_STATUS CosaDmlEthPortSetUpstream( CHAR *ifname, BOOL Upstream )
     return ANSC_STATUS_SUCCESS;
 }
 
+#if defined(FEATURE_RDKB_WAN_MANAGER) || defined(FEATURE_RDKB_WAN_AGENT)
+
 INT CosaDmlEthPortLinkStatusCallback(CHAR *ifname, CHAR *state)
 {
     if (NULL == ifname || state == NULL)
@@ -1206,7 +1846,7 @@ INT CosaDmlEthPortLinkStatusCallback(CHAR *ifname, CHAR *state)
 
     COSA_DML_ETH_LINK_STATUS link_status;
 
-    if (strncasecmp(state, UP, 2) == 0)
+    if (strncasecmp(state, WANOE_IFACE_UP, 2) == 0)
     {
         link_status = ETH_LINK_STATUS_UP;
     }
@@ -1230,6 +1870,7 @@ INT CosaDmlEthPortLinkStatusCallback(CHAR *ifname, CHAR *state)
     }
     return TRUE;
 }
+#endif
 
 static ANSC_STATUS CosaDmlEthPortGetIndexFromIfName(char *ifname, INT *IfIndex)
 {
@@ -2181,56 +2822,6 @@ ANSC_STATUS CosaDmlEthGetPhyStatusForWanManager(char *ifname, char *PhyStatus)
 }
 #if defined (FEATURE_RDKB_WAN_MANAGER)
 /**
- * @Note Utility API to get WANOE interface from HAL layer.
- */
-static ANSC_STATUS  GetWan_InterfaceName (char* wanoe_ifacename, int length) {
-    if (NULL == wanoe_ifacename || length == 0) {
-        CcspTraceError(("[%s][%d] Invalid argument  \n", __FUNCTION__, __LINE__));
-        return ANSC_STATUS_FAILURE;
-    }
-
-    char wanoe_ifname[WANOE_IFACENAME_LENGTH] = {0};
-    if (RETURN_OK != GWP_GetEthWanInterfaceName((unsigned char*)wanoe_ifname, sizeof(wanoe_ifname))) {
-        CcspTraceError(("[%s][%d] Failed to get wanoe interface name \n", __FUNCTION__, __LINE__));
-        return ANSC_STATUS_FAILURE;
-    }
-
-    strncpy (wanoe_ifacename,wanoe_ifname,length);
-    return ANSC_STATUS_SUCCESS;
-}
-
-/**
- * @Note Callback invoked upon wanoe interface link up from HAL.
- */
-void EthWanLinkUp_callback() {
-    char wanoe_ifname[WANOE_IFACENAME_LENGTH] = {0};
-
-    if (ANSC_STATUS_SUCCESS == GetWan_InterfaceName (wanoe_ifname, sizeof(wanoe_ifname))) {
-        CcspTraceInfo (("[%s][%d] WANOE [%s] interface link up event received \n", __FUNCTION__,__LINE__,wanoe_ifname));
-        if ( TRUE == CosaDmlEthPortLinkStatusCallback (wanoe_ifname, WANOE_IFACE_UP)) {
-            CcspTraceInfo (("[%s][%d] Successfully posted WANOE [%s] interface link up event to message queue\n", __FUNCTION__,__LINE__,wanoe_ifname));
-        }else {
-            CcspTraceError (("[%s][%d] Failed to post WANOE [%s] interface link up event to message queue\n", __FUNCTION__,__LINE__,wanoe_ifname));
-        }
-    }
-}
-
-/**
- * @Note Callback invoked upon wanoe interface link up from HAL.
- */
-void EthWanLinkDown_callback() {
-    char wanoe_ifname[WANOE_IFACENAME_LENGTH] = {0};
-
-    if (ANSC_STATUS_SUCCESS == GetWan_InterfaceName (wanoe_ifname, sizeof(wanoe_ifname))) {
-        CcspTraceInfo (("[%s][%d] WANOE [%s] interface link down event received \n", __FUNCTION__,__LINE__,wanoe_ifname));
-        if ( TRUE == CosaDmlEthPortLinkStatusCallback (wanoe_ifname, WANOE_IFACE_DOWN)) {
-            CcspTraceInfo (("[%s][%d] Successfully posted WANOE [%s] interface link down event to message queue\n", __FUNCTION__,__LINE__,wanoe_ifname));
-        }else {
-            CcspTraceError (("[%s][%d] Failed to post WANOE [%s] interface link down event to message queue\n", __FUNCTION__,__LINE__,wanoe_ifname));
-        }
-    }
-}
-/**
  * @note API to check the given interface is configured to use as a PPPoE interface
 */
 static ANSC_STATUS DmlEthCheckIfaceConfiguredAsPPPoE( char *ifname, BOOL *isPppoeIface)
@@ -2302,6 +2893,81 @@ static ANSC_STATUS DmlEthCheckIfaceConfiguredAsPPPoE( char *ifname, BOOL *isPppo
         }
     }
     return ANSC_STATUS_SUCCESS;
+}
+
+/**
+ * @Note Utility API to get WANOE interface from HAL layer.
+ */
+static ANSC_STATUS  GetWan_InterfaceName (char* wanoe_ifacename, int length) {
+    if (NULL == wanoe_ifacename || length == 0) {
+        CcspTraceError(("[%s][%d] Invalid argument  \n", __FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    char wanoe_ifname[WANOE_IFACENAME_LENGTH] = {0};
+    if (RETURN_OK != GWP_GetEthWanInterfaceName((unsigned char*)wanoe_ifname, sizeof(wanoe_ifname))) {
+        CcspTraceError(("[%s][%d] Failed to get wanoe interface name \n", __FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    strncpy (wanoe_ifacename,wanoe_ifname,length);
+    return ANSC_STATUS_SUCCESS;
+}
+
+/**
+ * @Note Callback invoked upon wanoe interface link up from HAL.
+ */
+void EthWanLinkUp_callback() {
+    char wanoe_ifname[WANOE_IFACENAME_LENGTH] = {0};
+#ifdef AUTOWAN_ENABLE
+        char redirFlag[10]={0};
+        char captivePortalEnable[10]={0};
+
+        if (!syscfg_get(NULL, "redirection_flag", redirFlag, sizeof(redirFlag)) && !syscfg_get(NULL, "CaptivePortal_Enable", captivePortalEnable, sizeof(captivePortalEnable))){
+          if (!strcmp(redirFlag,"true") && !strcmp(captivePortalEnable,"true"))
+        EthWanSetLED(WHITE, BLINK, 1);
+//Cox: Cp is disabled and need to show solid white
+         if(!strcmp(captivePortalEnable,"false"))
+         {
+        CcspTraceInfo(("%s: CP disabled case and set led to solid white \n", __FUNCTION__));
+        EthWanSetLED(WHITE, SOLID, 1);
+         }
+        }
+    // phy link wan state should set to run dibbler client.
+    v_secure_system("sysevent set phylink_wan_state up");
+
+    v_secure_system("sysevent set ethwan-initialized 1");
+    v_secure_system("syscfg set ntp_enabled 1"); // Enable NTP in case of ETHWAN
+    v_secure_system("syscfg commit"); 
+#endif
+
+   if (ANSC_STATUS_SUCCESS == GetWan_InterfaceName (wanoe_ifname, sizeof(wanoe_ifname))) {
+        CcspTraceInfo (("[%s][%d] WANOE [%s] interface link up event received \n", __FUNCTION__,__LINE__,wanoe_ifname));
+        if ( TRUE == CosaDmlEthPortLinkStatusCallback (wanoe_ifname, WANOE_IFACE_UP)) {
+            CcspTraceInfo (("[%s][%d] Successfully posted WANOE [%s] interface link up event to message queue\n", __FUNCTION__,__LINE__,wanoe_ifname));
+        }else {
+            CcspTraceError (("[%s][%d] Failed to post WANOE [%s] interface link up event to message queue\n", __FUNCTION__,__LINE__,wanoe_ifname));
+        }
+    }
+}
+
+/**
+ * @Note Callback invoked upon wanoe interface link up from HAL.
+ */
+void EthWanLinkDown_callback() {
+    char wanoe_ifname[WANOE_IFACENAME_LENGTH] = {0};
+
+#ifdef AUTOWAN_ENABLE
+    v_secure_system("sysevent set phylink_wan_state down");
+#endif
+    if (ANSC_STATUS_SUCCESS == GetWan_InterfaceName (wanoe_ifname, sizeof(wanoe_ifname))) {
+        CcspTraceInfo (("[%s][%d] WANOE [%s] interface link down event received \n", __FUNCTION__,__LINE__,wanoe_ifname));
+        if ( TRUE == CosaDmlEthPortLinkStatusCallback (wanoe_ifname, WANOE_IFACE_DOWN)) {
+            CcspTraceInfo (("[%s][%d] Successfully posted WANOE [%s] interface link down event to message queue\n", __FUNCTION__,__LINE__,wanoe_ifname));
+        }else {
+            CcspTraceError (("[%s][%d] Failed to post WANOE [%s] interface link down event to message queue\n", __FUNCTION__,__LINE__,wanoe_ifname));
+        }
+    }
 }
 #endif // defined (FEATURE_RDKB_WAN_MANAGER)
 #endif // defined (FEATURE_RDKB_WAN_MANAGER) || defined (FEATURE_RDKB_WAN_AGENT)

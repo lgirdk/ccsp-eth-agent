@@ -751,10 +751,85 @@ EthernetWAN_SetParamStringValue
         }
 
     }
+
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+    rc = strcmp_s("RequestPhyStatus",strlen("RequestPhyStatus"),ParamName,&ind);
+    ERR_CHK(rc);
+    if ((!ind) && (rc == EOK))
+    {
+        PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
+        if (pMyObject)
+        {
+            PCOSA_DATAMODEL_ETH_WAN_AGENT pEthWanCfg = (PCOSA_DATAMODEL_ETH_WAN_AGENT)&pMyObject->EthWanCfg;
+            if (pEthWanCfg)
+            {
+                rc = strcpy_s(pEthWanCfg->wanInstanceNumber,sizeof(pEthWanCfg->wanInstanceNumber),pString);
+                if(rc != EOK)
+                {
+                    ERR_CHK(rc);
+                    return FALSE;
+                }
+
+                if (pEthWanCfg->MonitorPhyStatusAndNotify != TRUE)
+                {
+                    pEthWanCfg->MonitorPhyStatusAndNotify = TRUE;
+                    CosaDmlEthWanPhyStatusMonitor(pMyObject);
+                }
+            }
+        }
+
+       return TRUE;
+    }
+#endif
+
+
     /* AnscTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
 }
 #endif
+
+BOOL EthernetWAN_SetParamBoolValue
+
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL                        bValue
+    )
+{
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+
+    errno_t rc       = -1;
+    int     ind      = -1;
+    UNREFERENCED_PARAMETER(hInsContext);
+    rc = strcmp_s("ConfigureWan",strlen("ConfigureWan"),ParamName,&ind);
+    ERR_CHK(rc);
+    if ((!ind) && (rc == EOK))
+    {
+        CosaDmlConfigureEthWan(bValue);
+        return TRUE;
+    }
+#else
+    UNREFERENCED_PARAMETER(hInsContext);
+    UNREFERENCED_PARAMETER(ParamName);
+    UNREFERENCED_PARAMETER(bValue);
+
+#endif
+    return FALSE;
+}
+
+BOOL EthernetWAN_GetParamBoolValue
+
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL*                       pBool
+    )
+{
+    UNREFERENCED_PARAMETER(hInsContext);
+    UNREFERENCED_PARAMETER(ParamName);
+    UNREFERENCED_PARAMETER(pBool);
+    return FALSE;
+}
 
 /***********************************************************************
 APIs for Object:

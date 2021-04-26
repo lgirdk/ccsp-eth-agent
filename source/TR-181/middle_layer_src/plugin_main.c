@@ -133,6 +133,9 @@ COSA_Init
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthernetWAN_SetParamStringValue", EthernetWAN_SetParamStringValue);
 #endif
 #if defined(FEATURE_RDKB_WAN_MANAGER)
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthernetWAN_GetParamBoolValue", EthernetWAN_GetParamBoolValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthernetWAN_SetParamBoolValue", EthernetWAN_SetParamBoolValue);
+
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthRdkInterface_GetEntryCount", EthRdkInterface_GetEntryCount);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthRdkInterface_GetEntry", EthRdkInterface_GetEntry);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthRdkInterface_AddEntry", EthRdkInterface_AddEntry);

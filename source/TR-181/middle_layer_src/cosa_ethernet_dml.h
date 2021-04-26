@@ -226,6 +226,24 @@ EthernetWAN_SetParamStringValue
     );
 #endif
 BOOL
+EthernetWAN_GetParamBoolValue
+
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL*                       pBool
+    );
+
+BOOL
+EthernetWAN_SetParamBoolValue
+
+    (
+        ANSC_HANDLE                 hInsContext,
+        char*                       ParamName,
+        BOOL                        bValue
+    );
+
+BOOL
 AutowanFeatureSupport_GetParamBoolValue
     (
         ANSC_HANDLE                 hInsContext,
