@@ -276,6 +276,8 @@ ANSC_STATUS CosaDmlTriggerExternalEthPortLinkStatus(char *ifname, BOOL status);
 ANSC_STATUS CosaDmlEthPortGetLinkStatus( CHAR *ifname, COSA_DML_ETH_LINK_STATUS *LinkStatus );
 ANSC_STATUS CosaDmlEthPortSetName( CHAR *ifname, CHAR *newIfname);
 INT CosaDmlEthPortLinkStatusCallback( CHAR *ifname, CHAR* state );
+void EthWanLinkUp_callback();
+void EthWanLinkDown_callback();
 ANSC_STATUS CosaDmlEthPortGetCopyOfGlobalInfoForGivenIfName(char* ifName, PCOSA_DML_ETH_PORT_GLOBAL_CONFIG pGlobalInfo );
 ANSC_STATUS CosaDmlEthSetWanLinkStatusForWanManager(char *ifname, char *WanStatus);
 ANSC_STATUS CosaDmlEthSetWanInterfaceNameForWanManager(char *ifname, char *WanIfName);

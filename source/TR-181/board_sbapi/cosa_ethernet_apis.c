@@ -120,7 +120,6 @@
 #if defined (FEATURE_RDKB_WAN_MANAGER)
 #define TOTAL_NUMBER_OF_INTERNAL_INTERFACES 4
 #define DATAMODEL_PARAM_LENGTH 256
-#include "eth_hal.h"
 #define WANOE_IFACENAME_LENGTH 32
 #define WANOE_IFACE_UP "UP"
 #define WANOE_IFACE_DOWN "DOWN"
@@ -217,9 +216,7 @@ static ANSC_STATUS CosaDmlEthSetParamValues(char *pComponent, char *pBus, char *
 #elif defined (FEATURE_RDKB_WAN_MANAGER)
 static ANSC_STATUS CosaDmlEthSetParamValues(const char *pComponent, const char *pBus, const char *pParamName, const char *pParamVal, enum dataType_e type, unsigned int bCommitFlag);
 static ANSC_STATUS DmlEthCheckIfaceConfiguredAsPPPoE( char *ifname, BOOL *isPppoeIface);
-#ifdef _SR300_PRODUCT_REQ_
 static ANSC_STATUS  GetWan_InterfaceName (char* wanoe_ifacename, int length);
-#endif // _SR300_PRODUCT_REQ_
 INT gTotal = TOTAL_NUMBER_OF_INTERNAL_INTERFACES;
 #endif //FEATURE_RDKB_WAN_MANAGER
 
@@ -563,7 +560,7 @@ CosaDmlEthInit(
     char WanOEInterface[16] = {0};
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)phContext;
     int ifIndex;
-#if defined (FEATURE_RDKB_WAN_AGENT)
+
     //Initialise ethsw-hal to get event notification from lower layer.
     if (CcspHalEthSwInit() != RETURN_OK)
     {
@@ -572,6 +569,7 @@ CosaDmlEthInit(
     }
     //ETH Port Init.
     CosaDmlEthPortInit((PANSC_HANDLE)pMyObject);
+#if defined (FEATURE_RDKB_WAN_AGENT)
 
     if(CosaDmlGetWanOEInterfaceName(WanOEInterface, sizeof(WanOEInterface)) == ANSC_STATUS_SUCCESS) {
         if(GWP_GetEthWanLinkStatus() == 1) {
@@ -595,23 +593,6 @@ CosaDmlEthInit(
         }
     }
 #elif defined (FEATURE_RDKB_WAN_MANAGER)
-#ifdef _SR300_PRODUCT_REQ_
-    //Initialise ethsw-hal to get event notification from lower layer.
-    if (CcspHalEthSwInit() != RETURN_OK)
-    {
-        CcspTraceError(("Hal initialization failed \n"));
-        return ANSC_STATUS_FAILURE;
-    }
-#else
-    //Initialise eth-hal to get event notification from lower layer.
-    if (eth_hal_init() != RETURN_OK)
-    {
-        CcspTraceError(("Hal initialization failed \n"));
-        return ANSC_STATUS_FAILURE;
-    }
-#endif // _SR300_PRODUCT_REQ_
-    //ETH Port Init.
-    CosaDmlEthPortInit((PANSC_HANDLE)pMyObject);
     if(CosaDmlGetWanOEInterfaceName(WanOEInterface, sizeof(WanOEInterface)) == ANSC_STATUS_SUCCESS) {
         if(GWP_GetEthWanLinkStatus() == 1) {
             if(CosaDmlEthGetPhyStatusForWanManager(WanOEInterface, PhyStatus) == ANSC_STATUS_SUCCESS) {
@@ -2199,7 +2180,6 @@ ANSC_STATUS CosaDmlEthGetPhyStatusForWanManager(char *ifname, char *PhyStatus)
     return ANSC_STATUS_SUCCESS;
 }
 #if defined (FEATURE_RDKB_WAN_MANAGER)
-#ifdef _SR300_PRODUCT_REQ_
 /**
  * @Note Utility API to get WANOE interface from HAL layer.
  */
@@ -2250,7 +2230,6 @@ void EthWanLinkDown_callback() {
         }
     }
 }
-#endif //_SR300_PRODUCT_REQ_
 /**
  * @note API to check the given interface is configured to use as a PPPoE interface
 */
