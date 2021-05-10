@@ -1739,6 +1739,40 @@ ANSC_STATUS CosaDmlEthSetWanLinkStatusForWanManager(char *ifname, char *WanStatu
     CcspTraceInfo(("%s %d Successfully notified %s event to WAN Agent for %s interface\n", __FUNCTION__, __LINE__, WanStatus, ifname));
     return ANSC_STATUS_SUCCESS;
 }
+
+/* Set wan interface name to WanManager */
+ANSC_STATUS CosaDmlEthSetWanInterfaceNameForWanManager(char *ifname, char *WanIfName)
+{
+    COSA_DML_ETH_PORT_GLOBAL_CONFIG stGlobalInfo = {0};
+    char acSetParamName[256];
+    char acSetParamValue[256];
+    INT iWANInstance = -1;
+    //Validate buffer
+    if ((NULL == ifname) || (NULL == WanIfName))
+    {
+        CcspTraceError(("%s Invalid Memory\n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+    //Get global copy of the data from interface name
+    CosaDmlEthPortGetCopyOfGlobalInfoForGivenIfName(ifname, &stGlobalInfo);
+    //Get Instance for corresponding name
+    CosaDmlEthGetLowerLayersInstanceInOtherAgent(NOTIFY_TO_WAN_AGENT, stGlobalInfo.Name, &iWANInstance);
+    //Index is not present. so no need to do anything any WAN instance
+    if (-1 == iWANInstance)
+    {
+        CcspTraceError(("%s %d WAN instance not present\n", __FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    CcspTraceInfo(("%s %d WAN Instance:%d\n", __FUNCTION__, __LINE__, iWANInstance));
+    //Set WAN Status
+    snprintf(acSetParamName, DATAMODEL_PARAM_LENGTH, WAN_INTERFACE_PARAM_NAME, iWANInstance);
+    snprintf(acSetParamValue, DATAMODEL_PARAM_LENGTH, "%s", WanIfName);
+    CosaDmlEthSetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH, acSetParamName, acSetParamValue, ccsp_string, TRUE);
+
+    CcspTraceInfo(("%s %d Successfully notified WAN Interface name %s for %s base interface\n", __FUNCTION__, __LINE__, WanIfName, ifname));
+    return ANSC_STATUS_SUCCESS;
+}
 #endif //FEATURE_RDKB_WAN_AGENT
 
 static ANSC_STATUS CosaDmlGetWanOEInterfaceName(char *pInterface, unsigned int length)

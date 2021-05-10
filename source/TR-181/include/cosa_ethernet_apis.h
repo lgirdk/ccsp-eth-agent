@@ -125,6 +125,7 @@ wanmanager could able to handle vlan interface creation and management */
 #define WAN_PHY_STATUS_PARAM_NAME         "Device.X_RDK_WanManager.CPEInterface.%d.Phy.Status"
 #define WAN_PHY_PATH_PARAM_NAME           "Device.X_RDK_WanManager.CPEInterface.%d.Phy.Path"
 #define WAN_LINK_STATUS_PARAM_NAME        "Device.X_RDK_WanManager.CPEInterface.%d.Wan.LinkStatus"
+#define WAN_INTERFACE_PARAM_NAME          "Device.X_RDK_WanManager.CPEInterface.%d.Wan.Name"
 #define WAN_STATUS_PARAM_NAME             "Device.X_RDK_WanManager.CPEInterface.%d.Wan.Status"
 #define WAN_IF_NAME_PARAM_NAME            "Device.X_RDK_WanManager.CPEInterface.%d.Name"
 
@@ -277,6 +278,7 @@ ANSC_STATUS CosaDmlEthPortSetName( CHAR *ifname, CHAR *newIfname);
 INT CosaDmlEthPortLinkStatusCallback( CHAR *ifname, CHAR* state );
 ANSC_STATUS CosaDmlEthPortGetCopyOfGlobalInfoForGivenIfName(char* ifName, PCOSA_DML_ETH_PORT_GLOBAL_CONFIG pGlobalInfo );
 ANSC_STATUS CosaDmlEthSetWanLinkStatusForWanManager(char *ifname, char *WanStatus);
+ANSC_STATUS CosaDmlEthSetWanInterfaceNameForWanManager(char *ifname, char *WanIfName);
 ANSC_STATUS CosaDmlEthCreateEthLink(char *l2ifName, char *Path);
 ANSC_STATUS CosaDmlEthDeleteEthLink(char *ifName, char *Path);
 ANSC_STATUS CosaDmlEthGetPhyStatusForWanManager( char *ifname, char *PhyStatus );

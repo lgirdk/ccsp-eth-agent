@@ -348,6 +348,10 @@ static ethSmState_t Transition_EthWanLinkUp(PETH_SM_PRIVATE_INFO pstInfo)
 #if defined (FEATURE_RDKB_WAN_AGENT)
     if (ANSC_STATUS_SUCCESS != CosaDmlEthSetWanStatusForWanAgent(pstInfo->Name, "Up"))
 #elif defined(FEATURE_RDKB_WAN_MANAGER)
+    if (ANSC_STATUS_SUCCESS != CosaDmlEthSetWanInterfaceNameForWanManager(pstInfo->Name, WAN_INTERFACE_NAME))
+    {
+        CcspTraceError(("%s Failed to set LinkUp to WAN\n", __FUNCTION__));
+    }
     if (ANSC_STATUS_SUCCESS != CosaDmlEthSetWanLinkStatusForWanManager(pstInfo->Name, "Up"))
 #endif
     {
