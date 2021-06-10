@@ -562,17 +562,19 @@ static int ethGetPHYRate
     CCSP_HAL_ETHSW_LINK_RATE LinkRate       = CCSP_HAL_ETHSW_LINK_NULL;
     CCSP_HAL_ETHSW_DUPLEX_MODE DuplexMode   = CCSP_HAL_ETHSW_DUPLEX_Auto;
     INT PHYRate                             = 0;
-#if defined(_CBR_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_)
+#if defined(_CBR_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_) || ( defined (_XB6_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_))
     CCSP_HAL_ETHSW_LINK_STATUS  LinkStatus  = CCSP_HAL_ETHSW_LINK_Down;
 #endif
     /* For Broadcom platform device, CcspHalEthSwGetPortStatus returns the Linkrate based
      * on the CurrentBitRate and CcspHalEthSwGetPortCfg returns the Linkrate based on the
      * MaximumBitRate. Hence CcspHalEthSwGetPortStatus called for Broadcom platform devices.
      */
-#if defined(_CBR_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_)
+#if defined(_CBR_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_) || ( defined (_XB6_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_))
     status = CcspHalEthSwGetPortStatus(PortId, &LinkRate, &DuplexMode, &LinkStatus);
+    CcspTraceWarning(("CcspHalEthSwGetPortStatus link rate %d\n", LinkRate));
 #else
     status = CcspHalEthSwGetPortCfg(PortId, &LinkRate, &DuplexMode);
+     CcspTraceWarning(("CcspHalEthSwGetPortCfg link rate %d\n", LinkRate));
 #endif
     if (RETURN_OK == status)
     {
