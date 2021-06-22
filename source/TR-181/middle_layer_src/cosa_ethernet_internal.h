@@ -139,4 +139,7 @@ CosaEthernetRemove
 #if defined (FEATURE_RDKB_WAN_MANAGER)
 ANSC_STATUS InitEthIfaceEntry(ANSC_HANDLE hDml, PCOSA_DML_ETH_PORT_CONFIG pEntry);
 #endif
+#ifdef FEATURE_RDKB_WAN_UPSTREAM
+ANSC_STATUS CosaDmlSetWanOEMode( PCOSA_DML_ETH_PORT_FULL phContext, BOOL enable );
+#endif
 #endif

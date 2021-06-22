@@ -127,7 +127,9 @@ COSA_DML_ETH_PORT_SINFO      g_EthIntSInfo[] =
         {SWITCH_PORT_1_NAME,                FALSE,  {0,0,0,0,0,0}},
 #if defined(ETH_4_PORTS) || defined(ETH_6_PORTS) || defined(ETH_8_PORTS)
         {SWITCH_PORT_2_NAME,                FALSE,  {0,0,0,0,0,0}},
+#ifndef FEATURE_RDKB_WAN_UPSTREAM
         {SWITCH_PORT_3_NAME,                FALSE,  {0,0,0,0,0,0}},
+#endif  /* FEATURE_RDKB_WAN_UPSTREAM */
 #endif
 #if defined(ETH_6_PORTS) || defined(ETH_8_PORTS)
         {SWITCH_PORT_4_NAME,                FALSE,  {0,0,0,0,0,0}},
@@ -234,8 +236,12 @@ CosaEthInterfaceInfo g_EthEntries[] =
         {g_EthIntSInfo + 0, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 0, {0}},
         {g_EthIntSInfo + 1, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 1, {0}},
         {g_EthIntSInfo + 2, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 2, {0}},
+#ifndef FEATURE_RDKB_WAN_UPSTREAM
         {g_EthIntSInfo + 3, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 3, {0}},
         {g_EthIntSInfo + 4, {'\0'}, 0, 0, &ifFuncs, NULL,          {0}},
+#else
+        {g_EthIntSInfo + 3, {'\0'}, 0, 0, &ifFuncs, NULL,          {0}},
+#endif
 #if defined(INTEL_PUMA7) && !defined(_ARRIS_XB6_PRODUCT_REQ_)
         {g_EthIntSInfo + 5, {'\0'}, 0, 0, &ifFuncs, NULL,          {0}},
         {g_EthIntSInfo + 6, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 4, {0}},
@@ -252,6 +258,20 @@ CosaEthInterfaceInfo g_EthEntries[] =
 /**********************************************************************
                             Routine Trunks
 **********************************************************************/
+#ifdef FEATURE_RDKB_WAN_UPSTREAM
+BOOL getSystemUpstream()
+{
+    char buf[8]={0};
+    if (syscfg_get(NULL, "Ethwan_Disable_Upstream", buf, sizeof(buf)) == 0)
+    {
+        if (buf != NULL && atoi(buf) == 1)
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+#endif
 
 ANSC_STATUS
 CosaDmlEthInterfaceInit
@@ -292,6 +312,18 @@ CosaDmlEthInterfaceInit
     _getMac("brlan0", strMac);
 #endif
 
+#ifdef FEATURE_RDKB_WAN_UPSTREAM
+
+/* Get upstream from system and assign it to upstream */
+
+for (i=0; i < g_EthernetIntNum; ++i) {
+    if (AnscEqualString(g_EthIntSInfo[i].Name, DMSB_ETH_IF_NAME_DFT_WanRouting, TRUE))
+    {
+        g_EthIntSInfo[i].bUpstream = getSystemUpstream();
+        CcspTraceInfo(("%s g_EthIntSInfo[%ld].bUpstream=[%s]\n", __FUNCTION__, i+1, g_EthIntSInfo[i].bUpstream?"TRUE":"FALSE"));
+    }
+}
+#endif
     /*  Iterate through Ethernet ports, assign LAN mac to downstream ports
         Keep track of the index of upstream ports to assign their MAC addresses
      */

@@ -68,6 +68,8 @@
 #include "../middle_layer_src/plugin_main_apis.h"
 #include "ccsp_hal_ethsw.h"
 
+#define WAN_ETHERNET_IFNAME "erouter0"
+
 /**********************************************************************
                 STRUCTURE AND CONSTANT DEFINITIONS
 **********************************************************************/

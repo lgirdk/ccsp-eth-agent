@@ -76,7 +76,7 @@
 #include <sys/stat.h>
 #include "safec_lib_common.h"
 #include "syscfg/syscfg.h"
-
+#include "secure_wrapper.h"
 #if defined (FEATURE_RDKB_WAN_MANAGER) || defined (FEATURE_RDKB_WAN_AGENT)
 #include "cosa_ethernet_manager.h"
 #endif //#if defined (FEATURE_RDKB_WAN_MANAGER)
@@ -1026,3 +1026,63 @@ ANSC_STATUS InitEthIfaceEntry(ANSC_HANDLE hDml, PCOSA_DML_ETH_PORT_CONFIG pEntry
     return returnStatus;
 }
 #endif // FEATURE_RDKB_WAN_MANAGER
+
+#ifdef FEATURE_RDKB_WAN_UPSTREAM
+
+ANSC_STATUS CosaDmlSetWanOEMode (PCOSA_DML_ETH_PORT_FULL pEthernetPortFull, BOOL enable)
+{
+
+    UINT WanPort = 0;
+    char buf[8] = {0};
+
+    if (pEthernetPortFull == NULL)
+    {
+        AnscTraceError(("[%s][%d] Invalid memeory! \n",__FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    /**
+     * Check request initiated for ethernet interface.
+     */
+    if (strncmp(pEthernetPortFull->StaticInfo.Name, WAN_ETHERNET_IFNAME, strlen(WAN_ETHERNET_IFNAME)) != 0)
+    {
+        AnscTraceInfo(("Update for wan.upstream is not requested for ethernet interface, not doing anything at this moment. \n"));
+        return ANSC_STATUS_SUCCESS;
+    }
+
+    if(0 != CcspHalExtSw_getEthWanPort(&WanPort))
+    {
+        AnscTraceInfo(("Failed to get WanPort[%lu] in CPE \n",WanPort));
+    }
+
+    if(WanPort != pEthernetPortFull->Cfg.InstanceNumber)
+    {
+        AnscTraceInfo(("[%s][%d] WanPort from EthSW[%lu], InstanceNumber! \n",__FUNCTION__, __LINE__,WanPort, pEthernetPortFull->Cfg.InstanceNumber));
+        if(0 != CcspHalExtSw_setEthWanPort(WanPort))
+        {
+            AnscTraceInfo(("Failed to set WanPort[%lu] in CPE \n",WanPort));
+            return ANSC_STATUS_FAILURE;
+        }
+    }
+
+    if (0 != CcspHalExtSw_setEthWanEnable(enable))
+    {
+        AnscTraceInfo(("Failed to %s ETH_WAN_MODE in CPE \n", (enable ? "Enable" : "Disable")));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    /** Update local storage with new value. **/
+    snprintf(buf, sizeof(buf), "%d", !enable);
+    if (syscfg_set(NULL, "Ethwan_Disable_Upstream", buf) != 0)
+    {
+        AnscTraceWarning(("syscfg_set failed\n"));
+        return ANSC_STATUS_FAILURE;
+    }
+    if (syscfg_commit() != 0)
+    {
+        AnscTraceWarning(("syscfg_commit failed\n"));
+        return ANSC_STATUS_FAILURE;
+    }
+    return ANSC_STATUS_SUCCESS;
+}
+#endif

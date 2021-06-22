@@ -234,6 +234,9 @@
          <name>Upstream</name>
          <type>boolean</type>
          <syntax>bool</syntax>
+<?ifdef FEATURE_RDKB_WAN_UPSTREAM?>
+         <writable>true</writable>
+<?endif?>
        </parameter>
        <parameter>
          <name>MACAddress</name>
