@@ -21,6 +21,9 @@
 /* ---- Include Files ---------------------------------------- */
 #include "cosa_ethernet_manager.h"
 #include "cosa_ethernet_apis.h"
+#if defined(_PLATFORM_RASPBERRYPI_)
+#include "syscfg.h"
+#endif
 
 /* ---- Global Constants -------------------------- */
 #define LOOP_TIMEOUT 500000 // timeout in milliseconds. This is the state machine loop interval
@@ -326,6 +329,19 @@ static ethSmState_t Transition_EthWanLinkFound(PETH_SM_PRIVATE_INFO pstInfo)
 #if defined(FEATURE_RDKB_WAN_AGENT)
     if (ANSC_STATUS_SUCCESS != CosaDmlEthCreateEthLink(pstInfo->Name, stGlobalInfo.Path))
 #elif defined(FEATURE_RDKB_WAN_MANAGER)
+    #if defined(_PLATFORM_RASPBERRYPI_)     
+    CHAR wanPhyName[20] = {0},out_value[20] = {0};
+    if (!syscfg_get(NULL, "wan_physical_ifname", out_value, sizeof(out_value)))
+    {
+           strcpy(wanPhyName, out_value);
+    }
+
+    if (!strncmp(wanPhyName, "erouter0", sizeof(wanPhyName)))
+    {
+            CosaDmlEthPortSetWanStatus(pstInfo->Name,ETH_WAN_UP);
+            return Transition_EthWanLinkUp(pstInfo);
+    }
+    #endif
     if (ANSC_STATUS_SUCCESS != CosaDmlEthCreateEthLink(pstInfo->Name, stGlobalInfo.LowerLayers))
 #endif
     {

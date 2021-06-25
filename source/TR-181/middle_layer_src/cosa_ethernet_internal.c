@@ -104,6 +104,7 @@ static void CosaEthernetLogger(void);
 static int CosaEthTelemetryInit(void);
 
 #if defined(FEATURE_RDKB_WAN_MANAGER) || defined (FEATURE_RDKB_WAN_AGENT)
+#if !defined(_PLATFORM_RASPBERRYPI_)
 static int checkIfSystemReady(void);
 static void waitUntilSystemReady(void);
 
@@ -138,6 +139,7 @@ static void waitUntilSystemReady()
         sleep(5);
     }
 }
+#endif // #if !defined(_PLATFORM_RASPBERRYPI_)
 #endif //#if defined (FEATURE_RDKB_WAN_MANAGER)
 
 /**********************************************************************
@@ -226,7 +228,9 @@ CosaEthernetInitialize
     PCOSA_DATAMODEL_ETHERNET        pMyObject           = (PCOSA_DATAMODEL_ETHERNET)hThisObject;
     syscfg_init();
 #if defined (FEATURE_RDKB_WAN_MANAGER) || defined(FEATURE_RDKB_WAN_AGENT)
+#if !defined(_PLATFORM_RASPBERRYPI_)
     waitUntilSystemReady();
+#endif    
 #endif //#if defined (FEATURE_RDKB_WAN_MANAGER) || defined(FEATURE_RDKB_WAN_AGENT)
 #if defined (FEATURE_RDKB_WAN_MANAGER)
     AnscSListInitializeHeader( &pMyObject->Q_EthList );
