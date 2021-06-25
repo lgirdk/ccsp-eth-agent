@@ -180,6 +180,10 @@ typedef enum WanMode
 
 #endif //#if defined (ENABLE_ETH_WAN)
 
+#if defined(_PLATFORM_RASPBERRYPI_)
+#define ETHWAN_DEF_INTF_NAME "eth0"
+#endif
+
 #define ETH_HOST_PARAMVALUE_TRUE "true"
 #define ETH_HOST_PARAMVALUE_FALSE "false"
 #define ETH_HOST_MAC_LENGTH 17
@@ -1198,6 +1202,22 @@ CosaDmlEthInit(
         }
     }
 #else
+    #if defined(_PLATFORM_RASPBERRYPI_)
+    char wanPhyName[20] = {0},out_value[20] = {0};
+
+    if (!syscfg_get(NULL, "wan_physical_ifname", out_value, sizeof(out_value)))
+    {
+       strcpy(wanPhyName, out_value);
+    }
+    else
+    {
+       return -1;
+    }
+    v_secure_system("ifconfig " ETHWAN_DEF_INTF_NAME" down");
+    v_secure_system("ip link set "ETHWAN_DEF_INTF_NAME" name %s",wanPhyName);
+    v_secure_system("ifconfig %s up",wanPhyName);
+    #endif
+
     //Initialise ethsw-hal to get event notification from lower layer.
     if (CcspHalEthSwInit() != RETURN_OK)
     {
@@ -1235,7 +1255,7 @@ CosaDmlEthInit(
         if(GWP_GetEthWanLinkStatus() == 1) {
             if(CosaDmlEthGetPhyStatusForWanManager(WanOEInterface, PhyStatus) == ANSC_STATUS_SUCCESS) {
                 if(strcmp(PhyStatus, "Up") != 0) {
-                    CosaDmlEthSetPhyStatusForWanManager(WanOEInterface, "Up");
+                    CosaDmlEthSetPhyStatusForWanManager(WanOEInterface, WANOE_IFACE_UP);
                     CcspTraceError(("Successfully updated PhyStatus to UP for %s interface \n", WanOEInterface));
                     /** We need also update `linkStatus` in global data to inform linkstatus is up
                      * for the EthAgent state machine. This is required for SM, when its being started

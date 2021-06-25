@@ -104,7 +104,7 @@ static void CosaEthernetLogger(void);
 static int CosaEthTelemetryInit(void);
 
 #if defined(FEATURE_RDKB_WAN_MANAGER) || defined (FEATURE_RDKB_WAN_AGENT)
-#if !defined(AUTOWAN_ENABLE) // This is not needed when auto wan is enabled for TCXBX platforms
+#if !defined(AUTOWAN_ENABLE) && !defined(_PLATFORM_RASPBERRYPI_) // This is not needed when auto wan is enabled for TCXBX platforms
 static int checkIfSystemReady(void);
 static void waitUntilSystemReady(void);
 
@@ -228,7 +228,7 @@ CosaEthernetInitialize
     PCOSA_DATAMODEL_ETHERNET        pMyObject           = (PCOSA_DATAMODEL_ETHERNET)hThisObject;
     syscfg_init();
 #if defined (FEATURE_RDKB_WAN_MANAGER) || defined(FEATURE_RDKB_WAN_AGENT)
-#if !defined(AUTOWAN_ENABLE) // This is not needed when auto wan is enabled for TCXBX platforms
+#if !defined(AUTOWAN_ENABLE) && !defined(_PLATFORM_RASPBERRYPI_)// This is not needed when auto wan is enabled for TCXBX platforms
         waitUntilSystemReady();
 #endif
 #endif //#if defined (FEATURE_RDKB_WAN_MANAGER) || defined(FEATURE_RDKB_WAN_AGENT)
