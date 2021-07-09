@@ -172,8 +172,6 @@ CosaUtilChannelValidate2
         char                       *channelList
     );
 
-int CosaUtilGetIfStats(char * ifname, PCOSA_DML_IF_STATS  pStats);
-
 ULONG CosaUtilIoctlXXX(char * if_name, char * method, void * input);
 ULONG NetmaskToNumber(char *netmask);
 ANSC_STATUS
