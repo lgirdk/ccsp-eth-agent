@@ -1345,57 +1345,6 @@ CosaUtilIoctlXXX
 #endif
 
 
-#define NET_STATS_FILE "/proc/net/dev"
-int CosaUtilGetIfStats(char * ifname, PCOSA_DML_IF_STATS pStats)
-{
-    int    i;
-    FILE * fp = NULL;
-    char buf[1024] = {0} ;
-    char * p;
-    int    ret = 0;
-    errno_t rc = -1;
-
-    fp = fopen(NET_STATS_FILE, "r");
-      /* Coverity Issue Fix - CID:67981 : Forward NULL */
-    if( fp  == NULL)
-    {		
-      		printf("cannot open file: %s\n", NET_STATS_FILE);
-                return -1;
-    } 
-    
-        i = 0;
-        while (fgets(buf, sizeof(buf), fp))
-        {
-            if (++i <= 2) continue;
-            
-            if ((p = strchr(buf, ':')))
-            {
-                if (strstr(buf, ifname))
-                {
-                    rc =  memset_s(pStats,sizeof(*pStats), 0, sizeof(*pStats));
-                    ERR_CHK(rc);
-                    if (sscanf(p+1, "%lu %lu %lu %lu %*d %*d %*d %*d %d %d %d %d %*d %*d %*d %*d", 
-                               &pStats->BytesReceived, &pStats->PacketsReceived, &pStats->ErrorsReceived, &pStats->DiscardPacketsReceived,
-                              (int *) &pStats->BytesSent,(int *) &pStats->PacketsSent,(int *) &pStats->ErrorsSent,(int *) &pStats->DiscardPacketsSent
-                            ) == 8)
-                    {
-                        /*found*/
-                        ret = TRUE;
-                        goto _EXIT;
-                    }
-                }
-                else continue;
-            }
-            else continue;
-        }
-        
-       
-
-_EXIT:
-    fclose(fp);
-    return ret;
-}
-
 ULONG NetmaskToNumber(char *netmask)
 {
     char * pch;
@@ -1589,16 +1538,6 @@ int CosaUtilGetIpv6AddrInfo (char * ifname, ipv6_addr_info_t ** pp_info, int * p
     return 0;
 }
 #endif
-
-
-int safe_strcpy(char * dst, char * src, int dst_size)
-{
-    if (!dst || !src) return -1;
-    memset(dst, 0, dst_size);
-     _ansc_strncpy(dst, src, (int)_ansc_strlen(src)<=dst_size-1 ? (int)_ansc_strlen(src):dst_size-1 );
-    return 0;
-}
-
 
 int  __v6addr_mismatch(char * addr1, char * addr2, int pref_len)
 {
