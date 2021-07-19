@@ -398,6 +398,7 @@ EthWan_SetParamBoolValue
 	    	}
 		else
 		{
+			#if 0
 			//RDKB-27656 : Bridge Mode must not set to true using WEBPA & dmcli in ETHWAN mode
 			BOOL bridgeInd = FALSE;
                         /*Coverity Fix CID :139267 CHECKED_RETURN */
@@ -412,6 +413,7 @@ EthWan_SetParamBoolValue
 				CcspTraceWarning(("EthernetWAN mode is not supported in bridge mode. Disable Bridge mode to enable Ethernet WAN mode \n"));
 				return FALSE;
 			}
+			#endif
 			if( ANSC_STATUS_SUCCESS == CosaDmlEthWanSetEnable( bValue )  )
 			{
 				pMyObject->EthWanCfg.Enable = bValue;
@@ -669,7 +671,6 @@ EthernetWAN_SetParamStringValue
     BOOL  bValue = FALSE;
     char buf[8]={0};
     int wan_mode = 0;
-    BOOL bridge_mode_enabled = FALSE;
     errno_t rc = -1;
     int            ind = -1;
     /* check the parameter name and set the corresponding value */
@@ -686,12 +687,14 @@ EthernetWAN_SetParamStringValue
         }
         else if((strcmp_s("Ethernet",strlen("Ethernet"),pString,&ind) == EOK) && (ind == 0))
         {
+	    #if 0
             is_usg_in_bridge_mode(&bridge_mode_enabled);
             ERR_CHK(rc);
             if ((rc == EOK) && bridge_mode_enabled) {
                CcspTraceWarning(("EthernetWAN mode is not supported in bridge mode.\n"));
                return FALSE;
 	    }
+	    #endif
 		bValue = TRUE;
 		wan_mode = WAN_MODE_ETH;
         }
