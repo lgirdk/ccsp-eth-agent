@@ -383,8 +383,6 @@ void* CosaDmlEthWanChangeHandling( void* buff )
 	pthread_detach(pthread_self());	
 
 /* Set the reboot reason */
-                        char buf[8];
-                        snprintf(buf,sizeof(buf),"%d",1);
 			OnboardLog("Device reboot due to reason WAN_Mode_Change\n");
                         if (syscfg_set(NULL, "X_RDKCENTRAL-COM_LastRebootReason", "WAN_Mode_Change") != 0)
                         {
@@ -399,7 +397,7 @@ void* CosaDmlEthWanChangeHandling( void* buff )
                         }
 
 
-                        if (syscfg_set(NULL, "X_RDKCENTRAL-COM_LastRebootCounter", buf) != 0)
+                        if (syscfg_set(NULL, "X_RDKCENTRAL-COM_LastRebootCounter", "1") != 0)
                         {
                                 AnscTraceWarning(("syscfg_set failed\n"));
                         }

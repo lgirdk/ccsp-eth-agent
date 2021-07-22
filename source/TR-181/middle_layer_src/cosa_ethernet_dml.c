@@ -672,7 +672,6 @@ EthernetWAN_SetParamStringValue
     UNREFERENCED_PARAMETER(ParamName);
 #ifdef AUTOWAN_ENABLE
     BOOL  bValue = FALSE;
-    char buf[8]={0};
     int wan_mode = 0;
     BOOL bridge_mode_enabled = FALSE;
     errno_t rc = -1;
@@ -710,8 +709,7 @@ EthernetWAN_SetParamStringValue
 		return FALSE;
 	}
 
-        snprintf(buf, sizeof(buf), "%d", wan_mode);
-	if (syscfg_set(NULL, "selected_wan_mode", buf) != 0) 
+	if (syscfg_set_u(NULL, "selected_wan_mode", wan_mode) != 0) 
         {
             AnscTraceWarning(("syscfg_set failed\n"));
         } 
@@ -723,22 +721,17 @@ EthernetWAN_SetParamStringValue
             }
             else
             {
+                char buf[8];
             	int cur_wan_mode= 0;
-                rc =  memset_s(buf,sizeof(buf), 0, sizeof(buf));
-                ERR_CHK(rc);
+
 		    if (syscfg_get(NULL, "curr_wan_mode", buf, sizeof(buf)) == 0)
 		    {
-			if (buf != NULL)
-			{
-			
 				cur_wan_mode = atoi(buf);
 				if(cur_wan_mode == wan_mode)
 				{
 					CcspTraceWarning(("SelectedOperationalMode - %s is same as CurrentWanMode\n", pString));
 					return TRUE;
 				}
-
-			}
 		    }
                 rc = strcmp_s("Auto",strlen("Auto"),pString,&ind);
                 ERR_CHK(rc);
@@ -997,7 +990,6 @@ EthLogging_SetParamUlongValue
     )
 {
     UNREFERENCED_PARAMETER(hInsContext);
-    char buf[16]={0};
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
     errno_t        rc = -1;
     int            ind = -1;
@@ -1006,9 +998,7 @@ EthLogging_SetParamUlongValue
     if( (ind == 0) && (rc == EOK))
 
     {
-        sprintf(buf, "%lu", uValue);
-
-        if (syscfg_set(NULL, "eth_log_period", buf) != 0) 
+        if (syscfg_set_u(NULL, "eth_log_period", uValue) != 0) 
         {
             AnscTraceWarning(("syscfg_set failed\n"));
         } 
