@@ -929,8 +929,6 @@ ANSC_STATUS InitEthIfaceEntry(ANSC_HANDLE hDml, PCOSA_DML_ETH_PORT_CONFIG pEntry
 #ifdef FEATURE_RDKB_WAN_UPSTREAM
 ANSC_STATUS CosaDmlSetWanOEMode (PCOSA_DML_ETH_PORT_FULL pEthernetPortFull,PCOSA_DML_ETH_PORT_CONFIG pEthLink)
 {
-
-    char buf[8] = {0};
     BOOL bUpstream = FALSE;
     CHAR ifName[BUFLEN_32] = {0};
     if (pEthernetPortFull == NULL && pEthLink != NULL)
@@ -992,9 +990,7 @@ ANSC_STATUS CosaDmlSetWanOEMode (PCOSA_DML_ETH_PORT_FULL pEthernetPortFull,PCOSA
         }
 
         /** Update local storage with new value. **/
-        snprintf(buf, sizeof(buf), "%d", !bUpstream);
-
-        if (syscfg_set(NULL, "Ethwan_Disable_Upstream", buf) != 0)
+        if (syscfg_set_u(NULL, "Ethwan_Disable_Upstream", !bUpstream) != 0)
         {
             AnscTraceWarning(("syscfg_set failed\n"));
             return ANSC_STATUS_FAILURE;
