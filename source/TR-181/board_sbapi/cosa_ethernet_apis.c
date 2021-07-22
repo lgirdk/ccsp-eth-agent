@@ -569,8 +569,6 @@ void* CosaDmlEthWanChangeHandling( void* buff )
 	pthread_detach(pthread_self());	
 
 /* Set the reboot reason */
-                        char buf[8];
-                        snprintf(buf,sizeof(buf),"%d",1);
 			OnboardLog("Device reboot due to reason WAN_Mode_Change\n");
                         if (syscfg_set(NULL, "X_RDKCENTRAL-COM_LastRebootReason", "WAN_Mode_Change") != 0)
                         {
@@ -585,7 +583,7 @@ void* CosaDmlEthWanChangeHandling( void* buff )
                         }
 
 
-                        if (syscfg_set(NULL, "X_RDKCENTRAL-COM_LastRebootCounter", buf) != 0)
+                        if (syscfg_set(NULL, "X_RDKCENTRAL-COM_LastRebootCounter", "1") != 0)
                         {
                                 AnscTraceWarning(("syscfg_set failed\n"));
                         }
@@ -1664,12 +1662,10 @@ void* ThreadConfigEthWan(void *arg)
     sleep(2); // wait randomly some seconds till wan manager tear down the states.
     if ( ANSC_STATUS_SUCCESS != CosaDmlConfigureEthWan(*pValue))
     {
-        char buf[8] = {0};
         CcspTraceError(("CosaDmlConfigureEthWan failed %d revert %d \n",*pValue,!*pValue));
 
         // rollback configure to previous mode in case of failure.
-        snprintf(buf, sizeof(buf), "%d",  pEthWanCfgObj->PrevSelMode);
-        if (syscfg_set(NULL, "selected_wan_mode", buf) != 0)
+        if (syscfg_set_u(NULL, "selected_wan_mode", pEthWanCfgObj->PrevSelMode) != 0)
         {
             CcspTraceError(("syscfg_set failed\n"));
         }
