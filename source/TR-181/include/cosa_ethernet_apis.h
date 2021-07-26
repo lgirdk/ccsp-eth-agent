@@ -279,6 +279,113 @@ typedef enum _COSA_ETH_VLAN_OBJ_TYPE
 /*
     Standard function declaration
 */
+#define MAXINSTANCE 128
+#define ETH_INTERFACE_MAX_ASSOC_DEVICES   256
+#define MAC_SZ  6 /* Mac address in Hex format */
+#define MACADDR_SZ 17 /* Expanded MAC address in 00:02:... format */
+
+typedef  enum
+_COSA_DML_ETH_DUPLEX_MODE
+{
+    COSA_DML_ETH_DUPLEX_Half        = 1,
+    COSA_DML_ETH_DUPLEX_Full,
+    COSA_DML_ETH_DUPLEX_Auto
+}
+COSA_DML_ETH_DUPLEX_MODE, *PCOSA_DML_ETH_DUPLEX_MODE;
+
+typedef  struct
+_COSA_DML_ETH_STATS
+{
+    ULONG                           BytesSent;
+    ULONG                           BytesReceived;
+    ULONG                           PacketsSent;
+    ULONG                           PacketsReceived;
+    ULONG                           ErrorsSent;
+    ULONG                           ErrorsReceived;
+    ULONG                           UnicastPacketsSent;
+    ULONG                           UnicastPacketsReceived;
+    ULONG                           DiscardPacketsSent;
+    ULONG                           DiscardPacketsReceived;
+    ULONG                           MulticastPacketsSent;
+    ULONG                           MulticastPacketsReceived;
+    ULONG                           BroadcastPacketsSent;
+    ULONG                           BroadcastPacketsReceived;
+    ULONG                           UnknownProtoPacketsReceived;
+}
+COSA_DML_ETH_STATS, *PCOSA_DML_ETH_STATS;
+
+typedef  struct
+_COSA_DML_ETH_PORT_CFG
+{
+    ULONG                           InstanceNumber;
+    char                            Alias[COSA_DML_IF_NAME_LENGTH];
+
+    BOOLEAN                         bEnabled;
+    LONG                            MaxBitRate;
+    COSA_DML_ETH_DUPLEX_MODE        DuplexMode;
+}
+COSA_DML_ETH_PORT_CFG,  *PCOSA_DML_ETH_PORT_CFG;
+
+typedef  struct
+_COSA_DML_ETH_PORT_SINFO
+{
+    char                            Name[COSA_DML_IF_NAME_LENGTH];
+    BOOLEAN                         bUpstream;
+    UCHAR                           MacAddress[6];
+}
+COSA_DML_ETH_PORT_SINFO,  *PCOSA_DML_ETH_PORT_SINFO;
+
+/*
+ *  Dynamic portion of Ethernet port info
+ */
+
+typedef  struct
+_COSA_DML_ASSOCDEV_INFO
+{
+    UCHAR                           MacAddress[MACADDR_SZ];
+}
+COSA_DML_ASSOCDEV_INFO, *PCOSA_DML_ASSOCDEV_INFO;
+
+typedef  struct
+_COSA_DML_ETH_PORT_DINFO
+{
+    COSA_DML_IF_STATUS              Status;
+    ULONG                           CurrentBitRate;
+    ULONG                           LastChange;
+    ULONG                           AssocDevicesCount;
+    UCHAR                           AssocDevices[(MAC_SZ*ETH_INTERFACE_MAX_ASSOC_DEVICES)];
+}
+COSA_DML_ETH_PORT_DINFO,  *PCOSA_DML_ETH_PORT_DINFO;
+
+typedef  struct
+_COSA_DML_ETH_PORT_FULL
+{
+    COSA_DML_ETH_PORT_CFG           Cfg;
+    COSA_DML_ETH_PORT_SINFO         StaticInfo;
+    COSA_DML_ETH_PORT_DINFO         DynamicInfo;
+    COSA_DML_ASSOCDEV_INFO          AssocClient[ETH_INTERFACE_MAX_ASSOC_DEVICES];
+}
+COSA_DML_ETH_PORT_FULL, *PCOSA_DML_ETH_PORT_FULL;
+
+/* pCfg Identified by InstanceNumber */
+ANSC_STATUS CosaDmlEthPortSetCfg ( ANSC_HANDLE hContext, PCOSA_DML_ETH_PORT_CFG pCfg );
+
+ANSC_STATUS CosaDmlEthPortGetCfg ( ANSC_HANDLE hContext, PCOSA_DML_ETH_PORT_CFG pCfg );
+
+ANSC_STATUS CosaDmlEthPortSetValues ( ANSC_HANDLE hContext, ULONG ulIndex, ULONG ulInstanceNumber, char* pAlias );
+
+ANSC_STATUS CosaDmlEthPortGetDinfo ( ANSC_HANDLE hContext, ULONG ulInstanceNumber, PCOSA_DML_ETH_PORT_DINFO pInfo );
+
+ANSC_STATUS CosaDmlEthPortGetClientMac ( PCOSA_DML_ETH_PORT_FULL pEthernetPortFull, ULONG ulInstanceNumber );
+
+ANSC_STATUS CosaDmlEthPortGetEntry ( ANSC_HANDLE hContext, ULONG ulIndex, PCOSA_DML_ETH_PORT_FULL pEntry );
+
+ANSC_STATUS CosaDmlEthPortGetStats ( ANSC_HANDLE hContext, ULONG ulInstanceNumber, PCOSA_DML_ETH_STATS pStats );
+
+ANSC_STATUS CosaDmlEthInterfaceInit ( ANSC_HANDLE hDml, PANSC_HANDLE phContext );
+
+ANSC_STATUS CosaDmlEthPortGetNumberOfEntries( ANSC_HANDLE hContext );
+
 ANSC_STATUS
 CosaDmlEthInit
     (

@@ -28,7 +28,7 @@ hardware_platform = i686-linux-gnu
 noinst_LTLIBRARIES = libCcspEthAgent_middle_layer_src.la
 libCcspEthAgent_middle_layer_src_la_CPPFLAGS = -I$(top_srcdir)/source/TR-181/include -I$(top_srcdir)/source/TR-181/middle_layer_src -I$(top_srcdir)/source/TR-181/board_sbapi/
 
-libCcspEthAgent_middle_layer_src_la_SOURCES = cosa_ethernet_dml.c cosa_ethernet_internal.c plugin_main.c cosa_apis_util.c cosa_apis_busutil.c
+libCcspEthAgent_middle_layer_src_la_SOURCES = cosa_ethernet_dml.c cosa_ethernet_internal.c plugin_main.c plugin_main_apis.c cosa_apis_util.c cosa_apis_busutil.c cosa_ethernet_interface_dml.c
 libCcspEthAgent_middle_layer_src_la_LDFLAGS = -lccsp_common -lsecure_wrapper -lhal_ethsw
 
 

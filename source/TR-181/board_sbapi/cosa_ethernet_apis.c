@@ -91,6 +91,19 @@
 #include <string.h>
 #include <errno.h>
 #include <mqueue.h>
+#include <ctype.h>
+
+#include "utctx/utctx_api.h"
+#include <sys/socket.h>
+#include <sys/types.h>
+#include "linux/sockios.h"
+#include <sys/ioctl.h>
+
+#ifdef ARRIS_XB3_PLATFORM_CHANGES
+  #include "rdk_cm_api_arris.h"
+#else
+  #include "linux/if.h"
+#endif
 
 #include "cosa_ethernet_apis.h"
 #include "safec_lib_common.h"
@@ -144,6 +157,138 @@
 #define MACSEC_TIMEOUT_SEC    10
 #endif
 
+int _getMac(char* ifName, char* mac){
+
+    int skfd = -1;
+    struct ifreq ifr;
+    
+    AnscTraceFlow(("%s...\n", __FUNCTION__));
+
+    AnscCopyString(ifr.ifr_name, ifName);
+    
+    skfd = socket(AF_INET, SOCK_DGRAM, 0);
+    /* CID: 54085 Argument cannot be negative*/
+    if(skfd == -1)
+       return -1;
+
+    AnscTraceFlow(("%s...\n", __FUNCTION__));
+    if (ioctl(skfd, SIOCGIFFLAGS, &ifr) < 0) {
+        if (errno == ENODEV) {
+            close(skfd);
+            return -1;
+        }
+    }
+    if (ioctl(skfd, SIOCGIFHWADDR, &ifr) < 0) {
+        CcspTraceWarning(("cosa_ethernet_apis.c - getMac: Get interface %s error %d...\n", ifName, errno));
+        close(skfd);
+        return -1;
+    }
+    close(skfd);
+
+    AnscCopyMemory(mac, ifr.ifr_hwaddr.sa_data, 6);
+    return 0; 
+
+}
+static bool isValid(char *str)
+{
+    int i;
+    int len = strlen(str);
+    for (i = 0; i <= len; i++) {
+        if (!isspace(str[i])) {
+            break;
+        }
+    }
+    if (str[i] == '\0') {
+        return false;
+    }
+    return true;
+}
+
+BOOLEAN getIfAvailability( const PUCHAR name )
+{
+    struct ifreq ifr;
+    int skfd = -1;
+    AnscTraceFlow(("%s... name %s\n", __FUNCTION__,name));
+
+    skfd = socket(AF_INET, SOCK_DGRAM, 0);
+    
+    if (!isValid((char*)name)) {
+        return -1;
+    }
+    skfd = socket(AF_INET, SOCK_DGRAM, 0);
+    AnscTraceFlow(("%s... name %s\n", __FUNCTION__,name));
+    AnscCopyString(ifr.ifr_name, (char *)name);
+    
+    if (ioctl(skfd, SIOCGIFFLAGS, &ifr) < 0) {
+        if (errno == ENODEV) {
+            close(skfd);
+            return -1;
+        }
+    }
+		
+    if (ioctl(skfd, SIOCGIFINDEX, &ifr) < 0) {
+        CcspTraceWarning(("%s : Get interface %s error (%s)...\n", 
+									__FUNCTION__, 
+									name, 
+									strerror( errno )));
+        close( skfd );
+
+		return FALSE;
+    }
+	
+    close(skfd);
+
+	return TRUE;
+}
+
+COSA_DML_IF_STATUS getIfStatus(const PUCHAR name, struct ifreq *pIfr)
+{
+    struct ifreq ifr;
+    int skfd = -1;
+    
+    skfd = socket(AF_INET, SOCK_DGRAM, 0);
+    /* CID: 56442 Argument cannot be negative*/
+    if(skfd == -1)
+       return -1;
+
+    AnscCopyString(ifr.ifr_name, (char*)name);
+
+    if (!isValid((char*)name)) {
+        return -1;
+    }
+    AnscTraceFlow(("%s...\n", __FUNCTION__));
+    if (ioctl(skfd, SIOCGIFFLAGS, &ifr) < 0) {
+        if (errno == ENODEV) {
+            close(skfd);
+            return -1;
+        }
+		
+        CcspTraceWarning(("cosa_ethernet_apis.c - getIfStatus: Get interface %s error...\n", name));
+        close(skfd);
+
+		if ( FALSE == getIfAvailability( name ) )
+		{
+			return COSA_DML_IF_STATUS_NotPresent;
+		}
+
+        return COSA_DML_IF_STATUS_Unknown;
+    }
+    close(skfd);
+
+    if ( pIfr )
+    {
+        AnscCopyMemory(pIfr, &ifr, sizeof(struct ifreq));
+    }
+    
+    if ( ifr.ifr_flags & IFF_UP )
+    {
+        return COSA_DML_IF_STATUS_Up;
+    }
+    else
+    {
+        return COSA_DML_IF_STATUS_Down;
+    }
+}
 
 /**************************************************************************
                         DATA STRUCTURE DEFINITIONS

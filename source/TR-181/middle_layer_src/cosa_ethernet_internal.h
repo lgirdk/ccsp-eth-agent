@@ -85,6 +85,7 @@
     COSA_DML_ETH_LOG_STATUS LogStatus;                 \
     UINT ulTotalNoofEthInterfaces;                 \
     SLIST_HEADER Q_EthList;                        \
+    COSA_DML_ETH_PORT_FULL EthernetPortFullTable[MAXINSTANCE]; \
     ULONG ulPtNextInstanceNumber;                  \
     ULONG MaxInstanceNumber;
 #else
@@ -93,6 +94,7 @@
      COSA_BASE_CONTENT                                  \
      COSA_DATAMODEL_ETH_WAN_AGENT EthWanCfg;            \
      COSA_DML_ETH_LOG_STATUS LogStatus;                 \
+     COSA_DML_ETH_PORT_FULL EthernetPortFullTable[MAXINSTANCE]; \
      UINT ulTotalNoofEthInterfaces;                 \
      PCOSA_DML_ETH_PORT_CONFIG pEthLink;
 #endif //FEATURE_RDKB_WAN_MANAGER
@@ -108,6 +110,14 @@ void CosaEthTelemetryxOpsLogSettingsSync();
 /*
     Standard function declaration
 */
+ANSC_HANDLE CosaEthInterfaceCreate ( VOID );
+
+ANSC_STATUS CosaEthInterfaceInitialize ( ANSC_HANDLE hThisObject );
+
+ANSC_STATUS CosaEthInterfaceRemove ( ANSC_HANDLE hThisObject );
+
+ANSC_STATUS CosaEthPortGetAssocDevices ( UCHAR *mac, CHAR *maclist, int numMacAddr );
+
 ANSC_HANDLE
 CosaEthernetCreate
     (

@@ -148,6 +148,173 @@ static void waitUntilSystemReady()
 
     prototype:
 
+        ANSC_HANDLE CosaEthInterfaceCreate ( );
+
+    description:
+
+        This function constructs cosa Ethernet object and return handle.
+
+    argument:
+
+    return:     newly created Ethernet object.
+
+**********************************************************************/
+ANSC_HANDLE CosaEthInterfaceCreate ( VOID )
+{
+    PCOSA_DATAMODEL_ETHERNET    pMyObject    = (PCOSA_DATAMODEL_ETHERNET)NULL;
+
+    /*
+     * We create object by first allocating memory for holding the variables and member functions.
+     */
+    pMyObject = (PCOSA_DATAMODEL_ETHERNET)AnscAllocateMemory(sizeof(COSA_DATAMODEL_ETHERNET));
+
+    if ( !pMyObject )
+    {
+        return  (ANSC_HANDLE)NULL;
+    }
+
+    /*
+     * Initialize the common variables and functions for a container object.
+     */
+    pMyObject->Oid               = COSA_DATAMODEL_ETHERNET_OID;
+    pMyObject->Create            = CosaEthInterfaceCreate;
+    pMyObject->Remove            = CosaEthInterfaceRemove;
+    pMyObject->Initialize        = CosaEthInterfaceInitialize;
+
+    pMyObject->Initialize   ((ANSC_HANDLE)pMyObject);
+
+    return  (ANSC_HANDLE)pMyObject;
+}
+
+/**********************************************************************
+
+    caller:     self
+
+    prototype:
+
+        ANSC_STATUS CosaEthInterfaceInitialize ( ANSC_HANDLE hThisObject );
+
+    description:
+
+        This function initiate  cosa Ethernet object and return handle.
+
+    argument:   ANSC_HANDLE                 hThisObject
+            This handle is actually the pointer of this object
+            itself.
+
+    return:     operation status.
+
+**********************************************************************/
+
+ANSC_STATUS CosaEthInterfaceInitialize ( ANSC_HANDLE hThisObject )
+{
+    ANSC_STATUS                     returnStatus        = ANSC_STATUS_SUCCESS;
+    PCOSA_DATAMODEL_ETHERNET        pMyObject           = (PCOSA_DATAMODEL_ETHERNET)hThisObject;
+    ULONG                           ulEntryCount        = 0;
+    ULONG                           ulIndex             = 0;
+    ULONG                           ulNextInsNum        = 0;
+    errno_t                         rc                  = -1;
+    /* Initiation all functions */
+    CosaDmlEthInterfaceInit(NULL, &pMyObject->hSbContext);
+
+    _ansc_memset(pMyObject->EthernetPortFullTable, 0, sizeof(COSA_DML_ETH_PORT_FULL) * MAXINSTANCE);
+
+    /* Initiation Device.Ethernet.Interface */
+
+    ulEntryCount = CosaDmlEthPortGetNumberOfEntries(NULL);
+
+    ulNextInsNum = 1;
+
+    for ( ulIndex = 0; ulIndex < ulEntryCount; ulIndex++ )
+    {
+        CosaDmlEthPortGetEntry(NULL, ulIndex, &pMyObject->EthernetPortFullTable[ulIndex]);
+
+        if ( pMyObject->EthernetPortFullTable[ulIndex].Cfg.InstanceNumber == 0 )
+        {
+           pMyObject->EthernetPortFullTable[ulIndex].Cfg.InstanceNumber = ulNextInsNum;
+                                                                                                                                                                        rc = sprintf_s(pMyObject->EthernetPortFullTable[ulIndex].Cfg.Alias, sizeof(pMyObject->EthernetPortFullTable[ulIndex].Cfg.Alias),"Interface%d", (int)ulNextInsNum);
+            if(rc < EOK)
+            {
+              ERR_CHK(rc);
+              return ANSC_STATUS_FAILURE;
+            }
+
+            CosaDmlEthPortSetValues(NULL, ulIndex, ulNextInsNum, pMyObject->EthernetPortFullTable[ulIndex].Cfg.Alias);
+
+            ulNextInsNum++;
+        }
+        else
+        {
+            ulNextInsNum = pMyObject->EthernetPortFullTable[ulIndex].Cfg.InstanceNumber + 1;
+        }
+    }
+    return returnStatus;
+}
+
+/**********************************************************************
+
+    caller:     self
+
+    prototype:
+
+        ANSC_STATUS
+        CosaEthInterfaceRemove ( ANSC_HANDLE hThisObject );
+
+    description:
+
+        This function initiate  cosa Ethernet object and return handle.
+
+    argument:   ANSC_HANDLE                 hThisObject
+            This handle is actually the pointer of this object
+            itself.
+
+    return:     operation status.
+
+**********************************************************************/
+
+ANSC_STATUS CosaEthInterfaceRemove ( ANSC_HANDLE hThisObject )
+{
+    ANSC_STATUS                     returnStatus            = ANSC_STATUS_SUCCESS;
+    PCOSA_DATAMODEL_ETHERNET        pMyObject               = (PCOSA_DATAMODEL_ETHERNET)hThisObject;
+
+    /* Remove self */
+    AnscFreeMemory((ANSC_HANDLE)pMyObject);
+
+    return returnStatus;
+}
+
+ANSC_STATUS CosaEthPortGetAssocDevices ( UCHAR *mac, CHAR *maclist, int numMacAddr )
+{
+    int     i = 0,j = 0;
+    char macAddr[MACADDR_SZ+1];
+    errno_t rc = -1;
+
+    maclist[0] = '\0';
+
+    for(j=0; j < numMacAddr; j++)
+    {
+        memset(macAddr,0,(MACADDR_SZ+1));
+        if(i > 0)
+            strcat(maclist, ",");
+        rc = sprintf_s(macAddr, sizeof(macAddr),"%02x:%02x:%02x:%02x:%02x:%02x", mac[i], mac[i+1], mac[i+2], mac[i+3], mac[i+4], mac[i+5]);
+        if(rc < EOK)
+        {
+          ERR_CHK(rc);
+          return ANSC_STATUS_FAILURE;
+        }
+        strcat(maclist,macAddr);
+        i += MAC_SZ;
+    }
+
+    return ANSC_STATUS_SUCCESS;
+}
+
+/**********************************************************************
+
+    caller:     owner of the object
+
+    prototype:
+
         ANSC_HANDLE
         CosaEthernetCreate
             (

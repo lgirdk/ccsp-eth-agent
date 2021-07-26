@@ -43,6 +43,11 @@
 #include "plugin_main.h"
 #include "cosa_ethernet_dml.h"
 #include "safec_lib_common.h"
+#include "plugin_main_apis.h"
+
+#include "cosa_ethernet_interface_dml.h"
+
+PCOSA_BACKEND_MANAGER_OBJECT g_pCosaBEManager;
 
 #define THIS_PLUGIN_VERSION                         1
 
@@ -135,6 +140,31 @@ COSA_Init
 #if defined(FEATURE_RDKB_WAN_MANAGER)
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthernetWAN_GetParamBoolValue", EthernetWAN_GetParamBoolValue);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthernetWAN_SetParamBoolValue", EthernetWAN_SetParamBoolValue);
+    
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Interface_GetEntryCount", Interface_GetEntryCount);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Interface_GetEntry", Interface_GetEntry);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Interface_GetParamBoolValue", Interface_GetParamBoolValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Interface_GetParamStringValue", Interface_GetParamStringValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Interface_GetParamUlongValue", Interface_GetParamUlongValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Interface_GetParamIntValue", Interface_GetParamIntValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Interface_SetParamBoolValue", Interface_SetParamBoolValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Interface_SetParamStringValue", Interface_SetParamStringValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Interface_SetParamUlongValue", Interface_SetParamUlongValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Interface_SetParamIntValue", Interface_SetParamIntValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Interface_Validate", Interface_Validate);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Interface_Commit", Interface_Commit);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Interface_Rollback", Interface_Rollback);
+
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "AssociatedDevice1_GetEntryCount", AssociatedDevice1_GetEntryCount);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "AssociatedDevice1_GetEntry", AssociatedDevice1_GetEntry);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "AssociatedDevice1_GetParamStringValue", AssociatedDevice1_GetParamStringValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "AssociatedDevice1_IsUpdated", AssociatedDevice1_IsUpdated);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "AssociatedDevice1_Synchronize", AssociatedDevice1_Synchronize);
+
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Stats_GetParamBoolValue", Stats_GetParamBoolValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Stats_GetParamStringValue", Stats_GetParamStringValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Stats_GetParamUlongValue", Stats_GetParamUlongValue);
+    pPlugInfo->RegisterFunction(pPlugInfo->hContext, "Stats_GetParamIntValue", Stats_GetParamIntValue);
 
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthRdkInterface_GetEntryCount", EthRdkInterface_GetEntryCount);
     pPlugInfo->RegisterFunction(pPlugInfo->hContext, "EthRdkInterface_GetEntry", EthRdkInterface_GetEntry);
@@ -368,6 +398,19 @@ COSA_Init
     }
 
 g_EthObject          = (ANSC_HANDLE)CosaEthernetCreate();
+
+#if defined(FEATURE_RDKB_WAN_MANAGER)
+
+    /* Create backend framework */
+    g_pCosaBEManager = (PCOSA_BACKEND_MANAGER_OBJECT)CosaBackEndManagerCreate();
+
+    if ( g_pCosaBEManager && g_pCosaBEManager->Initialize )
+    {
+        g_pCosaBEManager->hCosaPluginInfo = pPlugInfo;
+
+        g_pCosaBEManager->Initialize   ((ANSC_HANDLE)g_pCosaBEManager);
+    }
+#endif
 
     return  0;
 EXIT:
