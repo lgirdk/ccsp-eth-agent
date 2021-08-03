@@ -94,9 +94,8 @@
 
 #include "cosa_ethernet_apis.h"
 #include "safec_lib_common.h"
-#include "cap.h"
-#include <linux/version.h>
 #include "cosa_ethernet_internal.h"
+#include <stdbool.h>
 #include "ccsp_hal_ethsw.h"
 #include "secure_wrapper.h"
 #include <platform_hal.h>
@@ -198,11 +197,6 @@ void CcspHalExtSw_SendNotificationForAllHosts( void );
 extern  ANSC_HANDLE bus_handle;
 extern  ANSC_HANDLE g_EthObject;
 extern void* g_pDslhDmlAgent;
-#define ARRAY_SIZE(x)  (sizeof(x) / sizeof(x[0]))
-extern cap_user appcaps;
-#if defined (ENABLE_ETH_WAN)
-    static bool bNonrootEnabled = false;
-#endif
 
 #if defined (FEATURE_RDKB_WAN_AGENT) || defined (FEATURE_RDKB_WAN_MANAGER)
 typedef enum _COSA_ETH_MSGQ_MSG_TYPE
@@ -942,12 +936,6 @@ CosaDmlEthWanSetEnable
 		char buf[ 8 ] = {0};
 		snprintf( buf, sizeof( buf ), "%s", bEnable ? "true" : "false" );
 
-                /* Linux version < 0 , switch to root */
-                if( (LINUX_VERSION_CODE < KERNEL_VERSION(4, 3, 0)) && (getuid() != 0))  { 
-		   AnscTraceWarning(( "Linux version < 4.3 and CcspEthAgent is running as non-root user\n" ));
-                   gain_root_privilege();
-                   bNonrootEnabled = true;
-                }
 		if(bEnable)
 		{
 			v_secure_system("touch /nvram/ETHWAN_ENABLE");
@@ -956,12 +944,6 @@ CosaDmlEthWanSetEnable
 		{
 			v_secure_system("rm /nvram/ETHWAN_ENABLE");
 		}
-                if(bNonrootEnabled){
-		    init_capability();
-		    drop_root_caps(&appcaps);
-		    update_process_caps(&appcaps);
-		    bNonrootEnabled = false;
-                }
 
 		if ( syscfg_set( NULL, "eth_wan_enabled", buf ) != 0 )
 		{
