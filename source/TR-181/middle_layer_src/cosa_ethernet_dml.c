@@ -1362,17 +1362,17 @@ EthRdkInterface_GetParamBoolValue
     PCOSA_CONTEXT_LINK_OBJECT   pCxtLink      = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_ETH_PORT_CONFIG   pEthLink      = (PCOSA_DML_ETH_PORT_CONFIG)pCxtLink->hContext;
     /* check the parameter name and return the corresponding value */
-    if( AnscEqualString(ParamName, "Enable", TRUE) )
+    if (strcmp(ParamName, "Enable") == 0)
     {
         *pBool = pEthLink->Enable;
         return TRUE;
     }
-    if( AnscEqualString(ParamName, "Upstream", TRUE) )
+    if (strcmp(ParamName, "Upstream") == 0)
     {
         *pBool = pEthLink->Upstream;
         return TRUE;
     }
-    if( AnscEqualString(ParamName, "WanValidated", TRUE) )
+    if (strcmp(ParamName, "WanValidated") == 0)
     {
         *pBool = pEthLink->WanValidated;
         return TRUE;
@@ -1429,7 +1429,7 @@ EthRdkInterface_GetParamStringValue
 {
     PCOSA_CONTEXT_LINK_OBJECT   pCxtLink      = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_ETH_PORT_CONFIG   pEthLink      = (PCOSA_DML_ETH_PORT_CONFIG)pCxtLink->hContext;
-    if( AnscEqualString(ParamName, "Name", TRUE) )
+    if (strcmp(ParamName, "Name") == 0)
     {
        /* collect value */
        if ( ( sizeof( pEthLink->Name ) - 1 ) < *pUlSize )
@@ -1443,7 +1443,7 @@ EthRdkInterface_GetParamStringValue
            return 1;
        }
     }
-    if( AnscEqualString(ParamName, "LowerLayers", TRUE) )
+    if (strcmp(ParamName, "LowerLayers") == 0)
     {
        /* collect value */
        if ( ( sizeof( pEthLink->LowerLayers ) - 1 ) < *pUlSize )
@@ -1506,7 +1506,7 @@ EthRdkInterface_SetParamStringValue
     PCOSA_DML_ETH_PORT_CONFIG   pEthLink        = (PCOSA_DML_ETH_PORT_CONFIG)pCxtLink->hContext;
 
     /* check the parameter name and return the corresponding value */
-    if( AnscEqualString(ParamName, "Name", TRUE) )
+    if (strcmp(ParamName, "Name") == 0)
     {
        /* collect value */
        if ( ANSC_STATUS_SUCCESS == CosaDmlEthPortSetName(pEthLink->Name, pString))
@@ -1519,7 +1519,7 @@ EthRdkInterface_SetParamStringValue
            return FALSE;
        }
     }
-    if( AnscEqualString(ParamName, "LowerLayers", TRUE) )
+    if (strcmp(ParamName, "LowerLayers") == 0)
     {
        /* collect value */
        if ( ANSC_STATUS_SUCCESS == CosaDmlEthPortSetLowerLayers(pEthLink->Name, pString))
@@ -1577,7 +1577,7 @@ EthRdkInterface_GetParamUlongValue
     PCOSA_CONTEXT_LINK_OBJECT       pCxtLink      = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_ETH_PORT_CONFIG   pEthLink        = (PCOSA_DML_ETH_PORT_CONFIG)pCxtLink->hContext;
     /* check the parameter name and return the corresponding value */
-    if( AnscEqualString(ParamName, "Status", TRUE) )
+    if (strcmp(ParamName, "Status") == 0)
     {
         COSA_DML_ETH_LINK_STATUS linkstatus;
         if (ANSC_STATUS_SUCCESS == CosaDmlEthPortGetLinkStatus(pEthLink->Name, &linkstatus))
@@ -1587,7 +1587,7 @@ EthRdkInterface_GetParamUlongValue
         *puLong = pEthLink->LinkStatus;
         return TRUE;
     }
-    if( AnscEqualString(ParamName, "WanStatus", TRUE) )
+    if (strcmp(ParamName, "WanStatus") == 0)
     {
         COSA_DML_ETH_WAN_STATUS wan_status;
         if (ANSC_STATUS_SUCCESS == CosaDmlEthPortGetWanStatus(pEthLink->Name, &wan_status))
@@ -1640,7 +1640,7 @@ EthRdkInterface_SetParamUlongValue
 {
     PCOSA_CONTEXT_LINK_OBJECT   pCxtLink      = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_ETH_PORT_CONFIG   pEthLink      = (PCOSA_DML_ETH_PORT_CONFIG)pCxtLink->hContext;
-    if( AnscEqualString(ParamName, "WanStatus", TRUE) )
+    if (strcmp(ParamName, "WanStatus") == 0)
     {
         if (uValue == pEthLink->WanStatus)
         {
@@ -1694,7 +1694,7 @@ EthRdkInterface_SetParamBoolValue
     PCOSA_CONTEXT_LINK_OBJECT   pCxtLink      = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_ETH_PORT_CONFIG   pEthLink      = (PCOSA_DML_ETH_PORT_CONFIG)pCxtLink->hContext;
     /* check the parameter name and set the corresponding value */
-    if( AnscEqualString(ParamName, "Upstream", TRUE))
+    if (strcmp(ParamName, "Upstream") == 0)
     {
         if( bValue == pEthLink->Upstream )
         {
@@ -1704,7 +1704,7 @@ EthRdkInterface_SetParamBoolValue
         CosaDmlEthPortSetUpstream( pEthLink->Name , pEthLink->Upstream );
         return TRUE;
     }
-    if( AnscEqualString(ParamName, "Enable", TRUE) )
+    if (strcmp(ParamName, "Enable") == 0)
     {
         if( bValue == pEthLink->Enable )
         {
@@ -1714,7 +1714,7 @@ EthRdkInterface_SetParamBoolValue
         pEthLink->Enable = bValue;
         return TRUE;
     }
-    if( AnscEqualString(ParamName, "WanValidated", TRUE) )
+    if (strcmp(ParamName, "WanValidated") == 0)
     {
         if (bValue == pEthLink->WanValidated)
         {
@@ -1958,12 +1958,12 @@ EthInterface_GetParamBoolValue
 {
     PCOSA_DML_ETH_PORT_CONFIG   pEthLink   = (PCOSA_DML_ETH_PORT_CONFIG)hInsContext;
     /* check the parameter name and return the corresponding value */
-    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_Upstream", TRUE) )
+    if (strcmp(ParamName, "X_RDKCENTRAL-COM_Upstream") == 0)
     {
         *pBool = pEthLink->Upstream;
         return TRUE;
     }
-    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_WanValidated", TRUE) )
+    if (strcmp(ParamName, "X_RDKCENTRAL-COM_WanValidated") == 0)
     {
         *pBool = pEthLink->WanValidated;
         return TRUE;
@@ -2020,7 +2020,7 @@ EthInterface_GetParamStringValue
     )
 {
     PCOSA_DML_ETH_PORT_CONFIG pEthLink = (PCOSA_DML_ETH_PORT_CONFIG)hInsContext;
-    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_Name", TRUE) )
+    if (strcmp(ParamName, "X_RDKCENTRAL-COM_Name") == 0)
     {
        /* collect value */
        if ( ( sizeof( pEthLink->Name ) - 1 ) < *pUlSize )
@@ -2123,7 +2123,7 @@ EthInterface_GetParamUlongValue
 {
     PCOSA_DML_ETH_PORT_CONFIG   pEthLink   = (PCOSA_DML_ETH_PORT_CONFIG)hInsContext;
     /* check the parameter name and return the corresponding value */
-    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_Status", TRUE) )
+    if (strcmp(ParamName, "X_RDKCENTRAL-COM_Status") == 0)
     {
         COSA_DML_ETH_LINK_STATUS linkstatus;
         if (ANSC_STATUS_SUCCESS == CosaDmlEthPortGetLinkStatus(pEthLink->ulInstanceNumber - 1, &linkstatus))
@@ -2135,7 +2135,7 @@ EthInterface_GetParamUlongValue
         return TRUE;
     }
 
-    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_WanStatus", TRUE) )
+    if (strcmp(ParamName, "X_RDKCENTRAL-COM_WanStatus") == 0)
     {
         COSA_DML_ETH_WAN_STATUS wan_status;
         if (ANSC_STATUS_SUCCESS == CosaDmlEthPortGetWanStatus(pEthLink->ulInstanceNumber - 1, &wan_status))
@@ -2189,7 +2189,7 @@ EthInterface_SetParamUlongValue
     )
 {
     PCOSA_DML_ETH_PORT_CONFIG   pEthLink   = (PCOSA_DML_ETH_PORT_CONFIG)hInsContext;
-    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_WanStatus", TRUE) )
+    if (strcmp(ParamName, "X_RDKCENTRAL-COM_WanStatus") == 0)
     {
         if (uValue == pEthLink->WanStatus)
         {
@@ -2243,7 +2243,7 @@ EthInterface_SetParamBoolValue
 {
     PCOSA_DML_ETH_PORT_CONFIG   pEthLink   = (PCOSA_DML_ETH_PORT_CONFIG)hInsContext;
     /* check the parameter name and set the corresponding value */
-    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_Upstream", TRUE))
+    if (strcmp(ParamName, "X_RDKCENTRAL-COM_Upstream") == 0)
     {
         if( bValue == pEthLink->Upstream )
         {
@@ -2255,7 +2255,7 @@ EthInterface_SetParamBoolValue
         return TRUE;
     }
 
-    if( AnscEqualString(ParamName, "X_RDKCENTRAL-COM_WanValidated", TRUE) )
+    if (strcmp(ParamName, "X_RDKCENTRAL-COM_WanValidated") == 0)
     {
         if (bValue == pEthLink->WanValidated)
         {
