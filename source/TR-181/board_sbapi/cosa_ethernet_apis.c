@@ -179,7 +179,7 @@ typedef enum WanMode
 
 #endif //#if defined (ENABLE_ETH_WAN)
 
-#if defined(_PLATFORM_RASPBERRYPI_)
+#if defined(_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
 #define ETHWAN_DEF_INTF_NAME "eth0"
 #endif
 
