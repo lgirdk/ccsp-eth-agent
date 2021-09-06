@@ -466,8 +466,8 @@ void* CcspHalExtSw_AssociatedDeviceMonitorThread( void *arg )
 					// If invalid then it will return 0
 					if( 0 == ValidateClient( tmp_mac_id ) )
 					{
-					   //Delete and No need to send notification	
-					   CcspHalExtSw_DeleteHost( &pstRecvEthDevice[ iLoopCount ], eth_device_hashArrayList, FALSE );
+                                           //Delete and send notification
+                                           CcspHalExtSw_DeleteHost( &pstRecvEthDevice[ iLoopCount ], eth_device_hashArrayList, TRUE );
 					   continue;
 					}
 				
