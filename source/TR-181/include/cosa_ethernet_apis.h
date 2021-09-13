@@ -344,7 +344,7 @@ COSA_DML_ETH_PORT_SINFO,  *PCOSA_DML_ETH_PORT_SINFO;
 typedef  struct
 _COSA_DML_ASSOCDEV_INFO
 {
-    UCHAR                           MacAddress[MACADDR_SZ];
+    UCHAR                           MacAddress[MACADDR_SZ+1];
 }
 COSA_DML_ASSOCDEV_INFO, *PCOSA_DML_ASSOCDEV_INFO;
 
