@@ -295,14 +295,14 @@ ANSC_STATUS CosaEthPortGetAssocDevices ( UCHAR *mac, CHAR *maclist, int numMacAd
     {
         memset(macAddr,0,(MACADDR_SZ+1));
         if(i > 0)
-            strcat(maclist, ",");
+            strncat(maclist, ",", sizeof(maclist) - strlen(maclist) - 1);
         rc = sprintf_s(macAddr, sizeof(macAddr),"%02x:%02x:%02x:%02x:%02x:%02x", mac[i], mac[i+1], mac[i+2], mac[i+3], mac[i+4], mac[i+5]);
         if(rc < EOK)
         {
           ERR_CHK(rc);
           return ANSC_STATUS_FAILURE;
         }
-        strcat(maclist,macAddr);
+        strncat(maclist,macAddr, strlen(macAddr) - strlen(maclist) - 1);
         i += MAC_SZ;
     }
 
@@ -797,7 +797,10 @@ static void read_updated_log_interval()
         CcspTraceError(("%s  %s file open error!!!\n", __func__, ETH_LOG_FILE));
 	return;
     }
-    fscanf(fp, "%d,%s", &gEthLogInterval, gEthLogEnable);
+    if (fscanf(fp, "%d,%6s", &gEthLogInterval, gEthLogEnable) != 2)
+    {
+        CcspTraceError(("%s %d: unable to get log info\n", __func__, __LINE__));
+    }
     fclose(fp);
 
     rc =  memset_s(tmp,sizeof(tmp),0,sizeof(tmp));

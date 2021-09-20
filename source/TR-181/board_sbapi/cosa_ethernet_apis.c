@@ -151,6 +151,7 @@
             return;                                              \
         }                                                        \
     } while (0)
+#define STATUS_BUFF_SIZE 32
 #endif //FEATURE_RDKB_WAN_AGENT || defined(FEATURE_RDKB_WAN_MANAGER)
 
 #if defined (_MACSEC_SUPPORT_)
@@ -695,7 +696,7 @@ static void checkComponentHealthStatus(char * compName, char * dbusPath, char *s
     if(ret == CCSP_SUCCESS)
     {
         CcspTraceDebug(("parameterval[0]->parameterName : %s parameterval[0]->parameterValue : %s\n",parameterval[0]->parameterName,parameterval[0]->parameterValue));
-        strcpy(status, parameterval[0]->parameterValue);
+        strncpy(status, parameterval[0]->parameterValue, STATUS_BUFF_SIZE - 1);
         CcspTraceDebug(("status of component:%s\n", status));
     }
     free_parameterValStruct_t (bus_handle, val_size, parameterval);
@@ -706,7 +707,7 @@ static void checkComponentHealthStatus(char * compName, char * dbusPath, char *s
 
 static void waitForWanMgrComponentReady()
 {
-    char status[32] = {'\0'};
+    char status[STATUS_BUFF_SIZE] = {'\0'};
     int count = 0;
     int ret = -1;
     while(1)
@@ -773,11 +774,11 @@ INT InitBootInformInfo(WAN_BOOTINFORM_MSG *pMsg)
 
     if (bEthWanEnable == TRUE)
     {
-        strncpy(pMsg->param[MSG_WAN_NAME].paramValue,wanName,sizeof(pMsg->param[MSG_WAN_NAME].paramValue));
+        strncpy(pMsg->param[MSG_WAN_NAME].paramValue,wanName,sizeof(pMsg->param[MSG_WAN_NAME].paramValue) - 1);
     }
     else
     {
-        strncpy(pMsg->param[MSG_WAN_NAME].paramValue,ethWanName,sizeof(pMsg->param[MSG_WAN_NAME].paramValue));
+        strncpy(pMsg->param[MSG_WAN_NAME].paramValue,ethWanName,sizeof(pMsg->param[MSG_WAN_NAME].paramValue) - 1);
     }
  
     CosaDmlEthGetLowerLayersInstanceInOtherAgent(NOTIFY_TO_WAN_AGENT, ethWanName, &iWANInstance);
@@ -789,37 +790,37 @@ INT InitBootInformInfo(WAN_BOOTINFORM_MSG *pMsg)
 
     memset(acSetParamName, 0, sizeof(acSetParamName));
     snprintf(acSetParamName, sizeof(acSetParamName), WAN_BOOTINFORM_INTERFACE_PARAM_NAME,  pMsg->iWanInstanceNumber);
-    strncpy(pMsg->param[MSG_WAN_NAME].paramName,acSetParamName,sizeof(pMsg->param[MSG_WAN_NAME].paramName));
+    strncpy(pMsg->param[MSG_WAN_NAME].paramName,acSetParamName,sizeof(pMsg->param[MSG_WAN_NAME].paramName) - 1);
     pMsg->param[MSG_WAN_NAME].paramType = ccsp_string;
 
     memset(acSetParamName, 0, sizeof(acSetParamName));
     snprintf(acSetParamName, sizeof(acSetParamName), WAN_BOOTINFORM_PHYPATH_PARAM_NAME,  pMsg->iWanInstanceNumber);
-    strncpy(pMsg->param[MSG_PHY_PATH].paramName,acSetParamName,sizeof(pMsg->param[MSG_PHY_PATH].paramName));
-    strncpy(pMsg->param[MSG_PHY_PATH].paramValue,WAN_PHYPATH_VALUE,sizeof(pMsg->param[MSG_PHY_PATH].paramValue));
+    strncpy(pMsg->param[MSG_PHY_PATH].paramName,acSetParamName,sizeof(pMsg->param[MSG_PHY_PATH].paramName) - 1);
+    strncpy(pMsg->param[MSG_PHY_PATH].paramValue,WAN_PHYPATH_VALUE,sizeof(pMsg->param[MSG_PHY_PATH].paramValue) - 1);
     pMsg->param[MSG_PHY_PATH].paramType = ccsp_string;
 
     memset(acSetParamName, 0, sizeof(acSetParamName));
     snprintf(acSetParamName, sizeof(acSetParamName), WAN_BOOTINFORM_OPERSTATUSENABLE_PARAM_NAME,  pMsg->iWanInstanceNumber);
-    strncpy(pMsg->param[MSG_OPER_STATUS].paramName,acSetParamName,sizeof(pMsg->param[MSG_OPER_STATUS].paramName));
-    strncpy(pMsg->param[MSG_OPER_STATUS].paramValue,"false",sizeof(pMsg->param[MSG_OPER_STATUS].paramValue));
+    strncpy(pMsg->param[MSG_OPER_STATUS].paramName,acSetParamName,sizeof(pMsg->param[MSG_OPER_STATUS].paramName) - 1);
+    strncpy(pMsg->param[MSG_OPER_STATUS].paramValue,"false",sizeof(pMsg->param[MSG_OPER_STATUS].paramValue) - 1);
     pMsg->param[MSG_OPER_STATUS].paramType = ccsp_boolean;
 
     memset(acSetParamName, 0, sizeof(acSetParamName));
     snprintf(acSetParamName, sizeof(acSetParamName), WAN_BOOTINFORM_CONFIGWANENABLE_PARAM_NAME,  pMsg->iWanInstanceNumber);
-    strncpy(pMsg->param[MSG_CONFIGURE_WAN].paramName,acSetParamName,sizeof(pMsg->param[MSG_CONFIGURE_WAN].paramName));
-    strncpy(pMsg->param[MSG_CONFIGURE_WAN].paramValue,"true",sizeof(pMsg->param[MSG_CONFIGURE_WAN].paramValue));
+    strncpy(pMsg->param[MSG_CONFIGURE_WAN].paramName,acSetParamName,sizeof(pMsg->param[MSG_CONFIGURE_WAN].paramName) - 1);
+    strncpy(pMsg->param[MSG_CONFIGURE_WAN].paramValue,"true",sizeof(pMsg->param[MSG_CONFIGURE_WAN].paramValue) - 1);
     pMsg->param[MSG_CONFIGURE_WAN].paramType = ccsp_boolean;
 
     memset(acSetParamName, 0, sizeof(acSetParamName));
     snprintf(acSetParamName, sizeof(acSetParamName), WAN_BOOTINFORM_CUSTOMCONFIG_PARAM_NAME,  pMsg->iWanInstanceNumber);
-    strncpy(pMsg->param[MSG_CUSTOMCONFIG_ENABLE].paramName,acSetParamName,sizeof(pMsg->param[MSG_CUSTOMCONFIG_ENABLE].paramName));
-    strncpy(pMsg->param[MSG_CUSTOMCONFIG_ENABLE].paramValue,"true",sizeof(pMsg->param[MSG_CUSTOMCONFIG_ENABLE].paramValue));
+    strncpy(pMsg->param[MSG_CUSTOMCONFIG_ENABLE].paramName,acSetParamName,sizeof(pMsg->param[MSG_CUSTOMCONFIG_ENABLE].paramName) - 1);
+    strncpy(pMsg->param[MSG_CUSTOMCONFIG_ENABLE].paramValue,"true",sizeof(pMsg->param[MSG_CUSTOMCONFIG_ENABLE].paramValue) - 1);
     pMsg->param[MSG_CUSTOMCONFIG_ENABLE].paramType = ccsp_boolean;
 
     memset(acSetParamName, 0, sizeof(acSetParamName));
     snprintf(acSetParamName, sizeof(acSetParamName), WAN_BOOTINFORM_CUSTOMCONFIGPATH_PARAM_NAME,  pMsg->iWanInstanceNumber);
-    strncpy(pMsg->param[MSG_CUSTOMCONFIG_PATH].paramName,acSetParamName,sizeof(pMsg->param[MSG_CUSTOMCONFIG_PATH].paramName));
-    strncpy(pMsg->param[MSG_CUSTOMCONFIG_PATH].paramValue,WAN_BOOTINFORM_CUSTOMCONFIGPATH_PARAM_VALUE,sizeof(pMsg->param[MSG_CUSTOMCONFIG_PATH].paramValue));
+    strncpy(pMsg->param[MSG_CUSTOMCONFIG_PATH].paramName,acSetParamName,sizeof(pMsg->param[MSG_CUSTOMCONFIG_PATH].paramName) - 1);
+    strncpy(pMsg->param[MSG_CUSTOMCONFIG_PATH].paramValue,WAN_BOOTINFORM_CUSTOMCONFIGPATH_PARAM_VALUE,sizeof(pMsg->param[MSG_CUSTOMCONFIG_PATH].paramValue) - 1);
     pMsg->param[MSG_CUSTOMCONFIG_PATH].paramType = ccsp_string;
 
    
@@ -1209,12 +1210,12 @@ ANSC_STATUS EthWanBridgeInit()
 
     if (!syscfg_get(NULL, "wan_physical_ifname", out_value, sizeof(out_value)))
     {
-       strcpy(wanPhyName, out_value);
+       strncpy(wanPhyName, out_value, sizeof(wanPhyName) - 1);
        printf("wanPhyName = %s\n", wanPhyName);
     }
     else
     {
-        strcpy(wanPhyName, "erouter0");
+        strncpy(wanPhyName, "erouter0", sizeof(wanPhyName) - 1);
 
     }
 
@@ -1224,7 +1225,7 @@ ANSC_STATUS EthWanBridgeInit()
 	{
 		//Fallback case needs to set it default
 		memset( ethwan_ifname , 0, sizeof( ethwan_ifname ) );
-		sprintf( ethwan_ifname , "%s", ETHWAN_DEF_INTF_NAME );
+		snprintf( ethwan_ifname , sizeof(ethwan_ifname) ,"%s", ETHWAN_DEF_INTF_NAME );
 	}
 
             CcspTraceError(("Ethwan interface %s \n",ethwan_ifname));
@@ -1575,9 +1576,9 @@ ANSC_STATUS CosDmlEthPortUpdateGlobalInfo(PANSC_HANDLE phContext, char *ifname, 
             tmpEthGInfo.LinkStatus = gpstEthGInfo[lastIndex].LinkStatus;
             tmpEthGInfo.WanValidated = gpstEthGInfo[lastIndex].WanValidated;
             tmpEthGInfo.Enable = gpstEthGInfo[lastIndex].Enable;
-            strncpy(tmpEthGInfo.Name, gpstEthGInfo[lastIndex].Name, sizeof(gpstEthGInfo[lastIndex].Name));
-            strncpy(tmpEthGInfo.Path, gpstEthGInfo[lastIndex].Path, sizeof(gpstEthGInfo[lastIndex].Path));
-            strncpy(tmpEthGInfo.LowerLayers, gpstEthGInfo[lastIndex].LowerLayers, sizeof(gpstEthGInfo[lastIndex].LowerLayers));
+            strncpy(tmpEthGInfo.Name, gpstEthGInfo[lastIndex].Name, sizeof(gpstEthGInfo[lastIndex].Name) - 1);
+            strncpy(tmpEthGInfo.Path, gpstEthGInfo[lastIndex].Path, sizeof(gpstEthGInfo[lastIndex].Path) - 1);
+            strncpy(tmpEthGInfo.LowerLayers, gpstEthGInfo[lastIndex].LowerLayers, sizeof(gpstEthGInfo[lastIndex].LowerLayers) - 1);
             /* Remove last Entry */
             gpstEthGInfo = (PCOSA_DML_ETH_PORT_GLOBAL_CONFIG)AnscReAllocateMemory(gpstEthGInfo, sizeof(COSA_DML_ETH_PORT_GLOBAL_CONFIG) * iTotal);
             //Return failure if allocation failiure
@@ -1593,9 +1594,9 @@ ANSC_STATUS CosDmlEthPortUpdateGlobalInfo(PANSC_HANDLE phContext, char *ifname, 
             gpstEthGInfo[IfIndex].LinkStatus = tmpEthGInfo.LinkStatus;
             gpstEthGInfo[IfIndex].WanValidated = tmpEthGInfo.WanValidated;
             gpstEthGInfo[IfIndex].Enable = tmpEthGInfo.Enable;
-            strncpy(gpstEthGInfo[IfIndex].Name, tmpEthGInfo.Name, sizeof(tmpEthGInfo.Name));
-            strncpy(gpstEthGInfo[IfIndex].Path, tmpEthGInfo.Path, sizeof(tmpEthGInfo.Path));
-            strncpy(gpstEthGInfo[IfIndex].LowerLayers, tmpEthGInfo.LowerLayers, sizeof(tmpEthGInfo.LowerLayers));
+            strncpy(gpstEthGInfo[IfIndex].Name, tmpEthGInfo.Name, sizeof(tmpEthGInfo.Name) - 1);
+            strncpy(gpstEthGInfo[IfIndex].Path, tmpEthGInfo.Path, sizeof(tmpEthGInfo.Path) - 1);
+            strncpy(gpstEthGInfo[IfIndex].LowerLayers, tmpEthGInfo.LowerLayers, sizeof(tmpEthGInfo.LowerLayers) - 1);
             gTotal--; // Decrement
             pthread_mutex_unlock(&gmEthGInfo_mutex);
         }
@@ -1810,7 +1811,7 @@ ANSC_STATUS CosaDmlEthPortSetLowerLayers(char *ifname, char *newLowerLayers)
         return ANSC_STATUS_FAILURE;
     }
     pthread_mutex_lock(&gmEthGInfo_mutex);
-    strncpy(gpstEthGInfo[IfIndex].LowerLayers,newLowerLayers, sizeof(gpstEthGInfo[IfIndex].LowerLayers));
+    strncpy(gpstEthGInfo[IfIndex].LowerLayers,newLowerLayers, sizeof(gpstEthGInfo[IfIndex].LowerLayers) - 1);
     pthread_mutex_unlock(&gmEthGInfo_mutex);
     CcspTraceError(("%s name[%s] updated successfully[%d]\n", __FUNCTION__, newLowerLayers,IfIndex));
     return ANSC_STATUS_SUCCESS;
@@ -1843,7 +1844,7 @@ ANSC_STATUS CosaDmlEthPortSetName(char *ifname, char *newIfname)
         return ANSC_STATUS_FAILURE;
     }
     pthread_mutex_lock(&gmEthGInfo_mutex);
-    strncpy(gpstEthGInfo[IfIndex].Name,newIfname, sizeof(gpstEthGInfo[IfIndex].Name));
+    strncpy(gpstEthGInfo[IfIndex].Name,newIfname, sizeof(gpstEthGInfo[IfIndex].Name) - 1);
     pthread_mutex_unlock(&gmEthGInfo_mutex);
     CcspTraceError(("%s name[%s] updated successfully[%d]\n", __FUNCTION__, newIfname,IfIndex));
     return ANSC_STATUS_SUCCESS;
@@ -2757,7 +2758,7 @@ ANSC_STATUS CosaDmlEthCreateEthLink(char *l2ifName, char *Path)
         char acTableName[128] = {0};
         INT iNewTableInstance = -1;
 
-        sprintf(acTableName, "%s", VLAN_ETH_LINK_TABLE_NAME);
+        snprintf(acTableName, sizeof(acTableName), "%s", VLAN_ETH_LINK_TABLE_NAME);
         if (CCSP_SUCCESS != CcspBaseIf_AddTblRow(
                                 bus_handle,
                                 VLAN_COMPONENT_NAME,
@@ -2859,7 +2860,7 @@ ANSC_STATUS CosaDmlEthDeleteEthLink(char *ifName, char *Path)
      * Delete Device.Ethernet.Link. Instance.
      * VLANAgent will delete the vlan interface as part table deletion process.
      */
-    sprintf(acTableName, "%s%d.", VLAN_ETH_LINK_TABLE_NAME, iVLANInstance);
+    snprintf(acTableName, sizeof(acTableName), "%s%d.", VLAN_ETH_LINK_TABLE_NAME, iVLANInstance);
     if (CCSP_SUCCESS != CcspBaseIf_DeleteTblRow(
                             bus_handle,
                             VLAN_COMPONENT_NAME,
@@ -2913,14 +2914,27 @@ ANSC_STATUS CosaDmlEthSetPhyStatusForWanManager(char *ifname, char *PhyStatus)
     snprintf(acSetParamName, sizeof(acSetParamName), WAN_PHY_PATH_PARAM_NAME, iWANInstance);
 
     memset(acSetParamVal, 0, sizeof(acSetParamVal));
-    CosaDmlEthPortGetIndexFromIfName(ifname, &iLinkInstance);
+    if (CosaDmlEthPortGetIndexFromIfName(ifname, &iLinkInstance) != ANSC_STATUS_SUCCESS)
+    {
+        CcspTraceError(("%s %d: Unable to get linkinstance from iface name %s\n", __FUNCTION__, __LINE__, ifname));
+        return ANSC_STATUS_FAILURE;
+    }
+
     snprintf(acSetParamVal, sizeof(acSetParamVal),ETH_IF_PHY_PATH, (iLinkInstance + 1));
-    CosaDmlEthSetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH, acSetParamName, acSetParamVal, ccsp_string, TRUE);
+    if (CosaDmlEthSetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH, acSetParamName, acSetParamVal, ccsp_string, TRUE) != ANSC_STATUS_SUCCESS)
+    {
+        CcspTraceError(("%s %d: Unable to set param name %s with value %s\n", __FUNCTION__, __LINE__, acSetParamName, acSetParamVal));
+        return ANSC_STATUS_FAILURE;
+    }
 
     //Set PHY Status
     memset(acSetParamName, 0, sizeof(acSetParamName));
     snprintf(acSetParamName, sizeof(acSetParamName), WAN_PHY_STATUS_PARAM_NAME, iWANInstance);
-    CosaDmlEthSetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH, acSetParamName, PhyStatus, ccsp_string, TRUE);
+    if (CosaDmlEthSetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH, acSetParamName, PhyStatus, ccsp_string, TRUE) != ANSC_STATUS_SUCCESS)
+    {
+        CcspTraceError(("%s %d: Unable to set param name %s\n", __FUNCTION__, __LINE__, acSetParamName));
+        return ANSC_STATUS_FAILURE;
+    }
 
     CcspTraceInfo(("%s %d Successfully notified %s event to WAN Agent for %s interface\n", __FUNCTION__, __LINE__, PhyStatus, ifname));
 
@@ -2962,7 +2976,11 @@ ANSC_STATUS CosaDmlEthGetPhyStatusForWanManager(char *ifname, char *PhyStatus)
     //Get PHY Status
     memset(acGetParamName, 0, sizeof(acGetParamName));
     snprintf(acGetParamName, sizeof(acGetParamName), WAN_PHY_STATUS_PARAM_NAME, iWANInstance);
-    CosaDmlEthGetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH, acGetParamName, PhyStatus);
+    if (CosaDmlEthGetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH, acGetParamName, PhyStatus) != ANSC_STATUS_SUCCESS)
+    {
+        CcspTraceError(("%s %d: CosaDmlEthGetParamValues() returned FAILURE\n", __FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
 
     return ANSC_STATUS_SUCCESS;
 }

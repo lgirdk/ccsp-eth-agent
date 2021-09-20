@@ -173,7 +173,7 @@ ssp_engage
 {
 	ANSC_STATUS					    returnStatus                = ANSC_STATUS_SUCCESS;
     PCCC_MBI_INTERFACE              pSsdMbiIf                   = (PCCC_MBI_INTERFACE)MsgHelper_CreateCcdMbiIf((void*)bus_handle, g_Subsystem);
-    char                            CrName[256];
+    char                            CrName[256] = {0};
 
      g_pComponent_COMMON_ethagent->Health = CCSP_COMMON_COMPONENT_HEALTH_Yellow;
 
@@ -186,11 +186,11 @@ ssp_engage
 
     if ( g_Subsystem[0] != 0 )
     {
-        _ansc_sprintf(CrName, "%s%s", g_Subsystem, CCSP_DBUS_INTERFACE_CR);
+        snprintf(CrName, sizeof(CrName), "%s%s", g_Subsystem, CCSP_DBUS_INTERFACE_CR);
     }
     else
     {
-        _ansc_sprintf(CrName, "%s", CCSP_DBUS_INTERFACE_CR);
+        snprintf(CrName, sizeof(CrName), "%s", CCSP_DBUS_INTERFACE_CR);
     }
 
     returnStatus =
@@ -221,8 +221,8 @@ ssp_cancel
     )
 {
 	int                             nRet  = 0;
-    char                            CrName[256];
-    char                            CpName[256];
+    char                            CrName[256] = {0};
+    char                            CpName[256] = {0};
 
     if(  g_pComponent_COMMON_ethagent == NULL)
     {
@@ -231,13 +231,13 @@ ssp_cancel
 
     if ( g_Subsystem[0] != 0 )
     {
-        _ansc_sprintf(CrName, "%s%s", g_Subsystem, CCSP_DBUS_INTERFACE_CR);
-        _ansc_sprintf(CpName, "%s%s", g_Subsystem, CCSP_COMPONENT_NAME_ETHAGENT);
+        snprintf(CrName, sizeof(CrName), "%s%s", g_Subsystem, CCSP_DBUS_INTERFACE_CR);
+        snprintf(CpName, sizeof(CpName), "%s%s", g_Subsystem, CCSP_COMPONENT_NAME_ETHAGENT);
     }
     else
     {
-        _ansc_sprintf(CrName, "%s", CCSP_DBUS_INTERFACE_CR);
-        _ansc_sprintf(CpName, "%s", CCSP_COMPONENT_NAME_ETHAGENT);
+        snprintf(CrName, sizeof(CrName), "%s", CCSP_DBUS_INTERFACE_CR);
+        snprintf(CpName, sizeof(CpName), "%s", CCSP_COMPONENT_NAME_ETHAGENT);
     }
     /* unregister component */
     nRet = CcspBaseIf_unregisterComponent(bus_handle, CrName, CpName );  

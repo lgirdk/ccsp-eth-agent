@@ -1704,7 +1704,7 @@ int CosaUtilGetIpv6AddrInfo (char * ifname, ipv6_addr_info_t ** pp_info, int * p
         ERR_CHK(rc);
         if((rc == EOK) && (!ind))      
         {
-            sprintf(addr6, "%s:%s:%s:%s:%s:%s:%s:%s",
+            snprintf(addr6, sizeof(addr6), "%s:%s:%s:%s:%s:%s:%s:%s",
 					addr6p[0], addr6p[1], addr6p[2], addr6p[3],
 					addr6p[4], addr6p[5], addr6p[6], addr6p[7]);
 			inet_pton(AF_INET6, addr6,
@@ -1754,8 +1754,8 @@ int CosaUtilGetIpv6AddrInfo (char * ifname, ipv6_addr_info_t ** pp_info, int * p
            rc =  memset_s(p_ai->v6pre,sizeof(p_ai->v6pre), 0, sizeof(p_ai->v6pre));
            ERR_CHK(rc);
             for (i=0; (i< ( plen%16 ? (plen/16+1):plen/16)) && i<8; i++)
-                sprintf(p_ai->v6pre + strlen(p_ai->v6pre), "%s:", addr6p[i]);
-            sprintf(p_ai->v6pre+strlen(p_ai->v6pre), ":/%d", plen);
+                snprintf(p_ai->v6pre + strlen(p_ai->v6pre), sizeof(p_ai->v6pre) - strlen(p_ai->v6pre), "%s:", addr6p[i]);
+            snprintf(p_ai->v6pre+strlen(p_ai->v6pre), sizeof(p_ai->v6pre) - strlen(p_ai->v6pre), ":/%d", plen);
             
         }
     }
