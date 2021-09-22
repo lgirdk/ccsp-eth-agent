@@ -738,11 +738,21 @@ INT InitBootInformInfo(WAN_BOOTINFORM_MSG *pMsg)
     CHAR out_value[64];
     CHAR acSetParamName[256];
     INT iWANInstance = 0;
+    char buf[64];
+
     if (!pMsg)
         return -1;
-    if ( 0 == access( "/nvram/ETHWAN_ENABLE" , F_OK ) )
+    memset(buf,0,sizeof(buf));
+    if (syscfg_get(NULL, "eth_wan_enabled", buf, sizeof(buf)) == 0)
     {
-        bEthWanEnable = TRUE;
+        if ( 0 == strcmp(buf,"true"))
+        {
+
+            if ( 0 == access( "/nvram/ETHWAN_ENABLE" , F_OK ) )
+            {
+                bEthWanEnable = TRUE;
+            }
+        }
     }
 
     memset(out_value,0,sizeof(out_value));
@@ -771,6 +781,20 @@ INT InitBootInformInfo(WAN_BOOTINFORM_MSG *pMsg)
         snprintf(ethWanName ,sizeof(ethWanName), "%s", ETHWAN_DEF_INTF_NAME);
     }
 
+#if defined (_BRIDGE_UTILS_BIN_)
+    if ( syscfg_set( NULL, "eth_wan_iface_name", ethWanName) != 0 )
+    {
+        CcspTraceError(( "syscfg_set failed for eth_wan_iface_name\n" ));
+    }
+    else
+    {
+        if ( syscfg_commit() != 0 )
+        {
+            CcspTraceError(( "syscfg_commit failed for eth_wan_iface_name\n" ));
+        }
+
+    }
+#endif
 
     if (bEthWanEnable == TRUE)
     {
@@ -940,8 +964,26 @@ ANSC_STATUS CosaDmlConfigureEthWan(BOOL bEnable)
     char buf[64] = {0};
     char ethwan_ifname[64] = {0};
     int lastKnownWanMode = -1;
-    CcspTraceError(("Func %s Entered arg %d\n",__FUNCTION__,bEnable));
+#if defined (_BRIDGE_UTILS_BIN_)
+    int ovsEnable = 0;
+    if( 0 == syscfg_get( NULL, "mesh_ovs_enable", buf, sizeof( buf ) ) )
+    {
+          if ( strcmp (buf,"true") == 0 )
+            ovsEnable = 1;
+          else
+            ovsEnable = 0;
 
+    }
+    else
+    {
+          CcspTraceError(("syscfg_get failed to retrieve ovs_enable\n"));
+
+    }
+#endif
+
+    CcspTraceInfo(("Func %s Entered arg %d\n",__FUNCTION__,bEnable));
+
+    memset(buf,0,sizeof(buf));
     if (syscfg_get(NULL, "last_wan_mode", buf, sizeof(buf)) == 0)
     {
         lastKnownWanMode = atoi(buf);
@@ -972,7 +1014,17 @@ ANSC_STATUS CosaDmlConfigureEthWan(BOOL bEnable)
             snprintf(ethwan_ifname ,sizeof(ethwan_ifname), "%s", ETHWAN_DEF_INTF_NAME);
         }
 
-        v_secure_system("brctl delif brlan0 %s",ethwan_ifname);
+#if defined (_BRIDGE_UTILS_BIN_)
+
+        if (ovsEnable)
+        {
+            v_secure_system("/usr/bin/bridgeUtils del-port brlan0 %s",ethwan_ifname);
+        }
+        else
+#endif
+        {
+            v_secure_system("brctl delif brlan0 %s",ethwan_ifname);
+        }
 
         macaddr_t macAddr;
         getWanMacAddress(&macAddr,wanPhyName);
@@ -981,7 +1033,17 @@ ANSC_STATUS CosaDmlConfigureEthWan(BOOL bEnable)
                 macAddr.hw[3], macAddr.hw[4], macAddr.hw[5]);
 
         // detach EWAN interface from brlan0
-        v_secure_system("ip link set dev %s nomaster", ethwan_ifname);
+#if defined (_BRIDGE_UTILS_BIN_)
+
+        if (ovsEnable)
+        {
+            v_secure_system("/usr/bin/bridgeUtils del-port brlan0 %s",ethwan_ifname);
+        }
+        else
+#endif
+        {
+            v_secure_system("ip link set dev %s nomaster", ethwan_ifname);
+        }
         v_secure_system("ip link set %s down", ethwan_ifname);
 
         // EWAN interface needs correct MAC before starting MACsec
@@ -1038,7 +1100,16 @@ ANSC_STATUS CosaDmlConfigureEthWan(BOOL bEnable)
         v_secure_system("ip -6 addr flush dev %s",ethwan_ifname);
         v_secure_system("sysctl -w net.ipv6.conf.%s.accept_ra=0",ethwan_ifname);
         v_secure_system("ifconfig %s up",ethwan_ifname);
-        v_secure_system("brctl addif brlan0 %s",ethwan_ifname);
+#if defined (_BRIDGE_UTILS_BIN_)
+        if (ovsEnable)
+        {
+            v_secure_system("/usr/bin/bridgeUtils add-port brlan0 %s",ethwan_ifname);
+        }
+        else
+#endif
+        {
+            v_secure_system("brctl addif brlan0 %s",ethwan_ifname);
+        }
 
     }
     CcspTraceError(("Func %s Exited arg %d\n",__FUNCTION__,bEnable));
@@ -1206,6 +1277,24 @@ ANSC_STATUS EthWanBridgeInit()
     char out_value[64] = {0};
     char ethwan_ifname[64] = {0};
    
+#if defined (_BRIDGE_UTILS_BIN_)
+    int ovsEnable = 0;
+    char buf[ 8 ] = { 0 };
+    if( 0 == syscfg_get( NULL, "mesh_ovs_enable", buf, sizeof( buf ) ) )
+    {
+          if ( strcmp (buf,"true") == 0 )
+            ovsEnable = 1;
+          else
+            ovsEnable = 0;
+
+    }
+    else
+    {
+          CcspTraceError(("syscfg_get failed to retrieve ovs_enable\n"));
+
+    }
+#endif
+
     CcspTraceError(("Func %s Entered\n",__FUNCTION__));
 
     if (!syscfg_get(NULL, "wan_physical_ifname", out_value, sizeof(out_value)))
@@ -1237,7 +1326,17 @@ ANSC_STATUS EthWanBridgeInit()
     v_secure_system("ifconfig %s down", ethwan_ifname);
 
 #if !defined(INTEL_PUMA7)
-    v_secure_system("vlan_util del_interface brlan0 %s", ethwan_ifname);
+#if defined (_BRIDGE_UTILS_BIN_)
+
+        if (ovsEnable)
+        {
+            v_secure_system("/usr/bin/bridgeUtils del-port brlan0 %s",ethwan_ifname);
+        } 
+        else
+#endif
+        {
+            v_secure_system("vlan_util del_interface brlan0 %s", ethwan_ifname);
+        }
 #endif
 
 #ifdef _COSA_BCM_ARM_
@@ -1311,8 +1410,11 @@ CosaDmlEthInit(
         {
             if ( 0 == strcmp(buf,"true"))
             {
-                ethwanEnabled = TRUE;
-                CcspTraceError(("Ethwan enabled \n"));
+                if ( 0 == access( "/nvram/ETHWAN_ENABLE" , F_OK ) )
+                {
+                    ethwanEnabled = TRUE;
+                    CcspTraceInfo(("Ethwan enabled \n"));
+                }
             }
         }
 
@@ -2883,8 +2985,10 @@ ANSC_STATUS CosaDmlEthSetPhyStatusForWanManager(char *ifname, char *PhyStatus)
 {
     COSA_DML_ETH_PORT_GLOBAL_CONFIG stGlobalInfo = {0};
     char acSetParamName[256];
+#ifndef AUTOWAN_ENABLE
     char acSetParamVal[256];
     INT iLinkInstance = -1;
+#endif
     INT iWANInstance = -1;
 
     //Validate buffer
@@ -2909,6 +3013,9 @@ ANSC_STATUS CosaDmlEthSetPhyStatusForWanManager(char *ifname, char *PhyStatus)
 
     CcspTraceInfo(("%s %d WAN Instance:%d\n", __FUNCTION__, __LINE__, iWANInstance));
 
+// Phy path not needed to set in case of auto wan policy mode.
+// it will be set in part of boot inform msg.
+#ifndef AUTOWAN_ENABLE
     //Set PHY path
     memset(acSetParamName, 0, sizeof(acSetParamName));
     snprintf(acSetParamName, sizeof(acSetParamName), WAN_PHY_PATH_PARAM_NAME, iWANInstance);
@@ -2927,6 +3034,7 @@ ANSC_STATUS CosaDmlEthSetPhyStatusForWanManager(char *ifname, char *PhyStatus)
         return ANSC_STATUS_FAILURE;
     }
 
+#endif
     //Set PHY Status
     memset(acSetParamName, 0, sizeof(acSetParamName));
     snprintf(acSetParamName, sizeof(acSetParamName), WAN_PHY_STATUS_PARAM_NAME, iWANInstance);
