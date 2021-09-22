@@ -150,6 +150,7 @@ wanmanager could able to handle vlan interface creation and management */
 #define ETHWAN_DOCSIS_INF_NAME "cm0"
 #define PHY_STATUS_MONITOR_MAX_TIMEOUT 240
 #define PHY_STATUS_QUERY_INTERVAL 2
+#define CFG_TR181_ETH_BORROW_MAC  1
 
 typedef struct _WAN_PARAM_INFO
 {
