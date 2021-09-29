@@ -494,6 +494,12 @@
           <writable>true</writable>
       </parameter>
       <parameter>
+          <name>PostCfgWanFinalize</name>
+          <type>string</type>
+          <syntax>string</syntax>
+          <writable>true</writable> 
+      </parameter>
+      <parameter>
           <name>RequestPhyStatus</name>
           <type>string</type>
           <syntax>string</syntax>

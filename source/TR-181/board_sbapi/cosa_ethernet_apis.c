@@ -605,6 +605,103 @@ void* CosaDmlEthWanChangeHandling( void* buff )
 
 #if defined (FEATURE_RDKB_WAN_MANAGER)
 
+ANSC_STATUS CosaDmlIfaceFinalize(char *pValue)
+{
+    char wanPhyName[64] = {0};
+    char buf[64] = {0};
+    char ethwan_ifname[64] = {0};
+    int ovsEnable = 0;
+    BOOL ethwanEnabled = FALSE;
+
+    if (!pValue)
+        return CCSP_FAILURE;
+    CcspTraceError(("Func %s Entered\n",__FUNCTION__));
+
+
+    if (syscfg_get(NULL, "eth_wan_enabled", buf, sizeof(buf)) == 0)
+    {
+        if ( 0 == strcmp(buf,"true"))
+        {
+            if ( 0 == access( "/nvram/ETHWAN_ENABLE" , F_OK ) )
+            {
+                ethwanEnabled = TRUE;
+                CcspTraceInfo(("Ethwan enabled \n"));
+            }
+        }
+    }
+
+#if defined (_BRIDGE_UTILS_BIN_)
+    if( 0 == syscfg_get( NULL, "mesh_ovs_enable", buf, sizeof( buf ) ) )
+    {
+          if ( strcmp (buf,"true") == 0 )
+            ovsEnable = 1;
+          else
+            ovsEnable = 0;
+
+    }
+    else
+    {
+          CcspTraceError(("syscfg_get failed to retrieve ovs_enable\n"));
+
+    }
+#endif
+
+    if (!syscfg_get(NULL, "wan_physical_ifname", buf, sizeof(buf)))
+    {
+        strcpy(wanPhyName, buf);
+        printf("wanPhyName = %s\n", wanPhyName);
+    }
+    else
+    {
+        strcpy(wanPhyName, "erouter0");
+
+    }
+
+    //Get the ethwan interface name from HAL
+    memset( ethwan_ifname , 0, sizeof( ethwan_ifname ) );
+    if ( ( 0 != GWP_GetEthWanInterfaceName((unsigned char*) ethwan_ifname, sizeof(ethwan_ifname) ) ) )
+    {
+        //Fallback case needs to set it default
+        memset( ethwan_ifname , 0, sizeof( ethwan_ifname ) );
+        sprintf( ethwan_ifname , "%s", ETHWAN_DEF_INTF_NAME );
+    }
+
+   
+    if (ethwanEnabled == TRUE)
+    {
+        if (ovsEnable)
+        {
+            v_secure_system("/usr/bin/bridgeUtils del-port brlan0 %s",ethwan_ifname);
+        }
+        else
+        {
+            v_secure_system("brctl delif brlan0 %s",ethwan_ifname);
+        }
+        v_secure_system("brctl addif %s %s", wanPhyName,ethwan_ifname);
+    }
+    else
+    {
+
+        v_secure_system("brctl delif %s %s", wanPhyName,ethwan_ifname);
+
+        if (ovsEnable)
+        {
+            v_secure_system("/usr/bin/bridgeUtils add-port brlan0 %s",ethwan_ifname);
+        }
+        else
+        {
+            v_secure_system("brctl addif brlan0 %s",ethwan_ifname);
+        }
+
+    }
+    if ( 0 != access( "/tmp/autowan_iface_finalized" , F_OK ) )
+    {
+        v_secure_system("touch /tmp/autowan_iface_finalized");
+    }
+    return ANSC_STATUS_SUCCESS;
+}
+
+
 ANSC_STATUS EthwanEnableWithoutReboot(BOOL bEnable)
 {
     CcspTraceError(("Func %s Entered arg %d\n",__FUNCTION__,bEnable));
@@ -1088,17 +1185,6 @@ ANSC_STATUS CosaDmlConfigureEthWan(BOOL bEnable)
         v_secure_system("ip -6 addr flush dev %s",ethwan_ifname);
         v_secure_system("sysctl -w net.ipv6.conf.%s.accept_ra=0",ethwan_ifname);
         v_secure_system("ifconfig %s up",ethwan_ifname);
-#if defined (_BRIDGE_UTILS_BIN_)
-        if (ovsEnable)
-        {
-            v_secure_system("/usr/bin/bridgeUtils add-port brlan0 %s",ethwan_ifname);
-        }
-        else
-#endif
-        {
-            v_secure_system("brctl addif brlan0 %s",ethwan_ifname);
-        }
-
     }
     CcspTraceError(("Func %s Exited arg %d\n",__FUNCTION__,bEnable));
     return ANSC_STATUS_SUCCESS;

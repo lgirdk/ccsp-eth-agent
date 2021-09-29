@@ -783,6 +783,14 @@ EthernetWAN_SetParamStringValue
 
        return TRUE;
     }
+
+    rc = strcmp_s("PostCfgWanFinalize",strlen("PostCfgWanFinalize"),ParamName,&ind);
+    ERR_CHK(rc);
+    if ((!ind) && (rc == EOK))
+    {
+        CosaDmlIfaceFinalize(pString);
+        return TRUE;
+    }
 #endif
 
 
