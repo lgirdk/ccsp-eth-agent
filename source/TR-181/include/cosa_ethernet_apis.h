@@ -450,4 +450,9 @@ void EthWanLinkDown_callback();
 #endif
 void Ethernet_Hosts_Sync(void);
 INT CosaDmlEth_AssociatedDevice_callback(eth_device_t *eth_dev);
+int ethGetPHYRate
+    (
+        CCSP_HAL_ETHSW_PORT PortId
+    );
+
 #endif

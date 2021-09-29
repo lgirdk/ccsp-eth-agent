@@ -140,6 +140,16 @@ static void waitUntilSystemReady()
     }
 }
 #endif
+#if defined(_COSA_BCM_ARM_)  && defined(_XB6_PRODUCT_REQ_)
+            
+    #if !defined(_PLATFORM_RASPBERRYPI_) && !defined(_PLATFORM_TURRIS_)
+        static pthread_t sme_event_tid;
+        void *SME_EventHandler(void *arg);
+        /*appCallBack doesn't match with the one define in gw_prov_abstraction.h, pass NULL point just to start RPC tunnel. */
+        void SME_CreateEventHandler(appCallBack *pAppCallBack);
+    #endif
+#endif
+
 #endif //#if defined (FEATURE_RDKB_WAN_MANAGER)
 
 /**********************************************************************
@@ -361,6 +371,25 @@ CosaEthernetCreate
     return  (ANSC_HANDLE)pMyObject;
 }
 
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+
+#if defined(_COSA_BCM_ARM_)  && defined(_XB6_PRODUCT_REQ_)
+
+    void *SME_EventHandler(void *arg)
+    {
+        (void) (arg) ;
+        pthread_detach(pthread_self());
+        CcspTraceInfo((" Creating Event Handler\n"));
+        /*appCallBack doesn't match with the one define in gw_prov_abstraction.h, pass NULL point just to start RPC tunnel. */
+        SME_CreateEventHandler(NULL);
+        CcspTraceInfo((" Creating Event Handler over\n"));
+
+        return NULL ;
+    }
+
+    #endif
+
+#endif
 /**********************************************************************
 
     caller:     self
@@ -410,7 +439,6 @@ CosaEthernetInitialize
     CosaDmlEthWanGetCfg(&pMyObject->EthWanCfg);
 
 #if defined(FEATURE_RDKB_WAN_MANAGER)
-    CosaDmlEthInit(NULL, (PANSC_HANDLE)pMyObject);
 
     //Register callbacks with ethsw-hal for link events.
     appCallBack obj;
@@ -418,6 +446,15 @@ CosaEthernetInitialize
     obj.pGWP_act_EthWanLinkDown = EthWanLinkDown_callback;
     obj.pGWP_act_EthWanLinkUP   = EthWanLinkUp_callback;
     GWP_RegisterEthWan_Callback ( &obj );
+
+    //Initialise global data and initalise hal
+    CosaDmlEthInit(NULL, (PANSC_HANDLE)pMyObject);
+
+    #if defined(_COSA_BCM_ARM_)  && defined(_XB6_PRODUCT_REQ_)
+            #if !defined(_PLATFORM_RASPBERRYPI_) && !defined(_PLATFORM_TURRIS_)
+                    pthread_create(&sme_event_tid, NULL, SME_EventHandler, NULL);
+            #endif
+    #endif
 #elif defined(FEATURE_RDKB_WAN_AGENT)
     CosaDmlEthInit(NULL, (PANSC_HANDLE)pMyObject);
     CcspHalEthSw_RegisterLinkEventCallback(CosaDmlEthPortLinkStatusCallback); //Register cb for link event.
@@ -551,80 +588,6 @@ static void ethGetClientMacDetails
              ERR_CHK(rc);
         }
     }
-}
-
-static int ethGetPHYRate
-    (
-        CCSP_HAL_ETHSW_PORT PortId
-    )
-{
-    INT status                              = RETURN_ERR;
-    CCSP_HAL_ETHSW_LINK_RATE LinkRate       = CCSP_HAL_ETHSW_LINK_NULL;
-    CCSP_HAL_ETHSW_DUPLEX_MODE DuplexMode   = CCSP_HAL_ETHSW_DUPLEX_Auto;
-    INT PHYRate                             = 0;
-#if defined(_CBR_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_) || ( defined (_XB6_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_))
-    CCSP_HAL_ETHSW_LINK_STATUS  LinkStatus  = CCSP_HAL_ETHSW_LINK_Down;
-#endif
-    /* For Broadcom platform device, CcspHalEthSwGetPortStatus returns the Linkrate based
-     * on the CurrentBitRate and CcspHalEthSwGetPortCfg returns the Linkrate based on the
-     * MaximumBitRate. Hence CcspHalEthSwGetPortStatus called for Broadcom platform devices.
-     */
-#if defined(_CBR_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_) || ( defined (_XB6_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_))
-    status = CcspHalEthSwGetPortStatus(PortId, &LinkRate, &DuplexMode, &LinkStatus);
-    CcspTraceWarning(("CcspHalEthSwGetPortStatus link rate %d\n", LinkRate));
-#else
-    status = CcspHalEthSwGetPortCfg(PortId, &LinkRate, &DuplexMode);
-     CcspTraceWarning(("CcspHalEthSwGetPortCfg link rate %d\n", LinkRate));
-#endif
-    if (RETURN_OK == status)
-    {
-        switch (LinkRate)
-        {
-            case CCSP_HAL_ETHSW_LINK_10Mbps:
-            {
-                PHYRate = 10;
-                break;
-            }
-            case CCSP_HAL_ETHSW_LINK_100Mbps:
-            {
-                PHYRate = 100;
-                break;
-            }
-            case CCSP_HAL_ETHSW_LINK_1Gbps:
-            {
-                PHYRate = 1000;
-                break;
-            }
-#ifdef _2_5G_ETHERNET_SUPPORT_
-            case CCSP_HAL_ETHSW_LINK_2_5Gbps:
-            {
-                PHYRate = 2500;
-                break;
-            }
-            case CCSP_HAL_ETHSW_LINK_5Gbps:
-            {
-                PHYRate = 5000;
-                break;
-            }
-#endif //_2_5G_ETHERNET_SUPPORT_
-            case CCSP_HAL_ETHSW_LINK_10Gbps:
-            {
-                PHYRate = 10000;
-                break;
-            }
-            case CCSP_HAL_ETHSW_LINK_Auto:
-            {
-                PHYRate = 10000;
-                break;
-            }
-            default:
-            {
-                PHYRate = 0;
-                break;
-            }
-        }
-    }
-    return PHYRate;
 }
 
 void Ethernet_Log(void)

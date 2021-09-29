@@ -309,7 +309,6 @@ typedef enum WanMode
 /**************************************************************************
                         GLOBAL VARIABLES
 **************************************************************************/
-#if defined (ENABLE_ETH_WAN)
 
 /* ETH WAN Fallback Interface Name - Should eventually move away from Compile Time */
 #if defined (_XB7_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_)
@@ -322,7 +321,6 @@ typedef enum WanMode
 #define ETHWAN_DEF_INTF_NAME "eth0"
 #endif
 
-#endif //#if defined (ENABLE_ETH_WAN)
 
 #if defined(_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
 #define ETHWAN_DEF_INTF_NAME "eth0"
@@ -602,6 +600,85 @@ void* CosaDmlEthWanChangeHandling( void* buff )
 	} 
     return buff;
 }
+
+int ethGetPHYRate
+    (
+        CCSP_HAL_ETHSW_PORT PortId
+    )
+{
+    INT status                              = RETURN_ERR;
+    CCSP_HAL_ETHSW_LINK_RATE LinkRate       = CCSP_HAL_ETHSW_LINK_NULL;
+    CCSP_HAL_ETHSW_DUPLEX_MODE DuplexMode   = CCSP_HAL_ETHSW_DUPLEX_Auto;
+    INT PHYRate                             = 0;
+#if defined(_CBR_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_) || ( defined (_XB6_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_))
+    CCSP_HAL_ETHSW_LINK_STATUS  LinkStatus  = CCSP_HAL_ETHSW_LINK_Down;
+#endif
+    /* For Broadcom platform device, CcspHalEthSwGetPortStatus returns the Linkrate based
+     * on the CurrentBitRate and CcspHalEthSwGetPortCfg returns the Linkrate based on the
+     * MaximumBitRate. Hence CcspHalEthSwGetPortStatus called for Broadcom platform devices.
+     */
+#if defined(_CBR_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_) || ( defined (_XB6_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_))
+    status = CcspHalEthSwGetPortStatus(PortId, &LinkRate, &DuplexMode, &LinkStatus);
+    CcspTraceWarning(("CcspHalEthSwGetPortStatus link rate %d\n", LinkRate));
+#else
+    status = CcspHalEthSwGetPortCfg(PortId, &LinkRate, &DuplexMode);
+     CcspTraceWarning(("CcspHalEthSwGetPortCfg link rate %d\n", LinkRate));
+#endif
+
+    if (RETURN_OK == status)
+    {
+     	CcspTraceInfo((" Entry %s \n", __FUNCTION__));
+        switch (LinkRate)
+        {
+            case CCSP_HAL_ETHSW_LINK_10Mbps:
+            {
+                PHYRate = 10;
+                break;
+            }
+            case CCSP_HAL_ETHSW_LINK_100Mbps:
+            {
+                PHYRate = 100;
+                break;
+            }
+            case CCSP_HAL_ETHSW_LINK_1Gbps:
+            {
+                PHYRate = 1000;
+                break;
+            }
+#ifdef _2_5G_ETHERNET_SUPPORT_
+            case CCSP_HAL_ETHSW_LINK_2_5Gbps:
+            {
+                PHYRate = 2500;
+                break;
+            }
+            case CCSP_HAL_ETHSW_LINK_5Gbps:
+            {
+                PHYRate = 5000;
+                break;
+            }
+#endif // _2_5G_ETHERNET_SUPPORT_
+            case CCSP_HAL_ETHSW_LINK_10Gbps:
+            {
+                PHYRate = 10000;
+                break;
+            }
+            case CCSP_HAL_ETHSW_LINK_Auto:
+            {
+	            CcspTraceInfo((" Entry %s LINK_Auto \n", __FUNCTION__));
+                PHYRate = 1000;
+                break;
+            }
+            default:
+            {
+                PHYRate = 0;
+                break;
+            }
+        }
+    }
+    return PHYRate;
+}
+
+
 
 #if defined (FEATURE_RDKB_WAN_MANAGER)
 
@@ -894,6 +971,10 @@ INT InitBootInformInfo(WAN_BOOTINFORM_MSG *pMsg)
     if (-1 != iWANInstance)
     {
         pMsg->iWanInstanceNumber = iWANInstance;
+    }
+    else
+    {
+        pMsg->iNumOfParam = 0; // Dont send any inform msg to wan manager if wan instance number is not found.
     }
 
     memset(acSetParamName, 0, sizeof(acSetParamName));
@@ -1497,18 +1578,16 @@ CosaDmlEthInit(
         CcspTraceInfo(("pthread create boot inform \n"));
         pthread_create(&bootInformThreadId, NULL, &ThreadBootInformMsg, NULL);
 
-        if (syscfg_get(NULL, "eth_wan_enabled", buf, sizeof(buf)) == 0)
+        if (0 == access( "/nvram/ETHWAN_ENABLE" , F_OK ))
         {
-            if ( 0 == strcmp(buf,"true"))
+            if (syscfg_get(NULL, "eth_wan_enabled", buf, sizeof(buf)) == 0)
             {
-                if ( 0 == access( "/nvram/ETHWAN_ENABLE" , F_OK ) )
+                if (0 == strcmp(buf,"true"))
                 {
-                    ethwanEnabled = TRUE;
-                    CcspTraceInfo(("Ethwan enabled \n"));
+                    ethwanEnabled = TRUE;                                   
                 }
             }
         }
-
         if (TRUE == ethwanEnabled)
         {
             EthWanBridgeInit();
@@ -3285,6 +3364,7 @@ void EthWanLinkUp_callback() {
 #ifdef AUTOWAN_ENABLE
         char redirFlag[10]={0};
         char captivePortalEnable[10]={0};
+        unsigned int ethWanPort = 0xffffffff;
 
         if (!syscfg_get(NULL, "redirection_flag", redirFlag, sizeof(redirFlag)) && !syscfg_get(NULL, "CaptivePortal_Enable", captivePortalEnable, sizeof(captivePortalEnable))){
           if (!strcmp(redirFlag,"true") && !strcmp(captivePortalEnable,"true"))
@@ -3302,6 +3382,16 @@ void EthWanLinkUp_callback() {
     v_secure_system("sysevent set ethwan-initialized 1");
     v_secure_system("syscfg set ntp_enabled 1"); // Enable NTP in case of ETHWAN
     v_secure_system("syscfg commit"); 
+    if (RETURN_OK == CcspHalExtSw_getEthWanPort(&ethWanPort) )
+    {
+        ethWanPort += CCSP_HAL_ETHSW_EthPort1; /* ethWanPort starts from 0*/
+        CcspTraceInfo(("WAN_MODE: Ethernet %d\n", ethGetPHYRate(ethWanPort)));
+    }
+    else
+    {
+        CcspTraceInfo(("WAN_MODE: Ethernet WAN Port Couldn't Be Retrieved\n"));
+    }
+
 #endif
 
    if (ANSC_STATUS_SUCCESS == GetWan_InterfaceName (wanoe_ifname, sizeof(wanoe_ifname))) {
