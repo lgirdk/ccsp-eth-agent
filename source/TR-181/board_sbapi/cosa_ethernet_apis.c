@@ -2155,7 +2155,7 @@ static ANSC_STATUS CosaDmlEthGetParamNames(char *pComponent, char *pBus, char *p
 /* *CosaDmlEthGetParamValues() */
 static ANSC_STATUS CosaDmlEthGetParamValues(char *pComponent, char *pBus, char *pParamName, char *pReturnVal)
 {
-    parameterValStruct_t **retVal;
+    parameterValStruct_t **retVal = NULL;
     char *ParamName[1];
     int ret = 0,
         nval;
