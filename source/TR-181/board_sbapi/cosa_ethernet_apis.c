@@ -659,13 +659,15 @@ ANSC_STATUS CosaDmlIfaceFinalize(char *pValue)
 
     //Get the ethwan interface name from HAL
     memset( ethwan_ifname , 0, sizeof( ethwan_ifname ) );
-    if ( ( 0 != GWP_GetEthWanInterfaceName((unsigned char*) ethwan_ifname, sizeof(ethwan_ifname) ) ) )
+    if ((0 != GWP_GetEthWanInterfaceName((unsigned char*) ethwan_ifname, sizeof(ethwan_ifname)))
+            || (0 == strnlen(ethwan_ifname,sizeof(ethwan_ifname)))
+            || (0 == strncmp(ethwan_ifname,"disable",sizeof(ethwan_ifname))))
+
     {
         //Fallback case needs to set it default
         memset( ethwan_ifname , 0, sizeof( ethwan_ifname ) );
         sprintf( ethwan_ifname , "%s", ETHWAN_DEF_INTF_NAME );
     }
-
    
     if (ethwanEnabled == TRUE)
     {
@@ -877,21 +879,6 @@ INT InitBootInformInfo(WAN_BOOTINFORM_MSG *pMsg)
         /* Fallback case needs to set it default */
         snprintf(ethWanName ,sizeof(ethWanName), "%s", ETHWAN_DEF_INTF_NAME);
     }
-
-#if defined (_BRIDGE_UTILS_BIN_)
-    if ( syscfg_set( NULL, "eth_wan_iface_name", ethWanName) != 0 )
-    {
-        CcspTraceError(( "syscfg_set failed for eth_wan_iface_name\n" ));
-    }
-    else
-    {
-        if ( syscfg_commit() != 0 )
-        {
-            CcspTraceError(( "syscfg_commit failed for eth_wan_iface_name\n" ));
-        }
-
-    }
-#endif
 
     if (bEthWanEnable == TRUE)
     {
@@ -1111,7 +1098,21 @@ ANSC_STATUS CosaDmlConfigureEthWan(BOOL bEnable)
             snprintf(ethwan_ifname ,sizeof(ethwan_ifname), "%s", ETHWAN_DEF_INTF_NAME);
         }
 
+
 #if defined (_BRIDGE_UTILS_BIN_)
+
+        if ( syscfg_set( NULL, "eth_wan_iface_name", ethwan_ifname) != 0 )
+        {
+            CcspTraceError(( "syscfg_set failed for eth_wan_iface_name\n" ));
+        }
+        else
+        {
+            if ( syscfg_commit() != 0 )
+            {
+                CcspTraceError(( "syscfg_commit failed for eth_wan_iface_name\n" ));
+            }
+
+        }
 
         if (ovsEnable)
         {
@@ -1157,6 +1158,20 @@ ANSC_STATUS CosaDmlConfigureEthWan(BOOL bEnable)
             snprintf(ethwan_ifname , sizeof(ethwan_ifname), "%s", ETHWAN_DEF_INTF_NAME);
         }
 
+#if defined (_BRIDGE_UTILS_BIN_)
+        if ( syscfg_set( NULL, "eth_wan_iface_name", ethwan_ifname) != 0 )
+        {
+            CcspTraceError(( "syscfg_set failed for eth_wan_iface_name\n" ));
+        }
+        else
+        {
+            if ( syscfg_commit() != 0 )
+            {
+                CcspTraceError(( "syscfg_commit failed for eth_wan_iface_name\n" ));
+            }
+
+        }
+#endif
         v_secure_system("ifconfig %s up", ethwan_ifname);
 
     }
@@ -1384,7 +1399,9 @@ ANSC_STATUS EthWanBridgeInit()
 
 	//Get the ethwan interface name from HAL
 	memset( ethwan_ifname , 0, sizeof( ethwan_ifname ) );
-	if ( ( 0 != GWP_GetEthWanInterfaceName((unsigned char*) ethwan_ifname, sizeof(ethwan_ifname) ) ) )
+	if ((0 != GWP_GetEthWanInterfaceName((unsigned char*) ethwan_ifname, sizeof(ethwan_ifname))) 
+             || (0 == strnlen(ethwan_ifname,sizeof(ethwan_ifname)))
+            || (0 == strncmp(ethwan_ifname,"disable",sizeof(ethwan_ifname))))
 	{
 		//Fallback case needs to set it default
 		memset( ethwan_ifname , 0, sizeof( ethwan_ifname ) );
