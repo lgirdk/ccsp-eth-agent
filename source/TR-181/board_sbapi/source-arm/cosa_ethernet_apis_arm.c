@@ -620,7 +620,7 @@ static void ethGetClientMacDetails
                 {
                     ERR_CHK(rc);
                 }
-                rc = strcpy_s(mac, MACADDR_SZ, mac_addr);
+                rc = strcpy_s(mac, MACADDR_SZ+1, mac_addr);
                 ERR_CHK(rc);
                 return;
             }
