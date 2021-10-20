@@ -19,13 +19,13 @@
 
 /**********************************************************************
    Copyright [2014] [Cisco Systems, Inc.]
- 
+
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
- 
+
        http://www.apache.org/licenses/LICENSE-2.0
- 
+
    Unless required by applicable law or agreed to in writing, software
    distributed under the License is distributed on an "AS IS" BASIS,
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -417,18 +417,18 @@ EthRdkInterface_SetParamStringValue
         char*                       ParamName,
         char*                       pString
     );
-ANSC_HANDLE 
-EthRdkInterface_AddEntry 
-    ( 
+ANSC_HANDLE
+EthRdkInterface_AddEntry
+    (
         ANSC_HANDLE hInsContext,
-        ULONG* pInsNumber 
+        ULONG* pInsNumber
     );
 
-ULONG 
+ULONG
 EthRdkInterface_DelEntry
-    ( 
+    (
         ANSC_HANDLE hInsContext,
-        ANSC_HANDLE hInstance 
+        ANSC_HANDLE hInstance
     );
 
 BOOL
@@ -466,5 +466,5 @@ EthRdkInterface_SetParamUlongValue
     char *ParamName,
     ULONG uValue
     );
-#endif  // FEATURE_RDKB_WAN_MANAGER    
+#endif  // FEATURE_RDKB_WAN_MANAGER
 #endif
