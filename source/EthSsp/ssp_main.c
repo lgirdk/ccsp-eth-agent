@@ -268,7 +268,6 @@ int main(int argc, char* argv[])
     int                             idx = 0;
     appcaps.caps = NULL;
     appcaps.user_name = NULL;
-    char buf[8] = {'\0'};
     extern ANSC_HANDLE bus_handle;
     char *subSys            = NULL;  
     DmErr_t    err;
@@ -276,16 +275,20 @@ int main(int argc, char* argv[])
     int ind = -1;
 
     CcspTraceInfo(("\nWithin the main function\n"));
-    syscfg_init();
-    syscfg_get( NULL, "NonRootSupport", buf, sizeof(buf));
 #ifdef DROP_ROOT_EARLY
-    if( buf != NULL )  {
-        if (strncmp(buf, "true", strlen("true")) == 0) {
-            init_capability();
-            drop_root_caps(&appcaps);
-            update_process_caps(&appcaps);
-            read_capability(&appcaps);
-        }
+    bool ret = false;
+    ret = isBlocklisted();
+    if(ret)
+    {
+        AnscTrace("NonRoot feature is disabled\n");
+    }
+    else
+    {
+        AnscTrace("NonRoot feature is enabled, dropping root privileges for CcspEthAgent process\n");
+        init_capability();
+        drop_root_caps(&appcaps);
+        update_process_caps(&appcaps);
+        read_capability(&appcaps);
     }
 #endif
 
@@ -438,13 +441,19 @@ CcspTraceWarning(("\nAfter Cdm_Init\n"));
         exit(1);
     }
 #ifndef DROP_ROOT_EARLY
-    if( buf != NULL )  {
-        if (strncmp(buf, "true", strlen("true")) == 0) {
-            init_capability();
-            drop_root_caps(&appcaps);
-            update_process_caps(&appcaps);
-            read_capability(&appcaps);
-        }
+    bool ret = false;
+    ret = isBlocklisted();
+    if(ret)
+    {
+        AnscTrace("NonRoot feature is disabled\n");
+    }
+    else
+    {
+        AnscTrace("NonRoot feature is enabled, dropping root privileges for CcspEthAgent process\n");
+        init_capability();
+        drop_root_caps(&appcaps);
+        update_process_caps(&appcaps);
+        read_capability(&appcaps);
     }
 #endif
     system("touch /tmp/ethagent_initialized");
