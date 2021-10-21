@@ -36,4 +36,4 @@ if CCSP_ARCH_PC
 libCcspEthAgent_board_sbapi_la_SOURCES += source-pc/cosa_ethernet_apis_pc.c
 endif
 
-libCcspEthAgent_board_sbapi_la_LDFLAGS = -lccsp_common -lhal_ethsw -lhal_platform -llmapi
+libCcspEthAgent_board_sbapi_la_LDFLAGS = -lccsp_common -lhal_ethsw -lhal_platform -llmapi -lsecure_wrapper
