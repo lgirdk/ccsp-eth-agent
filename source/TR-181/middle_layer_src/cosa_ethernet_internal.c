@@ -767,7 +767,9 @@ static char *get_formatted_time(char *time)
 
     strftime(tmp, 128, "%y%m%d-%T", tm_info);
 
-    snprintf(time, 128, "%s.%06d", tmp, (int)tv_now.tv_usec);
+    if( snprintf(time, 128, "%s.%06d", tmp, (int)tv_now.tv_usec) >= 128) {
+        CcspTraceWarning(( "%s Truncation while formatting time, expected_time:%s.%06d current_time:%s\n", __FUNCTION__ , tmp, (int)tv_now.tv_usec, time));
+    }
     return time;
 }
 

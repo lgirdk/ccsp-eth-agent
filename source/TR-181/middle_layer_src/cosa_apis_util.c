@@ -268,11 +268,11 @@ CosaUtilGetLowerLayers
     ULONG                           i                           = 0;
     ULONG                           j                           = 0;
     ULONG                           ulEntryNameLen              = 256;
-    CHAR                            ucEntryParamName[256]       = {0};
+    CHAR                            ucEntryParamName[256+15]       = {0};
     CHAR                            ucEntryNameValue[256]       = {0};
     CHAR                            ucEntryFullPath[256]        = {0};
-    CHAR                            ucLowerEntryPath[256]       = {0};
-    CHAR                            ucLowerEntryName[256]       = {0};
+    CHAR                            ucLowerEntryPath[256+25]       = {0};
+    CHAR                            ucLowerEntryName[256+7]       = {0};
     ULONG                           ulEntryInstanceNum          = 0;
     ULONG                           ulEntryPortNum              = 0;
     char*                           pMatchedLowerLayer          = NULL;
@@ -799,7 +799,7 @@ CosaUtilConstructLowerLayers
     {
         /* Special processing for Bridge type LowerLayers */
         /*Coverity Fix CID: 73664 DC.STRING_BUFFER */
-        snprintf(pLowerLayersBuf,sizeof((PUCHAR)pLowerLayersBuf) ,"%s%d.Port.1", linkTypePath, (int)InstNumber);
+        snprintf(pLowerLayersBuf, *pBufLen ,"%s%d.Port.1", linkTypePath, (int)InstNumber);
     }
     else
     {
@@ -922,11 +922,11 @@ CosaUtilFindBridgePath(char* pBridgeName)
     ULONG                           i                           = 0;
     ULONG                           j                           = 0;
     ULONG                           ulEntryNameLen              = 256;
-    CHAR                            ucEntryParamName[256]       = {0};
+    CHAR                            ucEntryParamName[256+18]       = {0};
     CHAR                            ucEntryNameValue[256]       = {0};
     CHAR                            ucEntryFullPath[256]        = {0};
-    CHAR                            ucLowerEntryPath[256]       = {0};
-    CHAR                            ucLowerEntryName[256]       = {0};
+    CHAR                            ucLowerEntryPath[256+25]       = {0};
+    CHAR                            ucLowerEntryName[256+7]       = {0};
     ULONG                           ulEntryInstanceNum          = 0;
     ULONG                           ulEntryPortNum              = 0;
     char*                           pMatchedLowerLayer          = NULL;
@@ -1004,11 +1004,11 @@ CosaUtilGetFullPathNameByKeyword
     ULONG                           ulNumOfEntries              = 0;
     ULONG                           i                           = 0;
     ULONG                           ulEntryNameLen              = 256;
-    CHAR                            ucEntryParamName[256]       = {0};
+    CHAR                            ucEntryParamName[256+780]       = {0};
     CHAR                            ucEntryNameValue[256]       = {0};
-    CHAR                            ucTmp[128]                  = {0};
-    CHAR                            ucTmp2[128]                 = {0};
-    CHAR                            ucEntryFullPath[256]        = {0};
+    CHAR                            ucTmp[128+1024]                  = {0};
+    CHAR                            ucTmp2[128+400]                 = {0};
+    CHAR                            ucEntryFullPath[256+384]        = {0};
     char*                           pMatchedLowerLayer          = NULL;
     ULONG                           ulEntryInstanceNum          = 0;
     PANSC_TOKEN_CHAIN               pTableListTokenChain        = (PANSC_TOKEN_CHAIN)NULL;
