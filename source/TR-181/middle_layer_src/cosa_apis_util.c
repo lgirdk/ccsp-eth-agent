@@ -520,7 +520,7 @@ CosaUtilGetLowerLayers
                 }
                 AnscTraceFlow(("<HL>%s ucEntryNameValue=%s\n", __FUNCTION__,ucEntryNameValue));
                 _ansc_sscanf(ucEntryNameValue,"%lu",&ulNumOfEntries);
-                AnscTraceFlow(("<HL>%s Wifi # of entries=%d\n", __FUNCTION__,ulNumOfEntries));
+                AnscTraceFlow(("<HL>%s Wifi # of entries=%lu\n", __FUNCTION__,ulNumOfEntries));
                 i = 0;
                 ulEntryInstanceNum =1;
                 while (i < ulNumOfEntries)
@@ -536,12 +536,12 @@ CosaUtilGetLowerLayers
                     ulEntryNameLen = sizeof(ucEntryNameValue);
                     if (COSAGetParamValueByPathName(g_MessageBusHandle,&varStruct,&ulEntryNameLen))
                     {
-                        AnscTraceFlow(("<HL>%s WiFi instance(%d) not found\n", __FUNCTION__,
+                        AnscTraceFlow(("<HL>%s WiFi instance(%lu) not found\n", __FUNCTION__,
                             ulEntryInstanceNum));
                         ulEntryInstanceNum++;
                         continue;
                     }  
-                    AnscTraceFlow(("<HL>%s WiFi instance(%d) has name =%s inputName=%s\n", 
+                    AnscTraceFlow(("<HL>%s WiFi instance(%lu) has name =%s inputName=%s\n",
                         __FUNCTION__,ulEntryInstanceNum,ucEntryNameValue,pKeyword));
                      rc = strcmp_s(ucEntryNameValue,sizeof(ucEntryNameValue),(char*)pKeyword,&ind);
                      ERR_CHK(rc);
@@ -564,11 +564,11 @@ CosaUtilGetLowerLayers
                  if ((!ind) && (rc == EOK))
                {
                  ulNumOfEntries =  CosaGetParamValueUlong("Device.Bridging.BridgeNumberOfEntries");
-                 CcspTraceInfo(("----------CosaUtilGetLowerLayers, bridgenum:%d\n", ulNumOfEntries));
+                 CcspTraceInfo(("----------CosaUtilGetLowerLayers, bridgenum:%lu\n", ulNumOfEntries));
                  for ( i = 0 ; i < ulNumOfEntries; i++ )
                  {
                     ulEntryInstanceNum = CosaGetInstanceNumberByIndex("Device.Bridging.Bridge.", i);
-                    CcspTraceInfo(("----------CosaUtilGetLowerLayers, instance num:%d\n", ulEntryInstanceNum));
+                    CcspTraceInfo(("----------CosaUtilGetLowerLayers, instance num:%lu\n", ulEntryInstanceNum));
 
                     if ( ulEntryInstanceNum )
                     {
@@ -577,7 +577,7 @@ CosaUtilGetLowerLayers
                         snprintf(ucLowerEntryPath,sizeof(ucLowerEntryPath), "%s%s", ucEntryFullPath, ".PortNumberOfEntries"); 
                         
                         ulEntryPortNum = CosaGetParamValueUlong(ucLowerEntryPath);  
-                        CcspTraceInfo(("----------CosaUtilGetLowerLayers, Param:%s,port num:%d\n",ucLowerEntryPath, ulEntryPortNum));
+                        CcspTraceInfo(("----------CosaUtilGetLowerLayers, Param:%s,port num:%lu\n",ucLowerEntryPath, ulEntryPortNum));
 
                         for ( j = 1; j<= ulEntryPortNum; j++) {
                         /*Coverity Fix CID:73664 DC.STRING_BUFFER */
@@ -593,7 +593,7 @@ CosaUtilGetLowerLayers
 
                             {
                                 pMatchedLowerLayer =  AnscCloneString(ucLowerEntryName);
-                                CcspTraceInfo(("----------CosaUtilGetLowerLayers, J:%d, LowerLayer:%s\n", j, pMatchedLowerLayer));
+                                CcspTraceInfo(("----------CosaUtilGetLowerLayers, J:%lu, LowerLayer:%s\n", j, pMatchedLowerLayer));
                                 break;
                             }
                         }
@@ -807,7 +807,7 @@ CosaUtilConstructLowerLayers
         snprintf(pLowerLayersBuf,sizeof((PUCHAR)pLowerLayersBuf),"%s%d", linkTypePath, (int)InstNumber);
     }
 
-    AnscTraceFlow(("%s, size %d, buf len %d\n", pLowerLayersBuf, _ansc_strlen(pLowerLayersBuf), *pBufLen));
+    AnscTraceFlow(("%s, size %d, buf len %lu\n", pLowerLayersBuf, _ansc_strlen(pLowerLayersBuf), *pBufLen));
     return  ANSC_STATUS_SUCCESS;
 }
 
@@ -855,7 +855,7 @@ CosaUtilGetLowerLayerName
     }
     else
     {
-        AnscTraceWarning(("CosaUtilGetLowerLayerName -- failure %d, to retrieve %s\n", returnStatus, pParamPath));
+        AnscTraceWarning(("CosaUtilGetLowerLayerName -- failure %lu, to retrieve %s\n", returnStatus, pParamPath));
 
         return  returnStatus;
     }
@@ -883,7 +883,7 @@ CosaUtilFindBridgeName(char* pBridgePath)
     snprintf(ucLowerEntryPath,sizeof(ucLowerEntryPath), "%s%s", pBridgePath, ".PortNumberOfEntries"); 
                         
     ulEntryPortNum = CosaGetParamValueUlong(ucLowerEntryPath);  
-    AnscTraceFlow(("%s: Param:%s,port num:%d\n", __FUNCTION__, ucLowerEntryPath, ulEntryPortNum));
+    AnscTraceFlow(("%s: Param:%s,port num:%lu\n", __FUNCTION__, ucLowerEntryPath, ulEntryPortNum));
 
     for ( j = 1; j<= ulEntryPortNum; j++) {
        /* Coverity Fix CID:73664 DC.STRING_BUFFER */
@@ -902,7 +902,7 @@ CosaUtilFindBridgeName(char* pBridgePath)
             {
                 // not include port instance.
                 pMatchedBridgeName =  AnscCloneString(ucEntryNameValue);
-                AnscTraceFlow(("%s: J:%d, Name:%s\n", __FUNCTION__, j, pMatchedBridgeName));
+                AnscTraceFlow(("%s: J:%lu, Name:%s\n", __FUNCTION__, j, pMatchedBridgeName));
                 break;
             }
         }
@@ -935,13 +935,13 @@ CosaUtilFindBridgePath(char* pBridgeName)
     
 
     ulNumOfEntries =  CosaGetParamValueUlong("Device.Bridging.BridgeNumberOfEntries");
-    CcspTraceInfo(("----------CosaUtilGetLowerLayers, bridgenum:%d\n", ulNumOfEntries));
-    AnscTraceFlow(("%s: bridgenum:%d\n", __FUNCTION__, ulNumOfEntries));
+    CcspTraceInfo(("----------CosaUtilGetLowerLayers, bridgenum:%lu\n", ulNumOfEntries));
+    AnscTraceFlow(("%s: bridgenum:%lu\n", __FUNCTION__, ulNumOfEntries));
     for ( i = 0 ; i < ulNumOfEntries; i++ )
     {
         ulEntryInstanceNum = CosaGetInstanceNumberByIndex("Device.Bridging.Bridge.", i);
-        CcspTraceInfo(("----------CosaUtilGetLowerLayers, instance num:%d\n", ulEntryInstanceNum));
-        AnscTraceFlow(("%s: instance num:%d\n", __FUNCTION__, ulEntryInstanceNum));
+        CcspTraceInfo(("----------CosaUtilGetLowerLayers, instance num:%lu\n", ulEntryInstanceNum));
+        AnscTraceFlow(("%s: instance num:%lu\n", __FUNCTION__, ulEntryInstanceNum));
         if ( ulEntryInstanceNum )
         {
             /*Coverity Fix CID:73664 DC.STRING_BUFFER */
@@ -949,7 +949,7 @@ CosaUtilFindBridgePath(char* pBridgeName)
             snprintf(ucLowerEntryPath,sizeof(ucLowerEntryPath), "%s%s", ucEntryFullPath, ".PortNumberOfEntries"); 
                         
             ulEntryPortNum = CosaGetParamValueUlong(ucLowerEntryPath);  
-            CcspTraceInfo(("----------CosaUtilGetLowerLayers, Param:%s,port num:%d\n",ucLowerEntryPath, ulEntryPortNum));
+            CcspTraceInfo(("----------CosaUtilGetLowerLayers, Param:%s,port num:%lu\n",ucLowerEntryPath, ulEntryPortNum));
 
             for ( j = 1; j<= ulEntryPortNum; j++) {
             /*Coverity Fix CID:73664 DC.STRING_BUFFER */
@@ -964,7 +964,7 @@ CosaUtilFindBridgePath(char* pBridgeName)
                 {
                     // not include port instance.
                     pMatchedLowerLayer =  AnscCloneString(ucEntryFullPath);
-                    CcspTraceInfo(("----------CosaUtilGetLowerLayers, J:%d, LowerLayer:%s\n", j, pMatchedLowerLayer));
+                    CcspTraceInfo(("----------CosaUtilGetLowerLayers, J:%lu, LowerLayer:%s\n", j, pMatchedLowerLayer));
                     break;
                 }
             }

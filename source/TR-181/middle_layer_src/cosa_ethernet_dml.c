@@ -1477,7 +1477,7 @@ EthRdkInterface_GetParamBoolValue
 
         if(0 != CcspHalExtSw_getEthWanPort(&WanPort))
         {
-            AnscTraceInfo(("Failed to get WanPort[%lu] in CPE \n",WanPort));
+            AnscTraceInfo(("Failed to get WanPort[%u] in CPE \n",WanPort));
         }
 
         if(WanPort == pEthLink->ulInstanceNumber)
