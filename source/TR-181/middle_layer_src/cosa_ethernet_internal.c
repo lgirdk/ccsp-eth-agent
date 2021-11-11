@@ -1057,15 +1057,15 @@ ANSC_STATUS CosaDmlSetWanOEMode (PCOSA_DML_ETH_PORT_FULL pEthernetPortFull, BOOL
 
     if(0 != CcspHalExtSw_getEthWanPort(&WanPort))
     {
-        AnscTraceInfo(("Failed to get WanPort[%lu] in CPE \n",WanPort));
+        AnscTraceInfo(("Failed to get WanPort[%u] in CPE \n",WanPort));
     }
 
     if(WanPort != pEthernetPortFull->Cfg.InstanceNumber)
     {
-        AnscTraceInfo(("[%s][%d] WanPort from EthSW[%lu], InstanceNumber! \n",__FUNCTION__, __LINE__,WanPort, pEthernetPortFull->Cfg.InstanceNumber));
+        AnscTraceInfo(("[%s][%d] WanPort[%u] from EthSW, InstanceNumber[%lu]! \n",__FUNCTION__, __LINE__,WanPort, pEthernetPortFull->Cfg.InstanceNumber));
         if(0 != CcspHalExtSw_setEthWanPort(WanPort))
         {
-            AnscTraceInfo(("Failed to set WanPort[%lu] in CPE \n",WanPort));
+            AnscTraceInfo(("Failed to set WanPort[%u] in CPE \n",WanPort));
             return ANSC_STATUS_FAILURE;
         }
     }
