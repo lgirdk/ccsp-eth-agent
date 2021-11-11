@@ -1032,19 +1032,7 @@ ANSC_STATUS CosaDmlConfigureEthWan(BOOL bEnable)
         snprintf(wan_mac, sizeof(wan_mac), "%02x:%02x:%02x:%02x:%02x:%02x", macAddr.hw[0], macAddr.hw[1], macAddr.hw[2],
                 macAddr.hw[3], macAddr.hw[4], macAddr.hw[5]);
 
-        // detach EWAN interface from brlan0
-#if defined (_BRIDGE_UTILS_BIN_)
-
-        if (ovsEnable)
-        {
-            v_secure_system("/usr/bin/bridgeUtils del-port brlan0 %s",ethwan_ifname);
-        }
-        else
-#endif
-        {
-            v_secure_system("ip link set dev %s nomaster", ethwan_ifname);
-        }
-        v_secure_system("ip link set %s down", ethwan_ifname);
+       v_secure_system("ip link set %s down", ethwan_ifname);
 
         // EWAN interface needs correct MAC before starting MACsec
         // This could probably be done once since MAC shouldn't change.
