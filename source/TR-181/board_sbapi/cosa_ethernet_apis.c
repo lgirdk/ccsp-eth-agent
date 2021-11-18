@@ -1912,6 +1912,8 @@ CosaDmlEthInit(
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)phContext;
     int ifIndex;
 
+    //ETH Port Init.
+    CosaDmlEthPortInit((PANSC_HANDLE)pMyObject);
 #ifdef AUTOWAN_ENABLE 
     {
         PCOSA_DATAMODEL_ETH_WAN_AGENT pEthWanCfg = NULL;
@@ -1964,8 +1966,6 @@ CosaDmlEthInit(
         return ANSC_STATUS_FAILURE;
     }
 #endif
-    //ETH Port Init.
-    CosaDmlEthPortInit((PANSC_HANDLE)pMyObject);
 #if defined (FEATURE_RDKB_WAN_AGENT)
 
     if(CosaDmlGetWanOEInterfaceName(WanOEInterface, sizeof(WanOEInterface)) == ANSC_STATUS_SUCCESS) {

@@ -411,7 +411,7 @@ CosaEthernetInitialize
 
 #if defined(FEATURE_RDKB_WAN_MANAGER)
 
-    //Register callbacks with ethsw-hal for link events.
+    //Register callbacks with ethsw-hal for link events, so hal can update initial link status if needed
     appCallBack obj;
     memset (&obj, 0, sizeof(appCallBack));
     obj.pGWP_act_EthWanLinkDown = EthWanLinkDown_callback;
