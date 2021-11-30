@@ -144,6 +144,7 @@ wanmanager could able to handle vlan interface creation and management */
 #define WAN_BOOTINFORM_OPERSTATUSENABLE_PARAM_NAME "Device.X_RDK_WanManager.CPEInterface.%d.EnableOperStatusMonitor"
 #define WAN_BOOTINFORM_PHYPATH_PARAM_NAME "Device.X_RDK_WanManager.CPEInterface.%d.Phy.Path"
 #define WAN_BOOTINFORM_INTERFACE_PARAM_NAME "Device.X_RDK_WanManager.CPEInterface.%d.Wan.Name"
+#define WAN_ENABLE_PARAM "Device.X_RDK_WanManager.Enable"
 #define WAN_IF_NAME_PRIMARY "erouter0"
 #define WAN_PHYPATH_VALUE "Device.X_RDKCENTRAL-COM_EthernetWAN."
 #define WAN_ETH_INTERFACE_INSTANCE_NUM     2
@@ -176,6 +177,12 @@ typedef struct _WAN_BOOTINFORM_MSG
     INT iWanInstanceNumber;
 }WAN_BOOTINFORM_MSG;
 
+typedef enum WanOperStateAck
+{
+    WAN_OPER_STATE_NONE = 0,
+    WAN_OPER_STATE_RESET_INPROGRESS,
+    WAN_OPER_STATE_RESET_COMPLETED
+}WanOperStateAck;
 #endif //FEATURE_RDKB_WAN_MANAGER
 
 typedef struct _Eth_host_t
@@ -193,6 +200,10 @@ _COSA_DATAMODEL_ETH_WAN_AGENT_CONTENT
     ULONG             	    Port;
     BOOLEAN                MonitorPhyStatusAndNotify;
     char                   wanInstanceNumber[4];
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+    WanOperStateAck        wanOperState;
+#endif
+    char                   ethWanIfMac[32];
 }
 COSA_DATAMODEL_ETH_WAN_AGENT, *PCOSA_DATAMODEL_ETH_WAN_AGENT;
 
@@ -402,11 +413,11 @@ CosaDmlEthPortInit
         PANSC_HANDLE                phContext
     );
 #if defined (FEATURE_RDKB_WAN_MANAGER)
-ANSC_STATUS EthwanEnableWithoutReboot(BOOL bEnable);
+ANSC_STATUS EthwanEnableWithoutReboot(BOOL bEnable,INT bridgeMode);
 BOOL CosaDmlEthWanLinkStatus();
 ANSC_STATUS CosaDmlConfigureEthWan(BOOL bEnable);
 ANSC_STATUS CosaDmlEthWanPhyStatusMonitor(void *arg);
-ANSC_STATUS CosaDmlIfaceFinalize(char *pValue);
+ANSC_STATUS CosaDmlIfaceFinalize(char *pValue, BOOL isAutoWanMode);
 #endif
 #if defined (FEATURE_RDKB_WAN_AGENT)
 ANSC_STATUS CosaDmlEthGetPortCfg( INT nIndex, PCOSA_DML_ETH_PORT_CONFIG pEthLink);

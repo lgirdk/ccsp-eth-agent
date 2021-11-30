@@ -140,16 +140,6 @@ static void waitUntilSystemReady()
     }
 }
 #endif
-#if defined(_COSA_BCM_ARM_)  && defined(_XB6_PRODUCT_REQ_)
-            
-    #if !defined(_PLATFORM_RASPBERRYPI_) && !defined(_PLATFORM_TURRIS_)
-        static pthread_t sme_event_tid;
-        void *SME_EventHandler(void *arg);
-        /*appCallBack doesn't match with the one define in gw_prov_abstraction.h, pass NULL point just to start RPC tunnel. */
-        void SME_CreateEventHandler(appCallBack *pAppCallBack);
-    #endif
-#endif
-
 #endif //#if defined (FEATURE_RDKB_WAN_MANAGER)
 
 /**********************************************************************
@@ -371,25 +361,6 @@ CosaEthernetCreate
     return  (ANSC_HANDLE)pMyObject;
 }
 
-#if defined (FEATURE_RDKB_WAN_MANAGER)
-
-#if defined(_COSA_BCM_ARM_)  && defined(_XB6_PRODUCT_REQ_)
-
-    void *SME_EventHandler(void *arg)
-    {
-        (void) (arg) ;
-        pthread_detach(pthread_self());
-        CcspTraceInfo((" Creating Event Handler\n"));
-        /*appCallBack doesn't match with the one define in gw_prov_abstraction.h, pass NULL point just to start RPC tunnel. */
-        SME_CreateEventHandler(NULL);
-        CcspTraceInfo((" Creating Event Handler over\n"));
-
-        return NULL ;
-    }
-
-    #endif
-
-#endif
 /**********************************************************************
 
     caller:     self
@@ -450,18 +421,6 @@ CosaEthernetInitialize
     //Initialise global data and initalise hal
     CosaDmlEthInit(NULL, (PANSC_HANDLE)pMyObject);
 
-    char ethWan_Enabled[16] = {0};
-
-    syscfg_get(NULL, "eth_wan_enabled", ethWan_Enabled, sizeof(ethWan_Enabled));
-
-    if (strcmp(ethWan_Enabled,"true") == 0 )
-    {
-#if defined(_COSA_BCM_ARM_)  && defined(_XB6_PRODUCT_REQ_)
-#if !defined(_PLATFORM_RASPBERRYPI_) && !defined(_PLATFORM_TURRIS_)
-        pthread_create(&sme_event_tid, NULL, SME_EventHandler, NULL);
-#endif
-#endif
-    }
 #elif defined(FEATURE_RDKB_WAN_AGENT)
     CosaDmlEthInit(NULL, (PANSC_HANDLE)pMyObject);
     CcspHalEthSw_RegisterLinkEventCallback(CosaDmlEthPortLinkStatusCallback); //Register cb for link event.

@@ -675,11 +675,39 @@ EthernetWAN_SetParamStringValue
     int wan_mode = 0;
     errno_t rc = -1;
     int            ind = -1;
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+    int wan_oper_state = WAN_OPER_STATE_NONE;
+    PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
+    PCOSA_DATAMODEL_ETH_WAN_AGENT pEthWanCfgObj = NULL;
+    if (pMyObject)
+    {
+        pEthWanCfgObj = (PCOSA_DATAMODEL_ETH_WAN_AGENT)&pMyObject->EthWanCfg;
+        if (pEthWanCfgObj)
+        {
+            wan_oper_state = pEthWanCfgObj->wanOperState;
+        }
+    }
+#endif
     /* check the parameter name and set the corresponding value */
     rc = strcmp_s( "SelectedOperationalMode",strlen("SelectedOperationalMode"),ParamName,&ind);
     ERR_CHK(rc);
     if ((!ind) && (rc == EOK))
     {
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+        if (wan_oper_state == WAN_OPER_STATE_RESET_INPROGRESS)
+        {
+		    CcspTraceWarning(("WanOperationalMode Change is inprogress - pls try %s=%s to set after sometime \n", ParamName,pString));
+            return FALSE;
+        }
+        else
+        {
+            if (pEthWanCfgObj)
+            {
+                pEthWanCfgObj->wanOperState = WAN_OPER_STATE_NONE;
+            }
+
+        }
+#endif
         rc = strcmp_s("DOCSIS",strlen("DOCSIS"),pString,&ind);
         ERR_CHK(rc);
         if ((!ind) && (rc == EOK))
@@ -790,7 +818,7 @@ EthernetWAN_SetParamStringValue
     ERR_CHK(rc);
     if ((!ind) && (rc == EOK))
     {
-        CosaDmlIfaceFinalize(pString);
+        CosaDmlIfaceFinalize(pString,TRUE);
         return TRUE;
     }
 #endif
