@@ -146,4 +146,7 @@ ULONG Stats_GetParamStringValue ( ANSC_HANDLE hInsContext, char*  ParamName, cha
 
 int _getMac ( char* ifName, char* mac );
 
+#ifdef FEATURE_RDKB_WAN_UPSTREAM
+BOOL EthInterfaceSetUpstream( INT IfIndex, BOOL Upstream );
+#endif
 #endif

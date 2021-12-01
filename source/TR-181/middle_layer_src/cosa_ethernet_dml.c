@@ -19,13 +19,13 @@
 
 /**********************************************************************
    Copyright [2014] [Cisco Systems, Inc.]
- 
+
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
- 
+
        http://www.apache.org/licenses/LICENSE-2.0
- 
+
    Unless required by applicable law or agreed to in writing, software
    distributed under the License is distributed on an "AS IS" BASIS,
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -71,6 +71,8 @@
 #include "safec_lib_common.h"
 #include "cosa_ethernet_apis.h"
 #include "syscfg/syscfg.h"
+#include "cosa_ethernet_internal.h"
+#include "cosa_ethernet_interface_dml.h"
 
 extern ANSC_HANDLE g_EthObject;
 ANSC_STATUS is_usg_in_bridge_mode(BOOL *pBridgeMode);
@@ -85,13 +87,13 @@ CosaDmlEthWanSetEnable
  IMPORTANT NOTE:
 
  According to TR69 spec:
- On successful receipt of a SetParameterValues RPC, the CPE MUST apply 
- the changes to all of the specified Parameters atomically. That is, either 
- all of the value changes are applied together, or none of the changes are 
- applied at all. In the latter case, the CPE MUST return a fault response 
- indicating the reason for the failure to apply the changes. 
- 
- The CPE MUST NOT apply any of the specified changes without applying all 
+ On successful receipt of a SetParameterValues RPC, the CPE MUST apply
+ the changes to all of the specified Parameters atomically. That is, either
+ all of the value changes are applied together, or none of the changes are
+ applied at all. In the latter case, the CPE MUST return a fault response
+ indicating the reason for the failure to apply the changes.
+
+ The CPE MUST NOT apply any of the specified changes without applying all
  of them.
 
  In order to set parameter values correctly, the back-end is required to
@@ -112,7 +114,7 @@ CosaDmlEthWanSetEnable
  {
      Rollback_XXX();  -- Remove the update at backup;
  }
- 
+
 ***********************************************************************/
 /***********************************************************************
 
@@ -125,11 +127,11 @@ CosaDmlEthWanSetEnable
 
 
 ***********************************************************************/
-/**********************************************************************  
+/**********************************************************************
 
-    caller:     owner of this object 
+    caller:     owner of this object
 
-    prototype: 
+    prototype:
 
         BOOL
         Ethernet_GetParamBoolValue
@@ -141,7 +143,7 @@ CosaDmlEthWanSetEnable
 
     description:
 
-        This function is called to retrieve Boolean parameter value; 
+        This function is called to retrieve Boolean parameter value;
 
     argument:   ANSC_HANDLE                 hInsContext,
                 The instance handle;
@@ -179,11 +181,11 @@ Ethernet_GetParamBoolValue
     return FALSE;
 }
 
-/**********************************************************************  
+/**********************************************************************
 
-    caller:     owner of this object 
+    caller:     owner of this object
 
-    prototype: 
+    prototype:
 
         BOOL
         Ethernet_SetParamBoolValue
@@ -195,7 +197,7 @@ Ethernet_GetParamBoolValue
 
     description:
 
-        This function is called to set BOOL parameter value; 
+        This function is called to set BOOL parameter value;
 
     argument:   ANSC_HANDLE                 hInsContext,
                 The instance handle;
@@ -232,7 +234,7 @@ Ethernet_SetParamBoolValue
     CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName));
     return FALSE;
 }
-                                       
+
 /***********************************************************************
  APIs for Object:
 
@@ -329,8 +331,8 @@ EthWan_GetParamUlongValue
         char*                       ParamName,
         ULONG*                      puLong
     )
-{   
-    UNREFERENCED_PARAMETER(hInsContext); 
+{
+    UNREFERENCED_PARAMETER(hInsContext);
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
     errno_t rc       = -1;
     int     ind      = -1;
@@ -418,16 +420,16 @@ EthWan_SetParamBoolValue
 			{
 				pMyObject->EthWanCfg.Enable = bValue;
 				CcspTraceWarning((" EthWan_SetParamBoolValue Ethernet WAN is '%d'\n", bValue));
-				return TRUE; 
+				return TRUE;
 			}
 		}
     }
     return FALSE;
 }
 #endif
-/**********************************************************************  
-    caller:     owner of this object 
-    prototype: 
+/**********************************************************************
+    caller:     owner of this object
+    prototype:
         ULONG
         EthernetWAN_GetParamStringValue
             (
@@ -437,7 +439,7 @@ EthWan_SetParamBoolValue
                 ULONG*                      pUlSize
             );
     description:
-        This function is called to retrieve string parameter value; 
+        This function is called to retrieve string parameter value;
     argument:   ANSC_HANDLE                 hInsContext,
                 The instance handle;
                 char*                       ParamName,
@@ -527,7 +529,7 @@ EthernetWAN_GetParamStringValue
     }
     rc = strcmp_s("LastKnownOperationalMode", strlen("LastKnownOperationalMode"),ParamName,&ind);
     ERR_CHK(rc);
-    if ((!ind) && (rc == EOK)) 
+    if ((!ind) && (rc == EOK))
     {
 	    if (syscfg_get(NULL, "last_wan_mode", buf, sizeof(buf)) == 0)
 	    {
@@ -586,7 +588,7 @@ EthernetWAN_GetParamStringValue
     rc =  strcmp_s( "CurrentOperationalMode",strlen("CurrentOperationalMode"),ParamName,&ind);
     ERR_CHK(rc);
     if ((!ind) && (rc == EOK))
-     
+
     {
 	    if (syscfg_get(NULL, "curr_wan_mode", buf, sizeof(buf)) == 0)
 	    {
@@ -637,9 +639,9 @@ EthernetWAN_GetParamStringValue
     return -1;
 }
 
-/**********************************************************************  
-    caller:     owner of this object 
-    prototype: 
+/**********************************************************************
+    caller:     owner of this object
+    prototype:
         BOOL
         EthernetWAN_SetParamStringValue
             (
@@ -648,7 +650,7 @@ EthernetWAN_GetParamStringValue
                 char*                       pString
             );
     description:
-        This function is called to set string parameter value; 
+        This function is called to set string parameter value;
     argument:   ANSC_HANDLE                 hInsContext,
                 The instance handle;
                 char*                       ParamName,
@@ -709,13 +711,13 @@ EthernetWAN_SetParamStringValue
 	}
 
         snprintf(buf, sizeof(buf), "%d", wan_mode);
-	if (syscfg_set(NULL, "selected_wan_mode", buf) != 0) 
+	if (syscfg_set(NULL, "selected_wan_mode", buf) != 0)
         {
             AnscTraceWarning(("syscfg_set failed\n"));
-        } 
+        }
         else
         {
-            if (syscfg_commit() != 0) 
+            if (syscfg_commit() != 0)
             {
                 AnscTraceWarning(("syscfg_commit failed\n"));
             }
@@ -749,7 +751,7 @@ EthernetWAN_SetParamStringValue
 			
 		    }
 		}
-		return TRUE; 
+		return TRUE;
             }
         }
 
@@ -895,7 +897,7 @@ EthLogging_GetParamBoolValue
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
     errno_t rc       = -1;
     int     ind      = -1;
-    
+
     rc = strcmp_s("xOpsDMEthLogEnabled",strlen("xOpsDMEthLogEnabled"),ParamName,&ind);
     ERR_CHK(rc);
     if ((!ind) && (rc == EOK))
@@ -941,7 +943,7 @@ EthLogging_GetParamUlongValue
         char*                       ParamName,
         ULONG*                      puLong
     )
-{    
+{
     UNREFERENCED_PARAMETER(hInsContext);
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
     errno_t        rc = -1;
@@ -1019,15 +1021,15 @@ EthLogging_SetParamBoolValue
                 ERR_CHK(rc);
                 return FALSE;
              }
-     }  
-        
-        if (syscfg_set(NULL, "eth_log_enabled", buf) != 0) 
+     }
+
+        if (syscfg_set(NULL, "eth_log_enabled", buf) != 0)
         {
             AnscTraceWarning(("syscfg_set failed\n"));
-        } 
+        }
         else
         {
-            if (syscfg_commit() != 0) 
+            if (syscfg_commit() != 0)
             {
                 AnscTraceWarning(("syscfg_commit failed\n"));
             }
@@ -1089,10 +1091,10 @@ EthLogging_SetParamUlongValue
     {
         sprintf(buf, "%lu", uValue);
 
-        if (syscfg_set(NULL, "eth_log_period", buf) != 0) 
+        if (syscfg_set(NULL, "eth_log_period", buf) != 0)
         {
             AnscTraceWarning(("syscfg_set failed\n"));
-        } 
+        }
         else
         {
             if (syscfg_commit() != 0)
@@ -1463,6 +1465,31 @@ EthRdkInterface_GetParamBoolValue
         *pBool = pEthLink->WanValidated;
         return TRUE;
     }
+    if (strcmp(ParamName, "WanConfigPort") == 0)
+    {
+        UINT WanPort = 0;
+        
+        if(TRUE != pEthLink->Upstream)
+        {
+            *pBool = FALSE;
+            return TRUE;
+        }
+
+        if(0 != CcspHalExtSw_getEthWanPort(&WanPort))
+        {
+            AnscTraceInfo(("Failed to get WanPort[%lu] in CPE \n",WanPort));
+        }
+
+        if(WanPort == pEthLink->ulInstanceNumber)
+        {
+            *pBool = TRUE;
+        }
+        else
+        {
+            *pBool = FALSE;
+        }
+        return TRUE;
+    }
      return FALSE;
 }
 
@@ -1788,6 +1815,9 @@ EthRdkInterface_SetParamBoolValue
         }
         pEthLink->Upstream = bValue;
         CosaDmlEthPortSetUpstream( pEthLink->Name , pEthLink->Upstream );
+#ifdef FEATURE_RDKB_WAN_UPSTREAM
+        EthInterfaceSetUpstream( pEthLink->ulInstanceNumber - 1, pEthLink->Upstream );
+#endif
         return TRUE;
     }
     if (strcmp(ParamName, "Enable") == 0)

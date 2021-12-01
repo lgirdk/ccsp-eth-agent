@@ -453,6 +453,11 @@
           <syntax>string</syntax>
           <writable>true</writable>
         </parameter>
+        <parameter>
+          <name>WanConfigPort</name>
+          <type>boolean</type>
+          <syntax>bool</syntax>
+        </parameter>
       </parameters>
     </object>
 <?endif?>
