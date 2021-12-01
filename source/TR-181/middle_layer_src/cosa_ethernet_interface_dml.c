@@ -603,27 +603,7 @@ Interface_SetParamBoolValue
 #ifdef FEATURE_RDKB_WAN_UPSTREAM
     if( AnscEqualString(ParamName, "Upstream", TRUE))
     {
-        /* save update to backup */
-        pEthernetPortFull->StaticInfo.bUpstream = bValue;
-
-        /**
-         * In case of EthWan,
-         *  disable -> False needs to be disable Upstream feature.
-         *  enable  -> True needs to be enable Upstream feature.
-        */
-
-        if (strncmp(pEthernetPortFull->StaticInfo.Name, WAN_ETHERNET_IFNAME, strlen(WAN_ETHERNET_IFNAME)) == 0)
-        {
-            if (ANSC_STATUS_SUCCESS == CosaDmlSetWanOEMode(pEthernetPortFull, bValue))
-            {
-                AnscTraceError(("[%s][%d] wanoe mode set to %s\n",__FUNCTION__, __LINE__, ((bValue) ? "Enable" : "Disable")));
-            }
-            else
-            {
-                AnscTraceError(("[%s][%d] Failed to execute CosaDmlSetWanOEMode to %s wanoe mode \n",
-                            __FUNCTION__, __LINE__, ((bValue) ? "Enable" : "Disable")));
-            }
-        }
+        EthInterfaceSetUpstream( pEthernetPortFull->Cfg.InstanceNumber - 1, bValue );
         return TRUE;
     }
 #endif  // FEATURE_RDKB_WAN_UPSTREAM
