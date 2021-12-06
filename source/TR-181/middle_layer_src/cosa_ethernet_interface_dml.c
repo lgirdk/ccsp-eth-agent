@@ -600,6 +600,14 @@ Interface_SetParamBoolValue
         return TRUE;
     }
 
+#ifdef FEATURE_RDKB_WAN_UPSTREAM
+    if( AnscEqualString(ParamName, "Upstream", TRUE))
+    {
+        EthInterfaceSetUpstream( pEthernetPortFull->Cfg.InstanceNumber - 1, bValue );
+        return TRUE;
+    }
+#endif  // FEATURE_RDKB_WAN_UPSTREAM    
+
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
 }
@@ -703,14 +711,6 @@ Interface_SetParamUlongValue
         pEthernetPortFull->Cfg.DuplexMode = uValue;
         return TRUE;
     }
-
-#ifdef FEATURE_RDKB_WAN_UPSTREAM
-    if( AnscEqualString(ParamName, "Upstream", TRUE))
-    {
-        EthInterfaceSetUpstream( pEthernetPortFull->Cfg.InstanceNumber - 1, bValue );
-        return TRUE;
-    }
-#endif  // FEATURE_RDKB_WAN_UPSTREAM
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
