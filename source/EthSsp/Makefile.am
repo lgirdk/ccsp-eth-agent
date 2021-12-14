@@ -19,14 +19,12 @@
 
 AM_CFLAGS = -D_ANSC_LINUX
 AM_CFLAGS += -D_ANSC_USER
-AM_LDFLAGS = -lccsp_common
 
-AM_LDFLAGS += -lhal_plaform -lsysevent -lutapi -lutctx -lulog -lhal_ethsw
-AM_CPPFLAGS = -Wall -Werror
 ACLOCAL_AMFLAGS = -I m4
-hardware_platform = i686-linux-gnu
+
 bin_PROGRAMS = CcspEthAgent
-CcspEthAgent_CPPFLAGS = -I$(top_srcdir)/source/TR-181/include -I$(top_srcdir)/source/TR-181/middle_layer_src $(CPPFLAGS)
+
+CcspEthAgent_CPPFLAGS = -I$(top_srcdir)/source/TR-181/include -I$(top_srcdir)/source/TR-181/middle_layer_src
 
 CcspEthAgent_DEPENDENCIES= \
 	$(EXTRA_DEPENDENCIES) \
@@ -36,5 +34,4 @@ CcspEthAgent_DEPENDENCIES= \
 CcspEthAgent_CFLAGS = $(SYSTEMD_CFLAGS) $(NONROOT_CFLAGS)
 CcspEthAgent_SOURCES = ssp_messagebus_interface.c ssp_main.c ssp_action.c dm_pack_datamodel.c
 CcspEthAgent_LDFLAGS = -rdynamic $(SYSTEMD_LDFLAGS) -pthread
-CcspEthAgent_LDADD =  $(CcspEthAgent_DEPENDENCIES) -lccsp_common -lsyscfg -ldl
-
+CcspEthAgent_LDADD = $(CcspEthAgent_DEPENDENCIES) -lccsp_common -lsyscfg -ldl
