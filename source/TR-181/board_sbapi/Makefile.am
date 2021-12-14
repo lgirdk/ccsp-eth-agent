@@ -19,15 +19,11 @@
 AM_CFLAGS = -D_ANSC_LINUX
 AM_CFLAGS += -D_ANSC_USER
 AM_CFLAGS += -D_ANSC_LITTLE_ENDIAN_
-AM_LDFLAGS = -lccsp_common
-AM_LDFLAGS = -ltime_conversion
 
-AM_LDFLAGS += -lhal_plaform -lsysevent -lutapi -lutctx -lulog -lhal_ethsw
-AM_CPPFLAGS = -Wall -Werror
 ACLOCAL_AMFLAGS = -I m4
-hardware_platform = i686-linux-gnu
 
 noinst_LTLIBRARIES = libCcspEthAgent_board_sbapi.la
+
 libCcspEthAgent_board_sbapi_la_CPPFLAGS = -I$(top_srcdir)/source/TR-181/include -I$(top_srcdir)/source/TR-181/middle_layer_src 
 libCcspEthAgent_board_sbapi_la_SOURCES = cosa_ethernet_apis.c eth_hal_interface.c ../middle_layer_src/cosa_apis_util.c ../middle_layer_src/cosa_apis_busutil.c cosa_ethernet_manager.c
 if CCSP_ARCH_ARM
@@ -39,4 +35,5 @@ endif
 if CCSP_ARCH_PC
 libCcspEthAgent_board_sbapi_la_SOURCES += source-pc/cosa_ethernet_apis_pc.c
 endif
+
 libCcspEthAgent_board_sbapi_la_LDFLAGS = -lccsp_common -lhal_ethsw -lhal_platform -llmapi
