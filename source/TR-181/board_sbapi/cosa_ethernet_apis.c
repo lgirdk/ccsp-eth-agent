@@ -356,6 +356,11 @@ extern  ANSC_HANDLE bus_handle;
 extern  ANSC_HANDLE g_EthObject;
 extern void* g_pDslhDmlAgent;
 
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+#define INTERFACE_MAPPING_TABLE_FNAME "/var/tmp/map/mapping_table.txt"
+ANSC_STATUS GetEthPhyInterfaceName(INT index, CHAR *ifname, INT ifnameLength);
+#endif
+
 #if defined (FEATURE_RDKB_WAN_AGENT) || defined (FEATURE_RDKB_WAN_MANAGER)
 typedef enum _COSA_ETH_MSGQ_MSG_TYPE
 {
@@ -977,6 +982,9 @@ ANSC_STATUS CosaDmlIfaceFinalize(char *pValue, BOOL isAutoWanMode)
             v_secure_system("brctl addif %s %s", wanPhyName,ethwan_ifname);
         }
 
+#if defined(INTEL_PUMA7)
+       v_secure_system("cmctl down");
+#endif
     }
     else
     {
@@ -1239,7 +1247,7 @@ INT InitBootInformInfo(WAN_BOOTINFORM_MSG *pMsg)
     }
     else
     {
-        pMsg->iNumOfParam = 0; // Dont send any inform msg to wan manager if wan instance number is not found.
+        pMsg->iWanInstanceNumber = WAN_ETH_INTERFACE_INSTANCE_NUM;
     }
 
     memset(acSetParamName, 0, sizeof(acSetParamName));
@@ -1706,6 +1714,10 @@ ANSC_STATUS CosaDmlConfigureEthWan(BOOL bEnable)
         {
             return retvalue;
         }
+#if defined(INTEL_PUMA7)
+       v_secure_system("cmctl up");
+#endif
+
 #if defined (_MACSEC_SUPPORT_)
         CcspTraceInfo(("%s - Stopping MACsec on %d\n",__FUNCTION__,ETHWAN_DEF_INTF_NUM));
         /* Stopping MACsec on Port since DOCSIS Succeeded */
@@ -1933,6 +1945,7 @@ ANSC_STATUS EthWanBridgeInit(PCOSA_DATAMODEL_ETHERNET pEthernet)
           else
             ovsEnable = 0;
 
+	  CcspTraceWarning(("ovsEnable=%d\n",ovsEnable));
     }
     else
     {
@@ -2010,7 +2023,7 @@ ANSC_STATUS EthWanBridgeInit(PCOSA_DATAMODEL_ETHERNET pEthernet)
     v_secure_system("brctl addbr %s; brctl addif %s %s", wanPhyName,wanPhyName,ethwan_ifname);
 
 #if defined(INTEL_PUMA7)
-    v_secure_system("brctl addif %s dpdmta1",wanPhyName);
+    v_secure_system("brctl addif %s %s",wanPhyName,ETHWAN_DOCSIS_INF_NAME);
     v_secure_system("echo 1 > /sys/devices/virtual/net/%s/bridge/nf_disable_iptables",wanPhyName);
     v_secure_system("echo 1 > /sys/devices/virtual/net/%s/bridge/nf_disable_ip6tables",wanPhyName);
     v_secure_system("echo 1 > /sys/devices/virtual/net/%s/bridge/nf_disable_arptables",wanPhyName);
@@ -2075,6 +2088,14 @@ CosaDmlEthInit(
     #ifdef WAN_FAILOVER_SUPPORTED
       TriggerSysEventMonitorThread();
     #endif
+    /*!! Moved Message queue Event handler creation before Eth hal initailization to avoid any missing of Ethwan callback notification.
+    *  This helps to cache ethwan link up/down events in message queue even if wan manager or any consumer not ready by the time.
+    */
+
+    /* Trigger Event Handler thread.
+     * Monitor for the link status event and notify the other agents,
+     */
+    CosaDmlEthTriggerEventHandlerThread();
 
 #ifdef AUTOWAN_ENABLE 
     {
@@ -2091,7 +2112,7 @@ CosaDmlEthInit(
         CcspTraceInfo(("pthread create boot inform \n"));
         pthread_create(&bootInformThreadId, NULL, &ThreadBootInformMsg, NULL);
 
-       if (TRUE == isEthWanEnabled())
+        if (TRUE == isEthWanEnabled())
         {
             EthWanBridgeInit(pMyObject);
         }
@@ -2102,7 +2123,16 @@ CosaDmlEthInit(
             CcspTraceError(("Hal initialization failed \n"));
             return ANSC_STATUS_FAILURE;
         }
-
+#if defined(INTEL_PUMA7)
+        if (TRUE == isEthWanEnabled())
+        {
+            CcspHalExtSw_setEthWanPort ( ETHWAN_DEF_INTF_NUM );
+            if (ANSC_STATUS_SUCCESS != CcspHalExtSw_setEthWanEnable( TRUE))
+            {
+                CcspTraceError(("CcspHalExtSw_setEthWanEnable failed in bootup \n"));
+            }
+        }
+#endif 
     }
 #else
     #if defined(_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
@@ -2153,7 +2183,12 @@ CosaDmlEthInit(
     }
 #elif defined (FEATURE_RDKB_WAN_MANAGER)
     if(CosaDmlGetWanOEInterfaceName(WanOEInterface, sizeof(WanOEInterface)) == ANSC_STATUS_SUCCESS) {
-        if(GWP_GetEthWanLinkStatus() == 1) {
+#if defined (INTEL_PUMA7) && !defined (AUTOWAN_ENABLE)
+        if(FALSE) 
+#else
+        if(GWP_GetEthWanLinkStatus() == 1) 
+#endif
+        {
             if(CosaDmlEthGetPhyStatusForWanManager(WanOEInterface, PhyStatus) == ANSC_STATUS_SUCCESS) {
                 if(strcmp(PhyStatus, "Up") != 0) {
                     CosaDmlEthSetPhyStatusForWanManager(WanOEInterface, WANOE_IFACE_UP);
@@ -2175,15 +2210,90 @@ CosaDmlEthInit(
     }
 #endif
 
-    /* Trigger Event Handler thread.
-     * Monitor for the link status event and notify the other agents,
-     */
-    CosaDmlEthTriggerEventHandlerThread();
 #else
     UNREFERENCED_PARAMETER(phContext);
 #endif //#if defined (FEATURE_RDKB_WAN_AGENT) || FEATURE_RDKB_WAN_MANAGER
     return ANSC_STATUS_SUCCESS;
 }
+
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+ANSC_STATUS GetEthPhyInterfaceName(INT index, CHAR *ifname, INT ifnameLength)
+{
+    FILE *fp = NULL;
+    CHAR data[256];
+    CHAR logicalPort[64];
+    CHAR logicalName[64];
+    CHAR typeInterface[64];
+    CHAR *pTmpData = NULL;
+    INT parsedIndex = -1;
+    BOOL ifnameFound = FALSE;
+
+
+    fp = fopen(INTERFACE_MAPPING_TABLE_FNAME, "r");
+    if (fp == NULL)
+        return ANSC_STATUS_FAILURE;
+
+    memset(data,0,sizeof(data));
+    memset(logicalPort,0,sizeof(logicalPort));
+    memset(logicalName,0,sizeof(logicalName));
+    memset(typeInterface,0,sizeof(typeInterface));
+    while (fgets(data,sizeof(data), fp) != NULL)
+    {
+        sscanf(data,"%s %s %s",logicalPort,logicalName,typeInterface);
+        pTmpData=strstr(logicalPort,"=");
+        if (pTmpData != NULL)
+        {
+            ++pTmpData;
+            parsedIndex = atoi(pTmpData);
+            if (index == parsedIndex)
+            {
+                if (strstr(typeInterface,"PHY"))
+                {
+                    pTmpData = strstr(data,"BaseInterface=");
+                    if (pTmpData)
+                    {
+                        pTmpData += strlen("BaseInterface=");
+                        strncpy(ifname,pTmpData,ifnameLength);
+                        ifname[strlen(ifname) - 1] = '\0';
+                        ifnameFound = TRUE;
+                        break;
+                    }
+                }
+                else
+                {
+                     strncpy(ifname,logicalName + strlen("LogicalName="),ifnameLength);
+                     ifnameFound = TRUE;
+                     break;
+                }
+            }
+        }
+    }
+    fclose(fp);
+    if (TRUE == ifnameFound)
+    {
+        if (TRUE == isEthWanEnabled())
+        {
+            errno_t rc = -1;
+            int ind = -1;
+
+            rc = strcmp_s(ETHWAN_DEF_INTF_NAME,strlen(ETHWAN_DEF_INTF_NAME),ifname,&ind);
+            ERR_CHK(rc);
+            if (ind == 0)
+            {
+                char wanoe_ifname[WANOE_IFACENAME_LENGTH] = {0};
+
+                if (ANSC_STATUS_SUCCESS == GetWan_InterfaceName (wanoe_ifname, sizeof(wanoe_ifname)))
+                {
+                    memset(ifname,0,ifnameLength);
+                    strncpy(ifname,wanoe_ifname,ifnameLength);
+                }
+            }
+        }
+        return ANSC_STATUS_SUCCESS;
+    }
+    return ANSC_STATUS_FAILURE;
+}
+#endif
 
 ANSC_STATUS
 CosaDmlEthPortInit(
@@ -2254,7 +2364,15 @@ CosaDmlEthPortInit(
         pETHTemp->ulInstanceNumber = iLoopCount + 1;
         pMyObject->ulPtNextInstanceNumber=  pETHTemp->ulInstanceNumber + 1;
         // Get  Name.
+#if defined (INTEL_PUMA7)
+        if ( ANSC_STATUS_SUCCESS != GetEthPhyInterfaceName(iLoopCount + 1,pETHTemp->Name,sizeof(pETHTemp->Name)))
+        {
+            snprintf(pETHTemp->Name, sizeof(pETHTemp->Name), "sw_%d", iLoopCount + 1);
+        }
+        CcspTraceWarning(("\n ifname copied %s index %d\n",pETHTemp->Name,iLoopCount));
+#else
         snprintf(pETHTemp->Name, sizeof(pETHTemp->Name), "eth%d", iLoopCount);
+#endif
         snprintf(pETHTemp->LowerLayers, sizeof(pETHTemp->LowerLayers), "%s%d", ETHERNET_IF_LOWERLAYERS, iLoopCount + 1);
 #ifdef FEATURE_RDKB_AUTO_PORT_SWITCH
 
@@ -2637,7 +2755,7 @@ ANSC_STATUS CosaDmlEthPortSetName(char *ifname, char *newIfname)
         CcspTraceError(("%s Failed to get index for %s\n", __FUNCTION__,ifname));
         return ANSC_STATUS_FAILURE;
     }
-    if (IfIndex < TOTAL_NUMBER_OF_INTERNAL_INTERFACES)
+    if (IfIndex >= TOTAL_NUMBER_OF_INTERNAL_INTERFACES)
     {
         CcspTraceError(("%s Invalid or Default index[%d]\n", __FUNCTION__, IfIndex));
         return ANSC_STATUS_FAILURE;
@@ -2898,7 +3016,15 @@ static ANSC_STATUS CosDmlEthPortPrepareGlobalInfo()
         gpstEthGInfo[iLoopCount].WanStatus = ETH_WAN_DOWN;
         gpstEthGInfo[iLoopCount].LinkStatus = ETH_LINK_STATUS_DOWN;
         gpstEthGInfo[iLoopCount].WanValidated = TRUE; //Make default as True.
+#if defined (INTEL_PUMA7)
+        if ( ANSC_STATUS_SUCCESS != GetEthPhyInterfaceName(iLoopCount + 1,gpstEthGInfo[iLoopCount].Name,sizeof(gpstEthGInfo[iLoopCount].Name)))
+        {
+            snprintf(gpstEthGInfo[iLoopCount].Name, sizeof(gpstEthGInfo[iLoopCount].Name), "sw_%d", iLoopCount+1);
+        }
+        CcspTraceWarning(("\n ifname copied %s index %d\n",gpstEthGInfo[iLoopCount].Name,iLoopCount));
+#else
         snprintf(gpstEthGInfo[iLoopCount].Name, sizeof(gpstEthGInfo[iLoopCount].Name), "eth%d", iLoopCount);
+#endif
         snprintf(gpstEthGInfo[iLoopCount].Path, sizeof(gpstEthGInfo[iLoopCount].Path), "%s%d", ETHERNET_IF_PATH, iLoopCount + 1);
 #if defined(FEATURE_RDKB_WAN_MANAGER)
         gpstEthGInfo[iLoopCount].Enable = FALSE; //Make default as False.
@@ -3035,6 +3161,27 @@ static void *CosaDmlEthEventHandlerThread(void *arg)
 
             if (TRUE == IsValidStatus)
             {
+                // Update latest Hal Ethwan Interface name to wan manager interface table
+                // whatever receives in ethwan link up/down callback.  This is needed always when macsec is enabled.
+#ifdef FEATURE_RDKB_WAN_MANAGER
+#if defined(INTEL_PUMA7)
+                char acSetParamName[256];
+                INT iWANInstance = -1;
+                // wait till wan manager is available on bus.
+                waitForWanMgrComponentReady();
+                CosaDmlEthGetLowerLayersInstanceInOtherAgent(NOTIFY_TO_WAN_AGENT,  MSGQWanData.Name, &iWANInstance);
+                if (-1 == iWANInstance)
+                {
+                    memset(acSetParamName, 0, sizeof(acSetParamName));
+                    snprintf(acSetParamName, sizeof(acSetParamName), WAN_IF_NAME_PARAM_NAME, WAN_ETH_INTERFACE_INSTANCE_NUM);
+                    if (CosaDmlEthSetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH, acSetParamName, MSGQWanData.Name, ccsp_string, TRUE) != ANSC_STATUS_SUCCESS)
+                    {
+                        CcspTraceError(("%s %d: Unable to set param name %s\n", __FUNCTION__, __LINE__, acSetParamName));
+                    }
+                }
+#endif
+#endif
+
 #ifdef FEATURE_RDKB_WAN_AGENT
                 CosaDmlEthSetPhyStatusForWanAgent(MSGQWanData.Name, acTmpPhyStatus);
 #else
@@ -3982,7 +4129,11 @@ void EthWanLinkUp_callback() {
 #endif
 
    if (ANSC_STATUS_SUCCESS == GetWan_InterfaceName (wanoe_ifname, sizeof(wanoe_ifname))) {
-        CcspTraceInfo (("[%s][%d] WANOE [%s] interface link up event received \n", __FUNCTION__,__LINE__,wanoe_ifname));
+       // Update always Ethwan interface name into global structure if macsec is enabled.
+#if defined(INTEL_PUMA7)
+       CosaDmlEthPortSetName(ETHWAN_DEF_INTF_NAME,wanoe_ifname);
+#endif
+       CcspTraceInfo (("[%s][%d] WANOE [%s] interface link up event received \n", __FUNCTION__,__LINE__,wanoe_ifname));
         if ( TRUE == CosaDmlEthPortLinkStatusCallback (wanoe_ifname, WANOE_IFACE_UP)) {
             CcspTraceInfo (("[%s][%d] Successfully posted WANOE [%s] interface link up event to message queue\n", __FUNCTION__,__LINE__,wanoe_ifname));
         }else {
@@ -4011,6 +4162,10 @@ void EthWanLinkDown_callback() {
 	
 #endif
     if (ANSC_STATUS_SUCCESS == GetWan_InterfaceName (wanoe_ifname, sizeof(wanoe_ifname))) {
+       // Update always Ethwan interface name into global structure if macsec is enabled.
+#if defined(INTEL_PUMA7)
+       CosaDmlEthPortSetName(ETHWAN_DEF_INTF_NAME,wanoe_ifname);
+#endif
         CcspTraceInfo (("[%s][%d] WANOE [%s] interface link down event received \n", __FUNCTION__,__LINE__,wanoe_ifname));
         if ( TRUE == CosaDmlEthPortLinkStatusCallback (wanoe_ifname, WANOE_IFACE_DOWN)) {
             CcspTraceInfo (("[%s][%d] Successfully posted WANOE [%s] interface link down event to message queue\n", __FUNCTION__,__LINE__,wanoe_ifname));

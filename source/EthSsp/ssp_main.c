@@ -312,6 +312,7 @@ int main(int argc, char* argv[])
     int ind = -1;
 
     CcspTraceInfo(("\nWithin the main function\n"));
+#if !(defined(INTEL_PUMA7) && defined(_XB7_PRODUCT_REQ_))
 #ifdef DROP_ROOT_EARLY
     bool ret = false;
     ret = isBlocklisted();
@@ -327,6 +328,7 @@ int main(int argc, char* argv[])
         update_process_caps(&appcaps);
         read_capability(&appcaps);
     }
+#endif
 #endif
 
 #ifdef FEATURE_SUPPORT_RDKLOG
@@ -456,6 +458,7 @@ CcspTraceWarning(("\nAfter Cdm_Init\n"));
 
 #endif
 #endif //#if defined (FEATURE_RDKB_WAN_MANAGER) || defined(FEATURE_RDKB_WAN_AGENT)
+
     system("touch /tmp/ethagent_initialized");
 
     if ( bRunAsDaemon )

@@ -380,7 +380,6 @@ CosaEthernetInitialize
     obj.pGWP_act_EthWanLinkDown = EthWanLinkDown_callback;
     obj.pGWP_act_EthWanLinkUP   = EthWanLinkUp_callback;
     GWP_RegisterEthWan_Callback ( &obj );
-
     //Initialise global data and initalise hal
     CosaDmlEthInit(NULL, (PANSC_HANDLE)pMyObject);
 

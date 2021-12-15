@@ -150,7 +150,15 @@ wanmanager could able to handle vlan interface creation and management */
 #define WAN_IF_NAME_PRIMARY "erouter0"
 #define WAN_PHYPATH_VALUE "Device.X_RDKCENTRAL-COM_EthernetWAN."
 #define WAN_ETH_INTERFACE_INSTANCE_NUM     2
+
+#ifdef _COSA_BCM_ARM_
 #define ETHWAN_DOCSIS_INF_NAME "cm0"
+#elif defined(INTEL_PUMA7) 
+#define ETHWAN_DOCSIS_INF_NAME "dpdmta1"
+#else
+#define ETHWAN_DOCSIS_INF_NAME "cm0"
+#endif
+
 #define PHY_STATUS_MONITOR_MAX_TIMEOUT 240
 #define PHY_STATUS_QUERY_INTERVAL 2
 #define CFG_TR181_ETH_BORROW_MAC  1
