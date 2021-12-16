@@ -328,6 +328,11 @@ typedef enum WanMode
 #define ETHWAN_DEF_INTF_NAME "eth0"
 #endif
 
+/* Provide a fallback definition - not expected to be used, but enough for the code to compile */
+#if defined (FEATURE_RDKB_WAN_MANAGER) && ! defined(ETHWAN_DEF_INTF_NAME)
+#define ETHWAN_DEF_INTF_NAME "eth0"
+#endif
+
 #define ETH_HOST_PARAMVALUE_TRUE "true"
 #define ETH_HOST_PARAMVALUE_FALSE "false"
 #define ETH_HOST_MAC_LENGTH 17
