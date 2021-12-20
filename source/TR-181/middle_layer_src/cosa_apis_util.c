@@ -807,7 +807,7 @@ CosaUtilConstructLowerLayers
         snprintf(pLowerLayersBuf,sizeof((PUCHAR)pLowerLayersBuf),"%s%d", linkTypePath, (int)InstNumber);
     }
 
-    AnscTraceFlow(("%s, size %d, buf len %lu\n", pLowerLayersBuf, _ansc_strlen(pLowerLayersBuf), *pBufLen));
+    AnscTraceFlow(("%s, size %zu, buf len %lu\n", pLowerLayersBuf, _ansc_strlen(pLowerLayersBuf), *pBufLen));
     return  ANSC_STATUS_SUCCESS;
 }
 

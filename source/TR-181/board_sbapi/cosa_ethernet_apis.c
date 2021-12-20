@@ -3286,7 +3286,7 @@ static ANSC_STATUS CosaDmlEthGetLowerLayersInstanceInOtherAgent(COSA_ETH_NOTIFY_
         //Traverse from loop
         for (iLoopCount = 0; iLoopCount < iTotalNoofEntries; iLoopCount++)
         {
-            char acTmpQueryParam[256] = {0};
+            char acTmpQueryParam[300] = {0};
 
             //Query
             snprintf(acTmpQueryParam, sizeof(acTmpQueryParam), "%sLowerLayers", a2cTmpTableParams[iLoopCount]);
