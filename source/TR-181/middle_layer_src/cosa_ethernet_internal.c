@@ -450,11 +450,18 @@ CosaEthernetInitialize
     //Initialise global data and initalise hal
     CosaDmlEthInit(NULL, (PANSC_HANDLE)pMyObject);
 
-    #if defined(_COSA_BCM_ARM_)  && defined(_XB6_PRODUCT_REQ_)
-            #if !defined(_PLATFORM_RASPBERRYPI_) && !defined(_PLATFORM_TURRIS_)
-                    pthread_create(&sme_event_tid, NULL, SME_EventHandler, NULL);
-            #endif
-    #endif
+    char ethWan_Enabled[16] = {0};
+
+    syscfg_get(NULL, "eth_wan_enabled", ethWan_Enabled, sizeof(ethWan_Enabled));
+
+    if (strcmp(ethWan_Enabled,"true") == 0 )
+    {
+#if defined(_COSA_BCM_ARM_)  && defined(_XB6_PRODUCT_REQ_)
+#if !defined(_PLATFORM_RASPBERRYPI_) && !defined(_PLATFORM_TURRIS_)
+        pthread_create(&sme_event_tid, NULL, SME_EventHandler, NULL);
+#endif
+#endif
+    }
 #elif defined(FEATURE_RDKB_WAN_AGENT)
     CosaDmlEthInit(NULL, (PANSC_HANDLE)pMyObject);
     CcspHalEthSw_RegisterLinkEventCallback(CosaDmlEthPortLinkStatusCallback); //Register cb for link event.
