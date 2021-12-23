@@ -373,8 +373,6 @@ int main(int argc, char* argv[])
 
     cmd_dispatch('e');
 
-    syscfg_init();
-
     while ( cmdChar != 'q' )
     {
         cmdChar = getchar();
@@ -416,8 +414,6 @@ CcspTraceInfo(("\nbefore cmd_dispatch command\n"));
 
     cmd_dispatch('e');
 
-    syscfg_init();
- 
 #ifdef _COSA_SIM_
     subSys = "";        /* PC simu use empty string as subsystem */
 #else
