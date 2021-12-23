@@ -298,7 +298,6 @@ CosaDmlEthInterfaceInit
     char out_value[32] = {0};
 #endif
 
-    syscfg_init();
 
     /*
      *  Manufacturer programmed MAC address for LAN interface should be read out here. -- DH
