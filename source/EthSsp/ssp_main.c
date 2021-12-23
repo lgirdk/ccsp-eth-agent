@@ -336,7 +336,6 @@ int main(int argc, char* argv[])
 
     cmd_dispatch('e');
 
-    syscfg_init();
     CcspTraceInfo(("ETH_DBG:-------Read Log Info\n"));
     char buffer[5] = {0};
     if( 0 == syscfg_get( NULL, "X_RDKCENTRAL-COM_LoggerEnable" , buffer, sizeof( buffer ) ) &&  ( buffer[0] != '\0' ) )
@@ -401,7 +400,6 @@ CcspTraceInfo(("\nbefore cmd_dispatch command\n"));
 
     cmd_dispatch('e');
 
-    syscfg_init();
     CcspTraceInfo(("ETH_DBG:-------Read Log Info\n"));
     char buffer[5] = {0};
     if( 0 == syscfg_get( NULL, "X_RDKCENTRAL-COM_LoggerEnable" , buffer, sizeof( buffer ) ) &&  ( buffer[0] != '\0' ) )
