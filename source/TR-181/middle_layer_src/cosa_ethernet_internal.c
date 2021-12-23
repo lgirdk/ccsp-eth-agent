@@ -357,7 +357,6 @@ CosaEthernetInitialize
 {
     ANSC_STATUS                     returnStatus        = ANSC_STATUS_SUCCESS;
     PCOSA_DATAMODEL_ETHERNET        pMyObject           = (PCOSA_DATAMODEL_ETHERNET)hThisObject;
-    syscfg_init();
 #if defined (FEATURE_RDKB_WAN_MANAGER)
     AnscSListInitializeHeader( &pMyObject->Q_EthList );
     pMyObject->ulPtNextInstanceNumber   = 1;
