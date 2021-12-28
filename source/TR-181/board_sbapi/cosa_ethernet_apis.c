@@ -2366,6 +2366,7 @@ CosaDmlEthInit(
         }
     }
 #elif defined (FEATURE_RDKB_WAN_MANAGER)
+    CcspHalExtSw_setEthWanEnable(TRUE);
     if(CosaDmlGetWanOEInterfaceName(WanOEInterface, sizeof(WanOEInterface)) == ANSC_STATUS_SUCCESS) {
 #if defined (INTEL_PUMA7) && !defined (AUTOWAN_ENABLE)
         if(FALSE) 
