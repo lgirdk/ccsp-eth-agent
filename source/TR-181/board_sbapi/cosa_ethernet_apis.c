@@ -317,12 +317,9 @@ typedef enum WanMode
 #define ETHWAN_DEF_INTF_NAME "eth5"
 #elif defined (INTEL_PUMA7)
 #define ETHWAN_DEF_INTF_NAME "nsgmii0"
+#elif defined (_PLATFORM_TURRIS_)
+#define ETHWAN_DEF_INTF_NAME "eth2"
 #else
-#define ETHWAN_DEF_INTF_NAME "eth0"
-#endif
-
-
-#if defined(_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
 #define ETHWAN_DEF_INTF_NAME "eth0"
 #endif
 
@@ -1943,7 +1940,7 @@ CosaDmlEthInit(
 
     }
 #else
-    #if defined(_PLATFORM_RASPBERRYPI_)
+    #if defined(_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
     char wanPhyName[20] = {0},out_value[20] = {0};
 
     if (!syscfg_get(NULL, "wan_physical_ifname", out_value, sizeof(out_value)))
