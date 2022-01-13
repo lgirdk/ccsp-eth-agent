@@ -1001,7 +1001,10 @@ BOOL CosaDmlEthWanLinkStatus()
 
     if ( status == RETURN_OK )
     {
-       return TRUE;
+        if (LinkStatus == CCSP_HAL_ETHSW_LINK_Up)
+        {
+            return TRUE;
+        }
     }
     return FALSE;
 }
