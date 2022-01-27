@@ -52,6 +52,55 @@
 #include "safec_lib_common.h"
 
 cap_user appcaps;
+#if defined(FEATURE_RDKB_WAN_MANAGER) || defined (FEATURE_RDKB_WAN_AGENT)
+#if !defined(AUTOWAN_ENABLE) && !defined(_PLATFORM_RASPBERRYPI_) // This is not needed when auto wan is enabled for TCXBX platforms
+
+extern ANSC_HANDLE bus_handle;
+
+static int checkIfSystemReady(void);
+static void waitUntilSystemReady(void);
+
+/**
+* @brief checkIfSystemReady Function to query CR and check if system is ready.
+* If SystemReadySignal is already sent then this will return 1 indicating system is ready.
+*/
+static int checkIfSystemReady()
+{
+    char str[256] = {0};
+    int val;
+    snprintf(str, sizeof(str), "eRT.%s", CCSP_DBUS_INTERFACE_CR);
+    // Query CR for system ready
+    CcspBaseIf_isSystemReady(bus_handle, str, (dbus_bool *)&val);
+    return val;
+}
+
+static void waitUntilSystemReady()
+{
+    int wait_time = 0;
+    int ready_check_flag = 0;
+
+    /* Check CR is ready in every 5 seconds. This needs
+    to be continued upto 3 mins (36 * 5 = 180s) */
+    while(wait_time <= 180)
+    {
+        if(checkIfSystemReady()) {
+            ready_check_flag = 1;
+            break;
+        }
+
+        wait_time++;
+        sleep(1);
+    }
+    if (ready_check_flag) {
+        CcspTraceInfo(("checkIfSystemReady(): SUCCESS\n"));
+    }
+    else {
+        CcspTraceError(("checkIfSystemReady(): TIMEOUT\n"));
+    }
+}
+
+#endif
+#endif
 
 int GetLogInfo(ANSC_HANDLE bus_handle, char *Subsytem, char *pParameterName);
 extern char*                                pComponentName;
@@ -456,6 +505,12 @@ CcspTraceWarning(("\nAfter Cdm_Init\n"));
         read_capability(&appcaps);
     }
 #endif
+#if defined (FEATURE_RDKB_WAN_MANAGER) || defined(FEATURE_RDKB_WAN_AGENT)
+#if !defined(AUTOWAN_ENABLE) && !defined(_PLATFORM_RASPBERRYPI_)// This is not needed when auto wan is enabled for TCXBX platforms
+    waitUntilSystemReady();
+
+#endif
+#endif //#if defined (FEATURE_RDKB_WAN_MANAGER) || defined(FEATURE_RDKB_WAN_AGENT)
     system("touch /tmp/ethagent_initialized");
 
     if ( bRunAsDaemon )

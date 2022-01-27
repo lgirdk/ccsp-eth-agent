@@ -83,7 +83,6 @@
 
 extern void * g_pDslhDmlAgent;
 extern ANSC_HANDLE g_EthObject;
-extern ANSC_HANDLE bus_handle;
 
 ANSC_STATUS
 CosaDmlEthGetLogStatus
@@ -102,45 +101,6 @@ CosaDmlEthWanGetCfg
 
 static void CosaEthernetLogger(void);
 static int CosaEthTelemetryInit(void);
-
-#if defined(FEATURE_RDKB_WAN_MANAGER) || defined (FEATURE_RDKB_WAN_AGENT)
-#if !defined(AUTOWAN_ENABLE) && !defined(_PLATFORM_RASPBERRYPI_) // This is not needed when auto wan is enabled for TCXBX platforms
-static int checkIfSystemReady(void);
-static void waitUntilSystemReady(void);
-
-/**
-* @brief checkIfSystemReady Function to query CR and check if system is ready.
-* If SystemReadySignal is already sent then this will return 1 indicating system is ready.
-*/
-static int checkIfSystemReady()
-{
-    char str[256] = {0};
-    int val, ret;
-    snprintf(str, sizeof(str), "eRT.%s", CCSP_DBUS_INTERFACE_CR);
-    // Query CR for system ready
-    ret = CcspBaseIf_isSystemReady(bus_handle, str, (dbus_bool *)&val);
-    CcspTraceError(("checkIfSystemReady(): ret %d, val %d\n", ret, val));
-    return val;
-}
-
-static void waitUntilSystemReady()
-{
-    int wait_time = 0;
-
-    /* Check CR is ready in every 5 seconds. This needs
-    to be continued upto 3 mins (36 * 5 = 180s) */
-    while(wait_time <= 36)
-    {
-        if(checkIfSystemReady()) {
-            break;
-        }
-
-        wait_time++;
-        sleep(5);
-    }
-}
-#endif
-#endif //#if defined (FEATURE_RDKB_WAN_MANAGER)
 
 /**********************************************************************
 
@@ -394,11 +354,6 @@ CosaEthernetInitialize
     ANSC_STATUS                     returnStatus        = ANSC_STATUS_SUCCESS;
     PCOSA_DATAMODEL_ETHERNET        pMyObject           = (PCOSA_DATAMODEL_ETHERNET)hThisObject;
     syscfg_init();
-#if defined (FEATURE_RDKB_WAN_MANAGER) || defined(FEATURE_RDKB_WAN_AGENT)
-#if !defined(AUTOWAN_ENABLE) && !defined(_PLATFORM_RASPBERRYPI_)// This is not needed when auto wan is enabled for TCXBX platforms
-        waitUntilSystemReady();
-#endif
-#endif //#if defined (FEATURE_RDKB_WAN_MANAGER) || defined(FEATURE_RDKB_WAN_AGENT)
 #if defined (FEATURE_RDKB_WAN_MANAGER)
     AnscSListInitializeHeader( &pMyObject->Q_EthList );
     pMyObject->ulPtNextInstanceNumber   = 1;
