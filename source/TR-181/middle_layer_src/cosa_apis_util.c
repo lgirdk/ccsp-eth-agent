@@ -1539,16 +1539,6 @@ int CosaUtilGetIpv6AddrInfo (char * ifname, ipv6_addr_info_t ** pp_info, int * p
 }
 #endif
 
-
-int safe_strcpy(char * dst, char * src, int dst_size)
-{
-    if (!dst || !src) return -1;
-    memset(dst, 0, dst_size);
-     _ansc_strncpy(dst, src, (int)_ansc_strlen(src)<=dst_size-1 ? (int)_ansc_strlen(src):dst_size-1 );
-    return 0;
-}
-
-
 int  __v6addr_mismatch(char * addr1, char * addr2, int pref_len)
 {
     int i = 0;
