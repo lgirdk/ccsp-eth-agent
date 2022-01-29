@@ -74,7 +74,6 @@
 #include "cosa_apis.h"
 #include "plugin_main_apis.h"
 
-#ifdef _ANSC_LINUX
 #include <stdio.h>
 #include <unistd.h>
 #include <arpa/inet.h>
@@ -82,7 +81,6 @@
 #include <sys/socket.h>
 #include <net/if.h>
 #include <sys/types.h>
-#endif
 #include "ansc_platform.h"
 
 //$HL 4/30/2013
@@ -140,7 +138,6 @@ CosaUtilGetIfAddr
 {
     ANSC_IPV4_ADDRESS       ip4_addr = {};
 
-#ifdef _ANSC_LINUX
 
     struct ifreq            ifr;
     int                     fd = 0;
@@ -174,11 +171,6 @@ CosaUtilGetIfAddr
     else
         perror("CosaUtilGetIfAddr failed to open socket.");
 
-#else
-
-    AnscGetLocalHostAddress(ip4_addr.Dot);
-
-#endif
 
     return ip4_addr.Value;
 
@@ -1119,7 +1111,6 @@ CosaUtilGetFullPathNameByKeyword
     return (PUCHAR)pMatchedLowerLayer;
 }
 
-#if  defined(_ANSC_LINUX)
 
 ULONG
 CosaUtilChannelValidate
@@ -1329,20 +1320,6 @@ _EXIT:
     return ret;
 }
 
-#else
-
-ULONG
-CosaUtilIoctlXXX
-    (
-        char*                       if_name,
-        char*                       method,
-        void*                       input
-    )
-{
-    return  IFF_UP;
-}
-
-#endif
 
 
 ULONG NetmaskToNumber(char *netmask)
