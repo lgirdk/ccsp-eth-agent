@@ -107,7 +107,6 @@ int  cmd_dispatch(int  command)
     {
         case    'e' :
 
-#ifdef _ANSC_LINUX
             CcspTraceInfo(("Connect to bus daemon...\n"));
 
             {
@@ -129,7 +128,6 @@ int  cmd_dispatch(int  command)
                         CCSP_COMPONENT_PATH_ETHAGENT
                     );
             }
-#endif
 
             ssp_create();
             ssp_engage();
@@ -186,7 +184,6 @@ static void _print_stack_backtrace(void)
 #endif
 }
 
-#if defined(_ANSC_LINUX)
 static void daemonize(void) {
 	switch (fork()) {
 	case 0:
@@ -266,7 +263,6 @@ void sig_handler(int sig)
 
 }
 
-#endif
 
 #ifndef INCLUDE_BREAKPAD
 static int is_core_dump_opened(void)
@@ -367,19 +363,6 @@ int main(int argc, char* argv[])
 
     pComponentName          = CCSP_COMPONENT_NAME_ETHAGENT;
 
-#if  defined(_ANSC_WINDOWSNT)
-
-    AnscStartupSocketWrapper(NULL);
-
-    cmd_dispatch('e');
-
-    while ( cmdChar != 'q' )
-    {
-        cmdChar = getchar();
-
-        cmd_dispatch(cmdChar);
-    }
-#elif defined(_ANSC_LINUX)
     if ( bRunAsDaemon ) 
         daemonize();
 
@@ -472,7 +455,6 @@ CcspTraceWarning(("\nAfter Cdm_Init\n"));
         }
     }
 
-#endif
 	err = Cdm_Term();
 	if (err != CCSP_SUCCESS)
 	{
