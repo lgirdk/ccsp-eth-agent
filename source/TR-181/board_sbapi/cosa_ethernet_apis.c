@@ -569,25 +569,10 @@ void* CosaDmlEthWanChangeHandling( void* buff )
                         {
                                 AnscTraceWarning(("RDKB_REBOOT : RebootDevice syscfg_set failed GUI\n"));
                         }
-                        else
-                        {
-                                if (syscfg_commit() != 0)
-                                {
-                                        AnscTraceWarning(("RDKB_REBOOT : RebootDevice syscfg_commit failed for ETHWAN mode\n"));
-                                }
-                        }
 
-
-                        if (syscfg_set(NULL, "X_RDKCENTRAL-COM_LastRebootCounter", "1") != 0)
+                        if (syscfg_set_commit(NULL, "X_RDKCENTRAL-COM_LastRebootCounter", "1") != 0)
                         {
                                 AnscTraceWarning(("syscfg_set failed\n"));
-                        }
-                        else
-                        {
-                                if (syscfg_commit() != 0)
-                                {
-                                        AnscTraceWarning(("syscfg_commit failed\n"));
-                                }
                         }
 
 	/* Need to do reboot the device here */
@@ -1065,19 +1050,10 @@ ANSC_STATUS EthwanEnableWithoutReboot(BOOL bEnable,INT bridge_mode)
             v_secure_system("rm /nvram/ETHWAN_ENABLE");
         }
 
-        if ( syscfg_set( NULL, "eth_wan_enabled", buf ) != 0 )
+        if ( syscfg_set_commit( NULL, "eth_wan_enabled", buf ) != 0 )
         {
             CcspTraceError(( "syscfg_set failed for eth_wan_enabled\n" ));
             return ANSC_STATUS_FAILURE;
-        }
-        else
-        {
-            if ( syscfg_commit() != 0 )
-            {
-                CcspTraceError(( "syscfg_commit failed for eth_wan_enabled\n" ));
-                return ANSC_STATUS_FAILURE;
-            }
-
         }
     }
     else
@@ -1450,16 +1426,9 @@ void* ThreadConfigEthWan(void *arg)
         CcspTraceError(("CosaDmlConfigureEthWan failed %d revert %d \n",*pValue,!*pValue));
 
         // rollback configure to previous mode in case of failure.
-        if (syscfg_set_u(NULL, "selected_wan_mode", pEthWanCfgObj->PrevSelMode) != 0)
+        if (syscfg_set_u_commit(NULL, "selected_wan_mode", pEthWanCfgObj->PrevSelMode) != 0)
         {
             CcspTraceError(("syscfg_set failed\n"));
-        }
-        else
-        {
-            if (syscfg_commit() != 0)
-            {
-                CcspTraceError(("syscfg_commit failed\n"));
-            }
         }
 
         CosaDmlConfigureEthWan(!*pValue);
@@ -1587,17 +1556,9 @@ ANSC_STATUS CosaDmlConfigureEthWan(BOOL bEnable)
 
 #if defined (_BRIDGE_UTILS_BIN_)
 
-        if ( syscfg_set( NULL, "eth_wan_iface_name", ethwan_ifname) != 0 )
+        if ( syscfg_set_commit( NULL, "eth_wan_iface_name", ethwan_ifname) != 0 )
         {
             CcspTraceError(( "syscfg_set failed for eth_wan_iface_name\n" ));
-        }
-        else
-        {
-            if ( syscfg_commit() != 0 )
-            {
-                CcspTraceError(( "syscfg_commit failed for eth_wan_iface_name\n" ));
-            }
-
         }
 
         if (ovsEnable)
@@ -1663,17 +1624,9 @@ ANSC_STATUS CosaDmlConfigureEthWan(BOOL bEnable)
         }
 
 #if defined (_BRIDGE_UTILS_BIN_)
-        if ( syscfg_set( NULL, "eth_wan_iface_name", ethwan_ifname) != 0 )
+        if ( syscfg_set_commit( NULL, "eth_wan_iface_name", ethwan_ifname) != 0 )
         {
             CcspTraceError(( "syscfg_set failed for eth_wan_iface_name\n" ));
-        }
-        else
-        {
-            if ( syscfg_commit() != 0 )
-            {
-                CcspTraceError(( "syscfg_commit failed for eth_wan_iface_name\n" ));
-            }
-
         }
 #endif
         v_secure_system("ifconfig %s up", ethwan_ifname);
@@ -1789,8 +1742,6 @@ CosaDmlEthWanSetEnable
     if ( ANSC_STATUS_SUCCESS == CcspHalExtSw_setEthWanEnable( bEnable ) ) 
     {
         pthread_t tid;		
-        char buf[ 8 ] = {0};
-        snprintf( buf, sizeof( buf ), "%s", bEnable ? "true" : "false" );
 
         if(bEnable)
         {
@@ -1801,18 +1752,13 @@ CosaDmlEthWanSetEnable
             v_secure_system("rm /nvram/ETHWAN_ENABLE");
         }
 
-        if ( syscfg_set( NULL, "eth_wan_enabled", buf ) != 0 )
+        if ( syscfg_set_commit( NULL, "eth_wan_enabled", bEnable ? "true" : "false" ) != 0 )
         {
             AnscTraceWarning(( "syscfg_set failed for eth_wan_enabled\n" ));
             return ANSC_STATUS_FAILURE;
         }
         else
         {
-            if ( syscfg_commit() != 0 )
-            {
-                AnscTraceWarning(( "syscfg_commit failed for eth_wan_enabled\n" ));
-                return ANSC_STATUS_FAILURE;
-            }
             //CcspHalExtSw_setEthWanPort ( 1 );
             pthread_create ( &tid, NULL, &CosaDmlEthWanChangeHandling, NULL );
         }
