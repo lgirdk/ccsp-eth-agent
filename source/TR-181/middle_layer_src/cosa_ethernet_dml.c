@@ -746,18 +746,12 @@ EthernetWAN_SetParamStringValue
     }
 #endif
 
-	if (syscfg_set_u(NULL, "selected_wan_mode", wan_mode) != 0) 
+	if (syscfg_set_u_commit(NULL, "selected_wan_mode", wan_mode) != 0)
         {
             AnscTraceWarning(("syscfg_set failed\n"));
         }
         else
         {
-            if (syscfg_commit() != 0)
-            {
-                AnscTraceWarning(("syscfg_commit failed\n"));
-            }
-            else
-            {
                 char buf[8];
             	int cur_wan_mode= 0;
 
@@ -782,9 +776,7 @@ EthernetWAN_SetParamStringValue
 		    }
 		}
 		return TRUE;
-            }
         }
-
     }
 
 #if defined (FEATURE_RDKB_WAN_MANAGER)
@@ -1054,21 +1046,14 @@ EthLogging_SetParamBoolValue
              }
      }
 
-        if (syscfg_set(NULL, "eth_log_enabled", buf) != 0)
+        if (syscfg_set_commit(NULL, "eth_log_enabled", buf) != 0)
         {
             AnscTraceWarning(("syscfg_set failed\n"));
         }
         else
         {
-            if (syscfg_commit() != 0)
-            {
-                AnscTraceWarning(("syscfg_commit failed\n"));
-            }
-            else
-            {
                 pMyObject->LogStatus.Log_Enable = bValue;
 		CosaEthTelemetryxOpsLogSettingsSync();
-            }
         }
         return TRUE;
     }
@@ -1119,21 +1104,14 @@ EthLogging_SetParamUlongValue
     if( (ind == 0) && (rc == EOK))
 
     {
-        if (syscfg_set_u(NULL, "eth_log_period", uValue) != 0) 
+        if (syscfg_set_u_commit(NULL, "eth_log_period", uValue) != 0)
         {
             AnscTraceWarning(("syscfg_set failed\n"));
         }
         else
         {
-            if (syscfg_commit() != 0)
-            {
-                AnscTraceWarning(("syscfg_commit failed\n"));
-            }
-            else
-            {
                 pMyObject->LogStatus.Log_Period = uValue;
 		CosaEthTelemetryxOpsLogSettingsSync();
-            }
         }
         return TRUE;
         }
