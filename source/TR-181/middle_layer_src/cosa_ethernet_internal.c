@@ -990,14 +990,9 @@ ANSC_STATUS CosaDmlSetWanOEMode (PCOSA_DML_ETH_PORT_FULL pEthernetPortFull,PCOSA
         }
 
         /** Update local storage with new value. **/
-        if (syscfg_set_u(NULL, "Ethwan_Disable_Upstream", !bUpstream) != 0)
+        if (syscfg_set_u_commit(NULL, "Ethwan_Disable_Upstream", !bUpstream) != 0)
         {
             AnscTraceWarning(("syscfg_set failed\n"));
-            return ANSC_STATUS_FAILURE;
-        }
-        if (syscfg_commit() != 0)
-        {
-            AnscTraceWarning(("syscfg_commit failed\n"));
             return ANSC_STATUS_FAILURE;
         }
         return ANSC_STATUS_SUCCESS;
