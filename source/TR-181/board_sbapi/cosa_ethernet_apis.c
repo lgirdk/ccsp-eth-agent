@@ -805,23 +805,315 @@ static void TriggerSysEventMonitorThread(void)
     }
 }
 #endif        
+
+#if defined(INTEL_PUMA7)
+typedef enum
+{
+    NF_ARPTABLE,
+    NF_IPTABLE,
+    NF_IP6TABLE
+} bridge_nf_table_t;
+
+INT BridgeNfDisable( const char* bridgeName, bridge_nf_table_t table, BOOL disable )
+{
+    INT ret = 0;
+    char disableFile[100] = {0};
+    char* pTableName = NULL;
+
+    if (bridgeName == NULL)
+    {
+        CcspTraceError(("bridgeName is NULLn"));
+        return -1;
+    }
+
+    switch (table)
+    {
+        case NF_ARPTABLE:
+            pTableName = "nf_disable_arptables";
+            break;
+        case NF_IPTABLE:
+            pTableName = "nf_disable_iptables";
+            break;
+        case NF_IP6TABLE:
+            pTableName = "nf_disable_ip6tables";
+            break;
+        default:
+            // invalid table
+            CcspTraceError(("Invalid table: %d\n", table));
+            return -1;
+    }
+
+    snprintf(disableFile, sizeof(disableFile), "/sys/devices/virtual/net/%s/bridge/%s",bridgeName, pTableName);
+    int fd = open(disableFile, O_WRONLY);
+    if (fd != -1)
+    {
+        ret = 0;
+        char val = disable ? '1' : '0';
+        int num = write(fd, &val, 1);
+        if (num != 1)
+        {
+            CcspTraceError(("Failed to write: %d\n", num));
+            ret = -1;
+        }
+
+        close(fd);
+    }
+    else
+    {
+        CcspTraceError(("Failed to open %s\n", disableFile));
+        ret = -1;
+    }
+
+    return ret;
+}
+
+INT WanBridgeConfigurationIntelPuma7(WAN_MODE_BRIDGECFG *pCfg)
+{
+    if (!pCfg)
+        return -1;
+
+    if (pCfg->ethWanEnabled == TRUE)
+    {   
+        if (pCfg->ovsEnabled == TRUE)
+        {
+            v_secure_system("/usr/bin/bridgeUtils del-port brlan0 %s",pCfg->ethwan_ifname);
+        }
+        else
+        {
+            v_secure_system("brctl delif brlan0 %s",pCfg->ethwan_ifname);  
+
+        }
+
+
+        if (TRUE == pCfg->configureBridge)
+        {
+            macaddr_t macAddr;
+            char wan_mac[18];
+    
+            if (TRUE == pCfg->meshEbEnabled)
+            {
+                v_secure_system("/bin/sh /etc/utopia/service.d/vlan_util_xb7.sh meshethbhaul-removeEthwan 0");
+            }
+            v_secure_system("ifconfig %s down",pCfg->ethwan_ifname);
+            v_secure_system("ip addr flush dev %s",pCfg->ethwan_ifname);
+            v_secure_system("ip -6 addr flush dev %s",pCfg->ethwan_ifname);
+            v_secure_system("sysctl -w net.ipv6.conf.%s.accept_ra=0",pCfg->ethwan_ifname);
+            v_secure_system("ifconfig %s down; ip link set %s name dummy-rf", pCfg->wanPhyName,pCfg->wanPhyName);
+
+            v_secure_system("brctl addbr %s", pCfg->wanPhyName);
+            v_secure_system("brctl addif %s %s", pCfg->wanPhyName,pCfg->ethwan_ifname);
+            v_secure_system("sysctl -w net.ipv6.conf.%s.autoconf=0", pCfg->ethwan_ifname); 
+            v_secure_system("sysctl -w net.ipv6.conf.%s.disable_ipv6=1", pCfg->ethwan_ifname);
+            v_secure_system("ip6tables -I OUTPUT -o %s -p icmpv6 -j DROP", pCfg->ethwan_ifname);
+            if (0 != pCfg->bridgemode)
+            {
+                v_secure_system("/bin/sh /etc/utopia/service.d/service_bridge_puma7.sh bridge-restart");
+            }
+
+            BridgeNfDisable(pCfg->wanPhyName, NF_ARPTABLE, TRUE);
+            BridgeNfDisable(pCfg->wanPhyName, NF_IPTABLE, TRUE);
+            BridgeNfDisable(pCfg->wanPhyName, NF_IP6TABLE, TRUE);
+
+            v_secure_system("ip link set %s up",ETHWAN_DOCSIS_INF_NAME);
+            v_secure_system("brctl addif %s %s", pCfg->wanPhyName,ETHWAN_DOCSIS_INF_NAME);
+            v_secure_system("sysctl -w net.ipv6.conf.%s.disable_ipv6=1",ETHWAN_DOCSIS_INF_NAME);
+
+            memset(&macAddr,0,sizeof(macaddr_t));
+            getInterfaceMacAddress(&macAddr,"dummy-rf"); //dummy-rf is renamed from erouter0
+            memset(wan_mac,0,sizeof(wan_mac));
+            snprintf(wan_mac, sizeof(wan_mac), "%02x:%02x:%02x:%02x:%02x:%02x", macAddr.hw[0], macAddr.hw[1], macAddr.hw[2],
+                    macAddr.hw[3], macAddr.hw[4], macAddr.hw[5]);
+            v_secure_system("ifconfig %s down", pCfg->wanPhyName);
+            v_secure_system("ifconfig %s hw ether %s",  pCfg->wanPhyName,wan_mac);
+            v_secure_system("echo %s > /sys/bus/platform/devices/toe/in_if", pCfg->wanPhyName);
+            v_secure_system("ifconfig %s up", pCfg->wanPhyName);
+        }
+        else
+        {
+            v_secure_system("brctl addif %s %s", pCfg->wanPhyName,pCfg->ethwan_ifname);
+        }
         
+        v_secure_system("ifconfig %s up",pCfg->ethwan_ifname);
+        v_secure_system("cmctl down");
+
+    }
+    else
+    {
+        v_secure_system("brctl delif %s %s", pCfg->wanPhyName,pCfg->ethwan_ifname);
+
+        if (pCfg->ovsEnabled)
+        {
+            v_secure_system("/usr/bin/bridgeUtils add-port brlan0 %s",pCfg->ethwan_ifname);
+        }
+        else
+        {
+            v_secure_system("brctl addif brlan0 %s",pCfg->ethwan_ifname);
+        }
+        
+        if (TRUE == pCfg->configureBridge)        
+        {
+            if (TRUE == pCfg->meshEbEnabled)
+            {
+                v_secure_system("/bin/sh /etc/utopia/service.d/vlan_util_xb7.sh meshethbhaul-up 0");
+            }
+            if (0 != pCfg->bridgemode)
+            {
+                v_secure_system("/bin/sh /etc/utopia/service.d/service_bridge_puma7.sh bridge-restart");
+            }
+
+            v_secure_system("brctl delif %s %s", pCfg->wanPhyName,ETHWAN_DOCSIS_INF_NAME);
+            v_secure_system("ifconfig %s down", pCfg->wanPhyName);
+            v_secure_system("brctl delbr %s", pCfg->wanPhyName);
+            v_secure_system("ip link set dummy-rf name %s", pCfg->wanPhyName);
+            v_secure_system("echo %s > /sys/bus/platform/devices/toe/in_if", pCfg->wanPhyName);
+            v_secure_system("ifconfig %s up", pCfg->wanPhyName);
+       }
+    }
+
+    return 0;
+
+}
+#endif
+
+#if defined (_COSA_BCM_ARM_)
+INT WanBridgeConfigurationBcm(WAN_MODE_BRIDGECFG *pCfg)
+{
+    if (!pCfg)
+        return -1;
+
+    if (pCfg->ethWanEnabled == TRUE)
+    { 
+        if (pCfg->ovsEnabled == TRUE)
+        {
+            v_secure_system("/usr/bin/bridgeUtils del-port brlan0 %s",pCfg->ethwan_ifname);
+        }
+        else
+        {
+            v_secure_system("brctl delif brlan0 %s",pCfg->ethwan_ifname);  
+
+        }       
+
+        if (TRUE == pCfg->configureBridge)
+        {
+            v_secure_system("ifconfig %s down",pCfg->ethwan_ifname);
+            v_secure_system("ip addr flush dev %s",pCfg->ethwan_ifname);
+            v_secure_system("ip -6 addr flush dev %s",pCfg->ethwan_ifname);
+            v_secure_system("sysctl -w net.ipv6.conf.%s.accept_ra=0",pCfg->ethwan_ifname);
+
+            if (0 == pCfg->bridgemode)
+            {
+                CcspTraceInfo(("set CM0 %s wanif %s\n",ETHWAN_DOCSIS_INF_NAME,pCfg->wanPhyName));
+                v_secure_system("ifconfig %s down", pCfg->wanPhyName);
+                v_secure_system("ip link set %s name %s", pCfg->wanPhyName,ETHWAN_DOCSIS_INF_NAME);
+                v_secure_system("brctl addbr %s", pCfg->wanPhyName);
+                v_secure_system("brctl addif %s %s", pCfg->wanPhyName,pCfg->ethwan_ifname);
+
+                v_secure_system("sysctl -w net.ipv6.conf.%s.autoconf=0", pCfg->ethwan_ifname); 
+                v_secure_system("sysctl -w net.ipv6.conf.%s.disable_ipv6=1", pCfg->ethwan_ifname);
+                v_secure_system("ip6tables -I OUTPUT -o %s -p icmpv6 -j DROP", pCfg->ethwan_ifname);
+                v_secure_system("ip link set %s up",ETHWAN_DOCSIS_INF_NAME);
+                v_secure_system("brctl addif %s %s", pCfg->wanPhyName,ETHWAN_DOCSIS_INF_NAME);
+                v_secure_system("sysctl -w net.ipv6.conf.%s.disable_ipv6=1",ETHWAN_DOCSIS_INF_NAME);            
+            }
+            else
+            {
+#if defined (ENABLE_WANMODECHANGE_NOREBOOT)
+                v_secure_system("touch /tmp/wanmodechange");
+                if (pCfg->ovsEnabled)
+                {
+                    v_secure_system("/usr/bin/bridgeUtils multinet-syncMembers 1");
+                    v_secure_system("/usr/bin/bridgeUtils del-port brlan0 %s",pCfg->ethwan_ifname);
+                }
+                else
+                {
+                    v_secure_system("/bin/sh /etc/utopia/service.d/vlan_util_tchxb6.sh multinet-syncMembers 1");
+                    v_secure_system("brctl delif brlan0 %s",pCfg->ethwan_ifname);
+                }
+                v_secure_system("rm /tmp/wanmodechange");
+#endif
+
+                v_secure_system("brctl addif %s %s", pCfg->wanPhyName,pCfg->ethwan_ifname);
+            }
+        }
+        else
+        {
+            v_secure_system("brctl addif %s %s", pCfg->wanPhyName,pCfg->ethwan_ifname);
+        }
+        
+        v_secure_system("ifconfig %s up",pCfg->ethwan_ifname);
+
+    }
+    else
+    {
+        v_secure_system("brctl delif %s %s", pCfg->wanPhyName,pCfg->ethwan_ifname);
+
+        if (pCfg->ovsEnabled)
+        {
+            v_secure_system("/usr/bin/bridgeUtils add-port brlan0 %s",pCfg->ethwan_ifname);
+        }
+        else
+        {
+            v_secure_system("brctl addif brlan0 %s",pCfg->ethwan_ifname);
+        }
+        if (TRUE == pCfg->configureBridge)        
+        {
+            if (0 == pCfg->bridgemode)
+            {
+
+                v_secure_system("brctl delif %s %s", pCfg->wanPhyName,ETHWAN_DOCSIS_INF_NAME);
+                v_secure_system("ifconfig %s down", pCfg->wanPhyName);
+                v_secure_system("brctl delbr %s", pCfg->wanPhyName);
+                v_secure_system("ifconfig %s down", ETHWAN_DOCSIS_INF_NAME);
+                v_secure_system("ip link set %s name %s", ETHWAN_DOCSIS_INF_NAME,pCfg->wanPhyName);
+                v_secure_system("ifconfig %s up", pCfg->wanPhyName);
+                v_secure_system("echo addif %s > /proc/driver/flowmgr/cmd", pCfg->wanPhyName);
+                v_secure_system("echo delif %s > /proc/driver/flowmgr/cmd", ETHWAN_DOCSIS_INF_NAME);
+            }
+            else
+            {
+#if defined (ENABLE_WANMODECHANGE_NOREBOOT)
+                v_secure_system("touch /tmp/wanmodechange");
+                if (pCfg->ovsEnabled)
+                {
+                    v_secure_system("/usr/bin/bridgeUtils multinet-syncMembers 1");
+                }
+                else
+                {
+                    v_secure_system("/bin/sh /etc/utopia/service.d/vlan_util_tchxb6.sh multinet-syncMembers 1");
+                }
+                v_secure_system("rm /tmp/wanmodechange");
+#endif
+            }
+
+        }
+    }
+
+    return 0;
+}
+#endif
 
 ANSC_STATUS CosaDmlIfaceFinalize(char *pValue, BOOL isAutoWanMode)
 {
     char wanPhyName[64] = {0};
     char buf[64] = {0};
     char ethwan_ifname[64] = {0};
-    int ovsEnable = 0;
+    BOOL ovsEnabled = FALSE;
     BOOL ethwanEnabled = FALSE;
+    BOOL meshEbEnabled = FALSE;
     INT lastKnownWanMode = -1;
     BOOL configureBridge = FALSE;
     INT bridgemode = 0;
+    WanBridgeCfgHandler pCfgHandler = NULL;
+    WAN_MODE_BRIDGECFG wanModeCfg = {0};
 
     if (!pValue)
         return CCSP_FAILURE;
     CcspTraceInfo(("Func %s Entered\n",__FUNCTION__));
-
+#if defined(INTEL_PUMA7)
+    pCfgHandler = WanBridgeConfigurationIntelPuma7;
+#elif defined (_COSA_BCM_ARM_)
+    pCfgHandler = WanBridgeConfigurationBcm;
+#endif
 
     ethwanEnabled = isEthWanEnabled();
 
@@ -829,9 +1121,9 @@ ANSC_STATUS CosaDmlIfaceFinalize(char *pValue, BOOL isAutoWanMode)
     if( 0 == syscfg_get( NULL, "mesh_ovs_enable", buf, sizeof( buf ) ) )
     {
           if ( strcmp (buf,"true") == 0 )
-            ovsEnable = 1;
+            ovsEnabled = TRUE;
           else
-            ovsEnable = 0;
+            ovsEnabled = FALSE;
 
     }
     else
@@ -846,6 +1138,20 @@ ANSC_STATUS CosaDmlIfaceFinalize(char *pValue, BOOL isAutoWanMode)
     {
         bridgemode = atoi(buf);
     }
+
+    memset(buf,0,sizeof(buf));
+    if (syscfg_get(NULL, "eb_enable", buf, sizeof(buf)) == 0)
+    {
+        if (strcmp(buf,"true") == 0)
+        {
+            meshEbEnabled = TRUE;
+        }
+        else
+        {
+            meshEbEnabled = FALSE;
+        }
+    }
+
 
     memset(buf,0,sizeof(buf));
     if (!syscfg_get(NULL, "wan_physical_ifname", buf, sizeof(buf)))
@@ -914,127 +1220,22 @@ ANSC_STATUS CosaDmlIfaceFinalize(char *pValue, BOOL isAutoWanMode)
         memset( ethwan_ifname , 0, sizeof( ethwan_ifname ) );
         sprintf( ethwan_ifname , "%s", ETHWAN_DEF_INTF_NAME );
     }
-   
-    if (ethwanEnabled == TRUE)
-    {   
-        if (ovsEnable)
-        {
-            v_secure_system("/usr/bin/bridgeUtils del-port brlan0 %s",ethwan_ifname);
-        }
-        else
-        {
-            v_secure_system("brctl delif brlan0 %s",ethwan_ifname);  
+    wanModeCfg.bridgemode = bridgemode;
+    wanModeCfg.ovsEnabled = ovsEnabled;
+    wanModeCfg.ethWanEnabled = ethwanEnabled;
+    wanModeCfg.meshEbEnabled = meshEbEnabled;
+    wanModeCfg.configureBridge = configureBridge;
+    snprintf(wanModeCfg.wanPhyName,sizeof(wanModeCfg.wanPhyName),"%s",wanPhyName);
+    snprintf(wanModeCfg.ethwan_ifname,sizeof(wanModeCfg.ethwan_ifname),"%s",ethwan_ifname);
 
-        }       
-
-        if (TRUE == configureBridge)
-        {
-            v_secure_system("ifconfig %s down",ethwan_ifname);
-            v_secure_system("ip addr flush dev %s",ethwan_ifname);
-            v_secure_system("ip -6 addr flush dev %s",ethwan_ifname);
-            v_secure_system("sysctl -w net.ipv6.conf.%s.accept_ra=0",ethwan_ifname);
-
-            if (0 == bridgemode)
-            {
-#ifdef _COSA_BCM_ARM_
-                CcspTraceInfo(("set CM0 %s wanif %s\n",ETHWAN_DOCSIS_INF_NAME,wanPhyName));
-                v_secure_system("ifconfig %s down", wanPhyName);
-                v_secure_system("ip link set %s name %s", wanPhyName,ETHWAN_DOCSIS_INF_NAME);
-#else
-                v_secure_system("ifconfig %s down; ip link set %s name dummy-rf", wanPhyName,wanPhyName);
-#endif
-                v_secure_system("brctl addbr %s", wanPhyName);
-                v_secure_system("brctl addif %s %s", wanPhyName,ethwan_ifname);
-
-                v_secure_system("sysctl -w net.ipv6.conf.%s.autoconf=0", ethwan_ifname); 
-                v_secure_system("sysctl -w net.ipv6.conf.%s.disable_ipv6=1", ethwan_ifname);
-                v_secure_system("ip6tables -I OUTPUT -o %s -p icmpv6 -j DROP", ethwan_ifname);
-#ifdef _COSA_BCM_ARM_
-                v_secure_system("ip link set %s up",ETHWAN_DOCSIS_INF_NAME);
-                v_secure_system("brctl addif %s %s", wanPhyName,ETHWAN_DOCSIS_INF_NAME);
-                v_secure_system("sysctl -w net.ipv6.conf.%s.disable_ipv6=1",ETHWAN_DOCSIS_INF_NAME);            
-#endif
-            }
-            else
-            {
-#if defined (ENABLE_WANMODECHANGE_NOREBOOT)
-               v_secure_system("touch /tmp/wanmodechange");
-               if (ovsEnable)
-               {
-                   v_secure_system("/usr/bin/bridgeUtils multinet-syncMembers 1");
-                   v_secure_system("/usr/bin/bridgeUtils del-port brlan0 %s",ethwan_ifname);
-               }
-               else
-               {
-#if defined (_COSA_BCM_ARM_)
-                   v_secure_system("/bin/sh /etc/utopia/service.d/vlan_util_tchxb6.sh multinet-syncMembers 1");
-#endif
-                   v_secure_system("brctl delif brlan0 %s",ethwan_ifname);
-               }
-              v_secure_system("rm /tmp/wanmodechange");
-#endif
-               v_secure_system("brctl addif %s %s", wanPhyName,ethwan_ifname);
-            }
-            v_secure_system("ifconfig %s up",ethwan_ifname);
-        }
-        else
-        {
-            v_secure_system("brctl addif %s %s", wanPhyName,ethwan_ifname);
-        }
-
-#if defined(INTEL_PUMA7)
-       v_secure_system("cmctl down");
-#endif
-    }
-    else
+    if (pCfgHandler)
     {
-        v_secure_system("brctl delif %s %s", wanPhyName,ethwan_ifname);
-
-        if (ovsEnable)
-        {
-            v_secure_system("/usr/bin/bridgeUtils add-port brlan0 %s",ethwan_ifname);
-        }
-        else
-        {
-            v_secure_system("brctl addif brlan0 %s",ethwan_ifname);
-        }
-        if (TRUE == configureBridge)
-        {
-            if (0 == bridgemode)
-            {
-
-#ifdef _COSA_BCM_ARM_
-                v_secure_system("brctl delif %s %s", wanPhyName,ETHWAN_DOCSIS_INF_NAME);
-                v_secure_system("ifconfig %s down", wanPhyName);
-                v_secure_system("brctl delbr %s", wanPhyName);
-                v_secure_system("ifconfig %s down", ETHWAN_DOCSIS_INF_NAME);
-                v_secure_system("ip link set %s name %s", ETHWAN_DOCSIS_INF_NAME,wanPhyName);
-                v_secure_system("ifconfig %s up", wanPhyName);
-                v_secure_system("echo addif %s > /proc/driver/flowmgr/cmd", wanPhyName);
-                v_secure_system("echo delif %s > /proc/driver/flowmgr/cmd", ETHWAN_DOCSIS_INF_NAME);
-#endif
-            }
-            else
-            {
-#if defined (ENABLE_WANMODECHANGE_NOREBOOT)
-               v_secure_system("touch /tmp/wanmodechange");
-               if (ovsEnable)
-               {
-                   v_secure_system("/usr/bin/bridgeUtils multinet-syncMembers 1");
-               }
-               else
-               {
-#if defined (_COSA_BCM_ARM_)
-                   v_secure_system("/bin/sh /etc/utopia/service.d/vlan_util_tchxb6.sh multinet-syncMembers 1");
-#endif
-               }
-               v_secure_system("rm /tmp/wanmodechange");
-#endif
-            }
-        }
+        pCfgHandler(&wanModeCfg);
     }
+
     if (TRUE == isAutoWanMode)
     {
+        v_secure_system("sysevent set phylink_wan_state up");
         if ( 0 != access( "/tmp/autowan_iface_finalized" , F_OK ) )
         {
             v_secure_system("touch /tmp/autowan_iface_finalized");
@@ -2024,9 +2225,9 @@ ANSC_STATUS EthWanBridgeInit(PCOSA_DATAMODEL_ETHERNET pEthernet)
 
 #if defined(INTEL_PUMA7)
     v_secure_system("brctl addif %s %s",wanPhyName,ETHWAN_DOCSIS_INF_NAME);
-    v_secure_system("echo 1 > /sys/devices/virtual/net/%s/bridge/nf_disable_iptables",wanPhyName);
-    v_secure_system("echo 1 > /sys/devices/virtual/net/%s/bridge/nf_disable_ip6tables",wanPhyName);
-    v_secure_system("echo 1 > /sys/devices/virtual/net/%s/bridge/nf_disable_arptables",wanPhyName);
+    BridgeNfDisable(wanPhyName, NF_ARPTABLE, TRUE);
+    BridgeNfDisable(wanPhyName, NF_IPTABLE, TRUE);
+    BridgeNfDisable(wanPhyName, NF_IP6TABLE, TRUE);
 #endif
 
     v_secure_system("sysctl -w net.ipv6.conf.%s.autoconf=0", ethwan_ifname); // Fix: RDKB-22835, disabling IPv6 for ethwan port

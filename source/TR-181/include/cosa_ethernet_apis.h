@@ -209,6 +209,19 @@ typedef enum WanOperStateAck
     WAN_OPER_STATE_RESET_INPROGRESS,
     WAN_OPER_STATE_RESET_COMPLETED
 }WanOperStateAck;
+
+typedef struct _WAN_MODE_BRIDGECFG
+{
+    INT bridgemode;
+    BOOL ovsEnabled;
+    BOOL ethWanEnabled;
+    BOOL configureBridge;
+    BOOL meshEbEnabled;
+    CHAR ethwan_ifname[64];
+    CHAR wanPhyName[64];
+}WAN_MODE_BRIDGECFG;
+
+typedef INT (*WanBridgeCfgHandler)(WAN_MODE_BRIDGECFG *pcfg);
 #endif //FEATURE_RDKB_WAN_MANAGER
 
 typedef struct _Eth_host_t
