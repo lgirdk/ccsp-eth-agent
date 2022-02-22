@@ -458,6 +458,14 @@
           <type>boolean</type>
           <syntax>bool</syntax>
         </parameter>
+<?ifdef FEATURE_RDKB_AUTO_PORT_SWITCH?>
+        <parameter>
+          <name>PortCapability</name>
+          <type>string: WAN(1),LAN(2),WAN_LAN(3)</type>
+          <syntax>uint32/mapped</syntax>
+          <writable>true</writable>
+        </parameter>
+<?endif?>
       </parameters>
     </object>
 <?endif?>

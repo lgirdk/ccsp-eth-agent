@@ -512,46 +512,6 @@ Interface_GetParamStringValue
     return -1;
 }
 
-#ifdef FEATURE_RDKB_WAN_UPSTREAM
-BOOL EthInterfaceSetUpstream( INT IfIndex, BOOL Upstream )
-{
-
-    PCOSA_DATAMODEL_ETHERNET      pMyObject     = (PCOSA_DATAMODEL_ETHERNET)g_pCosaBEManager->hEthernet;
-
-    PCOSA_DML_ETH_PORT_FULL       pEthernetPortFull = (PCOSA_DML_ETH_PORT_FULL)&pMyObject->EthernetPortFullTable[IfIndex];
-
-    if(pEthernetPortFull == NULL)
-    {
-        AnscTraceError(("[%s][%d] Null Pointer\n",__FUNCTION__, __LINE__));
-        return FALSE;
-    }
-
-    AnscTraceInfo(("[%s][%d] EthName[%s] Upstream[%s]\n",__FUNCTION__, __LINE__, pEthernetPortFull->StaticInfo.Name, ((Upstream) ? "Enable" : "Disable")));
-    /**
-     * In case of EthWan,
-     *  disable -> False needs to be disable Upstream feature.
-     *  enable  -> True needs to be enable Upstream feature.
-    */
-
-    if (strncmp(pEthernetPortFull->StaticInfo.Name, WAN_ETHERNET_IFNAME, strlen(WAN_ETHERNET_IFNAME)) == 0)
-    {
-        if (ANSC_STATUS_SUCCESS == CosaDmlSetWanOEMode(pEthernetPortFull, Upstream))
-        {
-            AnscTraceInfo(("[%s][%d] Interface.UpStream set to %s\n",__FUNCTION__, __LINE__, ((Upstream) ? "Enable" : "Disable")));
-        }
-        else
-        {
-            AnscTraceError(("[%s][%d] Failed to execute CosaDmlSetWanOEMode  \n",__FUNCTION__, __LINE__ ));
-            return FALSE;
-        }
-
-        /* save update to backup */
-        pEthernetPortFull->StaticInfo.bUpstream = Upstream;
-    }
-
-    return TRUE;
-}
-#endif
 /**********************************************************************
 
     caller:     owner of this object
@@ -603,10 +563,11 @@ Interface_SetParamBoolValue
 #ifdef FEATURE_RDKB_WAN_UPSTREAM
     if (strcmp(ParamName, "Upstream") == 0)
     {
-        EthInterfaceSetUpstream( pEthernetPortFull->Cfg.InstanceNumber - 1, bValue );
+        pEthernetPortFull->StaticInfo.bUpstream = bValue;
+        EthInterfaceSetUpstream( pEthernetPortFull );
         return TRUE;
     }
-#endif  // FEATURE_RDKB_WAN_UPSTREAM    
+#endif  // FEATURE_RDKB_WAN_UPSTREAM
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;

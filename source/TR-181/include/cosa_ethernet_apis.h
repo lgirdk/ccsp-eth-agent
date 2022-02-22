@@ -100,6 +100,8 @@
 
 #elif defined (FEATURE_RDKB_WAN_MANAGER)
 
+#define BUFLEN_256 256
+#define BUFLEN_32  32
 #define WAN_INTERFACE_NAME         "erouter0"
 /*TODO: The hardcoded names will be removed from ethagent once the
 wanmanager could able to handle vlan interface creation and management */
@@ -152,6 +154,22 @@ wanmanager could able to handle vlan interface creation and management */
 #define PHY_STATUS_MONITOR_MAX_TIMEOUT 240
 #define PHY_STATUS_QUERY_INTERVAL 2
 #define CFG_TR181_ETH_BORROW_MAC  1
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+#ifdef FEATURE_RDKB_AUTO_PORT_SWITCH
+
+#define PSM_ETHAGENT_IF_PORTCAPABILITY "dmsb.ethagent.if.%d.PortCapability"
+int Ethagent_GetParamValuesFromPSM( char *pParamName, char *pReturnVal, int returnValLength );
+int Ethagent_SetParamValuesToPSM( char *pParamName, char *pParamVal );
+
+typedef enum
+_COSA_DML_ETH_PORT_CAP_OPER
+{
+    PORT_CAP_WAN = 1,
+    PORT_CAP_LAN,
+    PORT_CAP_WAN_LAN
+} COSA_DML_ETH_PORT_CAP_OPER;
+#endif  //FEATURE_RDKB_AUTO_PORT_SWITCH
+#endif
 
 typedef struct _WAN_PARAM_INFO
 {
@@ -256,6 +274,9 @@ _COSA_DML_ETH_PORT_CONFIG
     CHAR Path[128]; /* contains current table path */
 #ifdef FEATURE_RDKB_WAN_MANAGER
     CHAR LowerLayers[128]; /* contains LowerLayers */
+#ifdef FEATURE_RDKB_AUTO_PORT_SWITCH
+    COSA_DML_ETH_PORT_CAP_OPER PortCapability;
+#endif //FEATURE_RDKB_AUTO_PORT_SWITCH
 #endif
 } COSA_DML_ETH_PORT_CONFIG, *PCOSA_DML_ETH_PORT_CONFIG;
 
@@ -435,6 +456,13 @@ ANSC_STATUS CosaDmlEthGetPhyStatusForWanAgent( char *ifname, char *PhyStatus );
 ANSC_STATUS CosaDmlEthSetPhyStatusForWanAgent( char *ifname, char *PhyStatus );
 #elif defined(FEATURE_RDKB_WAN_MANAGER)
 ANSC_STATUS CosaDmlEthGetPortCfg( INT nIndex, PCOSA_DML_ETH_PORT_CONFIG pEthLink);
+#ifdef FEATURE_RDKB_AUTO_PORT_SWITCH
+ANSC_STATUS CosaDmlEthPortSetPortCapability( PCOSA_DML_ETH_PORT_CONFIG pEthLink );
+#endif
+#ifdef FEATURE_RDKB_WAN_UPSTREAM
+BOOL EthInterfaceSetUpstream( PCOSA_DML_ETH_PORT_FULL pEthernetPortFull );
+BOOL EthRdkInterfaceSetUpstream( PCOSA_DML_ETH_PORT_CONFIG pEthLink ); 
+#endif
 ANSC_STATUS CosaDmlEthPortSetUpstream( CHAR *ifname, BOOL Upstream );
 ANSC_STATUS CosaDmlEthPortSetWanValidated(INT IfIndex, BOOL WanValidated);
 ANSC_STATUS CosaDmlEthPortGetWanStatus( CHAR *ifname, COSA_DML_ETH_WAN_STATUS *wan_status );
