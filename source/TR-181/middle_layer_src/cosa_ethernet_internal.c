@@ -529,7 +529,6 @@ void Ethernet_Log(void)
     int count_client = 0;
     char *mac_address = NULL;
     int ret = ANSC_STATUS_FAILURE;
-    errno_t        rc = -1;
 
 #if defined(_CBR_PRODUCT_REQ_)
     total_port = 8;
@@ -556,8 +555,6 @@ void Ethernet_Log(void)
             mac_address = (char *)AnscAllocateMemory(mem_size);
             if (mac_address)
             {
-                rc = memset_s(mac_address,mem_size, 0, mem_size);
-                ERR_CHK(rc);
                 ethGetClientMacDetails(
                         i,
                         total_eth_device,
@@ -759,8 +756,6 @@ static void EthTelemetryPush()
 	    mac_address = (char *)AnscAllocateMemory(mem_size);
 	    if (mac_address)
 	    {
-		rc = memset_s(mac_address,mem_size, 0, mem_size);
-                ERR_CHK(rc);
 		ethGetClientMacDetails(
 			i,
 			total_eth_device,

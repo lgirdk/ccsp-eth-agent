@@ -2103,7 +2103,6 @@ CosaDmlEthPortInit(
     }
 
     pMyObject->ulTotalNoofEthInterfaces = iTotalInterfaces;
-    memset(pETHlinkTemp, 0, sizeof(COSA_DML_ETH_PORT_CONFIG) * iTotalInterfaces);
 
     //Fill line static information and initialize default values
     for (iLoopCount = 0; iLoopCount < iTotalInterfaces; iLoopCount++)
@@ -2148,7 +2147,6 @@ CosaDmlEthPortInit(
             CcspTraceError(("pEthCxtLink Failed to allocate memory \n"));
             return ANSC_STATUS_FAILURE;
         }
-        memset(pETHTemp, 0, sizeof(COSA_DML_ETH_PORT_CONFIG));
         //Fill line static information and initialize default values
         DML_ETHIF_INIT(pETHTemp);
         pETHTemp->ulInstanceNumber = iLoopCount + 1;
@@ -2791,7 +2789,6 @@ static ANSC_STATUS CosDmlEthPortPrepareGlobalInfo()
         return ANSC_STATUS_FAILURE;
     }
 
-    memset(gpstEthGInfo, 0, sizeof(COSA_DML_ETH_PORT_GLOBAL_CONFIG) * Totalinterfaces);
     //Assign default value
     for (iLoopCount = 0; iLoopCount < Totalinterfaces; ++iLoopCount)
     {
