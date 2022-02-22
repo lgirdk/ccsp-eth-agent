@@ -555,8 +555,6 @@ void Ethernet_Log(void)
             mac_address = (char *)AnscAllocateMemory(mem_size);
             if (mac_address)
             {
-                rc = memset_s(mac_address,mem_size, 0, mem_size);
-                ERR_CHK(rc);
                 ethGetClientMacDetails(
                         i,
                         total_eth_device,
@@ -758,8 +756,6 @@ static void EthTelemetryPush()
 	    mac_address = (char *)AnscAllocateMemory(mem_size);
 	    if (mac_address)
 	    {
-		rc = memset_s(mac_address,mem_size, 0, mem_size);
-                ERR_CHK(rc);
 		ethGetClientMacDetails(
 			i,
 			total_eth_device,

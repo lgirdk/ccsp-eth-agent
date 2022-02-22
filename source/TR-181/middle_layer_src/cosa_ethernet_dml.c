@@ -1394,7 +1394,6 @@ ANSC_HANDLE EthRdkInterface_AddEntry( ANSC_HANDLE hInsContext, ULONG* pInsNumber
     {
         return NULL;
     }
-    memset(p_EthLink, 0, sizeof(COSA_DML_ETH_PORT_CONFIG));
     pEthCxtLink = (PCOSA_CONTEXT_LINK_OBJECT)AnscAllocateMemory(sizeof(COSA_CONTEXT_LINK_OBJECT));
     if ( !pEthCxtLink )
     {
