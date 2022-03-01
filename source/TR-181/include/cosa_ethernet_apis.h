@@ -125,6 +125,8 @@ wanmanager could able to handle vlan interface creation and management */
 #define WAN_COMPONENT_NAME                "eRT.com.cisco.spvtg.ccsp.wanmanager"
 #define WAN_COMP_NAME_WITHOUT_SUBSYSTEM   "com.cisco.spvtg.ccsp.wanmanager"
 #define WAN_NOE_PARAM_NAME                "Device.X_RDK_WanManager.CPEInterfaceNumberOfEntries"
+#define WAN_CPE_LINK_STATUS_PARAM_NAME    "Device.X_RDK_WanManager.CPEInterface.%d.LinkStatus"
+#define WAN_BASE_INTERFACE_PARAM_NAME     "Device.X_RDK_WanManager.CPEInterface.%d.BaseInterface"
 #define WAN_PHY_STATUS_PARAM_NAME         "Device.X_RDK_WanManager.CPEInterface.%d.Phy.Status"
 #define WAN_PHY_PATH_PARAM_NAME           "Device.X_RDK_WanManager.CPEInterface.%d.Phy.Path"
 #define WAN_LINK_STATUS_PARAM_NAME        "Device.X_RDK_WanManager.CPEInterface.%d.Wan.LinkStatus"

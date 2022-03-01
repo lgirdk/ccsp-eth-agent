@@ -2886,6 +2886,7 @@ ANSC_STATUS CosaDmlEthSetPhyStatusForWanManager(char *ifname, char *PhyStatus)
     char acSetParamVal[256];
     INT iLinkInstance = -1;
     INT iWANInstance = -1;
+    char BaseInterfaceName[256];
 
     //Validate buffer
     if ((NULL == ifname) || (NULL == PhyStatus))
@@ -2911,7 +2912,7 @@ ANSC_STATUS CosaDmlEthSetPhyStatusForWanManager(char *ifname, char *PhyStatus)
 
     //Set PHY path
     memset(acSetParamName, 0, sizeof(acSetParamName));
-    snprintf(acSetParamName, sizeof(acSetParamName), WAN_PHY_PATH_PARAM_NAME, iWANInstance);
+    snprintf(acSetParamName, sizeof(acSetParamName),WAN_BASE_INTERFACE_PARAM_NAME, iWANInstance);
 
     memset(acSetParamVal, 0, sizeof(acSetParamVal));
     if (CosaDmlEthPortGetIndexFromIfName(ifname, &iLinkInstance) != ANSC_STATUS_SUCCESS)
@@ -2921,15 +2922,22 @@ ANSC_STATUS CosaDmlEthSetPhyStatusForWanManager(char *ifname, char *PhyStatus)
     }
 
     snprintf(acSetParamVal, sizeof(acSetParamVal),ETH_IF_PHY_PATH, (iLinkInstance + 1));
-    if (CosaDmlEthSetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH, acSetParamName, acSetParamVal, ccsp_string, TRUE) != ANSC_STATUS_SUCCESS)
+
+    if (CosaDmlEthGetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH,acSetParamName,BaseInterfaceName) != ANSC_STATUS_SUCCESS)
     {
-        CcspTraceError(("%s %d: Unable to set param name %s with value %s\n", __FUNCTION__, __LINE__, acSetParamName, acSetParamVal));
+        CcspTraceError(("%s %d: CosaDmlEthGetParamValues() returned FAILURE\n", __FUNCTION__, __LINE__));
         return ANSC_STATUS_FAILURE;
+    }
+
+    if (strncmp(acSetParamVal,BaseInterfaceName,sizeof(acSetParamVal)) != 0)
+    {
+    	CcspTraceError(("%s %d BaseInterface is not matching with LowerLayer\n", __FUNCTION__, __LINE__));
+    	return ANSC_STATUS_FAILURE;      
     }
 
     //Set PHY Status
     memset(acSetParamName, 0, sizeof(acSetParamName));
-    snprintf(acSetParamName, sizeof(acSetParamName), WAN_PHY_STATUS_PARAM_NAME, iWANInstance);
+    snprintf(acSetParamName, sizeof(acSetParamName), WAN_CPE_LINK_STATUS_PARAM_NAME , iWANInstance);
     if (CosaDmlEthSetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH, acSetParamName, PhyStatus, ccsp_string, TRUE) != ANSC_STATUS_SUCCESS)
     {
         CcspTraceError(("%s %d: Unable to set param name %s\n", __FUNCTION__, __LINE__, acSetParamName));
