@@ -131,6 +131,10 @@ extern  char g_Subsystem[BUFLEN_32];
 #define OnboardLog(...)
 #endif
 
+#if defined (WAN_FAILOVER_SUPPORTED)
+#include "cosa_rbus_handler_apis.h"
+#endif
+
 #if defined (FEATURE_RDKB_WAN_AGENT) || defined(FEATURE_RDKB_WAN_MANAGER)
 #include "cosa_ethernet_manager.h"
 #if defined (FEATURE_RDKB_WAN_MANAGER)
@@ -3833,6 +3837,10 @@ void EthWanLinkUp_callback() {
     {
         CcspTraceInfo(("WAN_MODE: Ethernet WAN Port Couldn't Be Retrieved\n"));
     }
+	
+#if defined (WAN_FAILOVER_SUPPORTED)
+	publishEWanLinkStatus(true);
+#endif
 
 #endif
 
@@ -3859,6 +3867,11 @@ void EthWanLinkDown_callback() {
     }
 
     v_secure_system("sysevent set phylink_wan_state down");
+	
+#if defined (WAN_FAILOVER_SUPPORTED)
+	publishEWanLinkStatus(false);
+#endif
+	
 #endif
     if (ANSC_STATUS_SUCCESS == GetWan_InterfaceName (wanoe_ifname, sizeof(wanoe_ifname))) {
         CcspTraceInfo (("[%s][%d] WANOE [%s] interface link down event received \n", __FUNCTION__,__LINE__,wanoe_ifname));
