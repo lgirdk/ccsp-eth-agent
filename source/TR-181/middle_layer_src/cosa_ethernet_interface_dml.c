@@ -415,7 +415,7 @@ Interface_GetParamStringValue
     if (strcmp(ParamName, "LowerLayers") == 0)
     {
         /* collect value */
-
+        strcpy(pValue, "");
         return 0;
     }
 
@@ -499,7 +499,6 @@ Interface_GetParamStringValue
         if(AnscSizeOfString(assocDeviceMacList) < *pUlSize)
         {
             AnscCopyString(pValue,assocDeviceMacList);
-            *pUlSize = AnscSizeOfString(assocDeviceMacList);
             return 0;
         }
         else
