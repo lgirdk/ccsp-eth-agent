@@ -463,7 +463,6 @@
 <?endif?>
   </objects>
   </object>
-<?ifdef AUTOWAN_ENABLE?>
     <object>
       <name>X_RDKCENTRAL-COM_EthernetWAN</name>
       <objectType>object</objectType>
@@ -512,7 +511,6 @@
       </parameter>
      </parameters>
     </object>
-<?endif?>
 
   </objects>
 </dataModelInfo>

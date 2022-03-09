@@ -123,7 +123,6 @@ EthWan_GetParamUlongValue
         char*                       ParamName,
         ULONG*                      pUlong
     );
-#if !defined(AUTOWAN_ENABLE)
 BOOL
 EthWan_SetParamBoolValue
 
@@ -132,7 +131,6 @@ EthWan_SetParamBoolValue
         char*                       ParamName,
         BOOL                        bValue
     );
-#endif
 /***********************************************************************
  APIs for Object:
 
@@ -208,7 +206,6 @@ EthLogging_Rollback
         ANSC_HANDLE                 hInsContext
     );
 
-#if defined(AUTOWAN_ENABLE)
 ULONG
 EthernetWAN_GetParamStringValue
     (
@@ -224,7 +221,6 @@ EthernetWAN_SetParamStringValue
         char*                       ParamName,
         char*                       pString
     );
-#endif
 BOOL
 EthernetWAN_GetParamBoolValue
 

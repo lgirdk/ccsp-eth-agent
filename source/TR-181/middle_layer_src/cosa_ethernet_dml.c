@@ -375,7 +375,6 @@ EthWan_GetParamUlongValue
 
     return:     TRUE if succeeded.
 **********************************************************************/
-#if !defined(AUTOWAN_ENABLE)
 BOOL
 EthWan_SetParamBoolValue
 
@@ -426,7 +425,6 @@ EthWan_SetParamBoolValue
     }
     return FALSE;
 }
-#endif
 /**********************************************************************
     caller:     owner of this object
     prototype:
@@ -459,7 +457,6 @@ EthWan_SetParamBoolValue
 #define WAN_MODE_DOCSIS		2
 #define WAN_MODE_UNKNOWN	3
 
-#ifdef AUTOWAN_ENABLE
 ULONG
 EthernetWAN_GetParamStringValue
     (
@@ -784,7 +781,6 @@ EthernetWAN_SetParamStringValue
     /* AnscTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
 }
-#endif
 
 BOOL EthernetWAN_SetParamBoolValue
 
