@@ -17,8 +17,7 @@
 # limitations under the License.
 ##########################################################################
 
-AM_CFLAGS = -D_ANSC_LINUX
-AM_CFLAGS += -D_ANSC_USER
+AM_CFLAGS =
 
 ACLOCAL_AMFLAGS = -I m4
 
@@ -34,4 +33,4 @@ CcspEthAgent_DEPENDENCIES= \
 CcspEthAgent_CFLAGS = $(SYSTEMD_CFLAGS) $(NONROOT_CFLAGS)
 CcspEthAgent_SOURCES = ssp_messagebus_interface.c ssp_main.c ssp_action.c dm_pack_datamodel.c
 CcspEthAgent_LDFLAGS = -rdynamic $(SYSTEMD_LDFLAGS) -pthread
-CcspEthAgent_LDADD = $(CcspEthAgent_DEPENDENCIES) -lccsp_common -lsyscfg -ldl
+CcspEthAgent_LDADD = $(CcspEthAgent_DEPENDENCIES) -lccsp_common -lsyscfg -lprivilege -ldl
