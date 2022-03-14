@@ -1912,17 +1912,26 @@ CosaDmlEthInit(
     char WanOEInterface[16] = {0};
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)phContext;
     int ifIndex;
-#if FEATURE_RDKB_WAN_MANAGER
+    //ETH Port Init.
+    CosaDmlEthPortInit((PANSC_HANDLE)pMyObject);
+
+#ifdef FEATURE_RDKB_WAN_MANAGER
+#ifndef AUTOWAN_ENABLE
     char wanoe_ifname[WANOE_IFACENAME_LENGTH] = {0};
 
     /* To initialize PhyStatus for Manager we set Down */
     if (ANSC_STATUS_SUCCESS == GetWan_InterfaceName (wanoe_ifname, sizeof(wanoe_ifname))) 
     {
-        CosaDmlEthSetPhyStatusForWanManager(wanoe_ifname, WANOE_IFACE_DOWN);
+        ANSC_STATUS ret = ANSC_STATUS_FAILURE;
+        ret = CosaDmlEthSetPhyPathForWanManager(wanoe_ifname);
+        CcspTraceError(("%s:%d Initialize %s PhyPath for Manager[%s]\n", __FUNCTION__, __LINE__, wanoe_ifname, (ret == ANSC_STATUS_SUCCESS)?"Success":"Failed"));
     }
+    else
+    {
+        CcspTraceError(("%s:%d  GetWan_InterfaceName Failed\n", __FUNCTION__, __LINE__));
+    }
+#endif //AUTOWAN_ENABLE
 #endif
-    //ETH Port Init.
-    CosaDmlEthPortInit((PANSC_HANDLE)pMyObject);
 #ifdef AUTOWAN_ENABLE 
     {
         PCOSA_DATAMODEL_ETH_WAN_AGENT pEthWanCfg = NULL;
@@ -3523,6 +3532,59 @@ ANSC_STATUS CosaDmlEthDeleteEthLink(char *ifName, char *Path)
 
     return ANSC_STATUS_SUCCESS;
 }
+#ifdef FEATURE_RDKB_WAN_MANAGER
+ANSC_STATUS CosaDmlEthSetPhyPathForWanManager(char *ifname)
+{
+    COSA_DML_ETH_PORT_GLOBAL_CONFIG stGlobalInfo = {0};
+    char acSetParamName[256] ={0};
+    char acSetParamVal[256] = {0};
+    INT iLinkInstance = -1;
+    INT iWANInstance = -1;
+
+    //Validate Input
+    if (NULL == ifname)
+    {
+        CcspTraceError(("%s ifname[NULL]\n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    CcspTraceError(("%s:%d ifname[%s]\n", __FUNCTION__,__LINE__,ifname));
+
+    //Get global copy of the data from interface name
+    CosaDmlEthPortGetCopyOfGlobalInfoForGivenIfName(ifname, &stGlobalInfo);
+    CcspTraceError(("%s:%d stGlobalInfo.Name[%s]\n", __FUNCTION__,__LINE__,stGlobalInfo.Name));
+
+    //Get Instance for corresponding name
+    CosaDmlEthGetLowerLayersInstanceInOtherAgent(NOTIFY_TO_WAN_AGENT, stGlobalInfo.Name, &iWANInstance);
+
+    //Index is not present. so no need to do anything any WAN instance
+    if (-1 == iWANInstance)
+    {
+        CcspTraceError(("%s %d WAN instance not present\n", __FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    snprintf(acSetParamName, sizeof(acSetParamName), WAN_PHY_PATH_PARAM_NAME, iWANInstance);
+    if (CosaDmlEthPortGetIndexFromIfName(ifname, &iLinkInstance) != ANSC_STATUS_SUCCESS)
+    {
+        CcspTraceError(("%s %d: Unable to get linkinstance from iface name %s\n", __FUNCTION__, __LINE__, ifname));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //Set PHY path
+    snprintf(acSetParamVal, sizeof(acSetParamVal),ETH_IF_PHY_PATH, (iLinkInstance + 1));
+    if (CosaDmlEthSetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH, acSetParamName, acSetParamVal, ccsp_string, TRUE) != ANSC_STATUS_SUCCESS)
+    {
+        CcspTraceError(("%s %d: Unable to set param name %s with value %s\n", __FUNCTION__, __LINE__, acSetParamName, acSetParamVal));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    CcspTraceInfo(("%s %d Successfully update phy.Path to WAN Manager for %s interface\n", __FUNCTION__, __LINE__,  ifname));
+
+    return ANSC_STATUS_SUCCESS;
+}
+#endif // FEATURE_RDKB_WAN_MANAGER
+
 #ifdef FEATURE_RDKB_WAN_AGENT
 ANSC_STATUS CosaDmlEthSetPhyStatusForWanAgent(char *ifname, char *PhyStatus)
 #else  //FEATURE_RDKB_WAN_MANAGER
