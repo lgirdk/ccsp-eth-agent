@@ -943,7 +943,7 @@ ANSC_STATUS CosaDmlIfaceFinalize(char *pValue, BOOL isAutoWanMode)
 
 ANSC_STATUS EthwanEnableWithoutReboot(BOOL bEnable,INT bridge_mode)
 {
-    CcspTraceError(("Func %s Entered arg %d bridge mode %d\n",__FUNCTION__,bEnable,bridge_mode));
+    CcspTraceInfo(("Func %s Entered arg %d bridge mode %d\n",__FUNCTION__,bEnable,bridge_mode));
     
     if(bEnable == FALSE && (bridge_mode == 0))
     {
@@ -973,19 +973,24 @@ ANSC_STATUS EthwanEnableWithoutReboot(BOOL bEnable,INT bridge_mode)
         if ( syscfg_set( NULL, "eth_wan_enabled", buf ) != 0 )
         {
             CcspTraceError(( "syscfg_set failed for eth_wan_enabled\n" ));
-            return RETURN_ERR;
+            return ANSC_STATUS_FAILURE;
         }
         else
         {
             if ( syscfg_commit() != 0 )
             {
                 CcspTraceError(( "syscfg_commit failed for eth_wan_enabled\n" ));
-                return RETURN_ERR;
+                return ANSC_STATUS_FAILURE;
             }
 
         }
     }
-    CcspTraceError(("Func %s Exited arg %d\n",__FUNCTION__,bEnable));
+    else
+    {
+        CcspTraceError(("Func %s CcspHalExtSw_setEthWanEnable failed  arg: %d\n",__FUNCTION__,bEnable));
+        return ANSC_STATUS_FAILURE;
+    }
+    CcspTraceInfo(("Func %s Exited arg %d\n",__FUNCTION__,bEnable));
  
     return ANSC_STATUS_SUCCESS;
 }
@@ -1345,21 +1350,44 @@ void* ThreadConfigEthWan(void *arg)
         CcspTraceError(("UpdateInformMsg to wanmanager is failed for param %s false\n",WAN_ENABLE_PARAM));
     }
     sleep(2); // wait randomly some seconds till wan manager tear down the states.
-    CosaDmlConfigureEthWan(*pValue);
-    CosaDmlIfaceFinalize("2",FALSE); // passing wan instance number for ethwan interface
-    v_secure_system("sysevent set phylink_wan_state up");
-    if (*pValue == TRUE)
+    if ( ANSC_STATUS_SUCCESS != CosaDmlConfigureEthWan(*pValue))
     {
-        v_secure_system("sysevent set ethwan-initialized 1");
-        v_secure_system("syscfg set ntp_enabled 1"); // Enable NTP in case of ETHWAN
-        v_secure_system("syscfg commit"); 
+        char buf[8] = {0};
+        CcspTraceError(("CosaDmlConfigureEthWan failed %d revert %d \n",*pValue,!*pValue));
+
+        // rollback configure to previous mode in case of failure.
+        snprintf(buf, sizeof(buf), "%d",  pEthWanCfgObj->PrevSelMode);
+        if (syscfg_set(NULL, "selected_wan_mode", buf) != 0)
+        {
+            CcspTraceError(("syscfg_set failed\n"));
+        }
+        else
+        {
+            if (syscfg_commit() != 0)
+            {
+                CcspTraceError(("syscfg_commit failed\n"));
+            }
+        }
+
+        CosaDmlConfigureEthWan(!*pValue);
+        CosaDmlIfaceFinalize("2",FALSE);
     }
     else
     {
-        v_secure_system("sysevent set ethwan-initialized 0");
+        CosaDmlIfaceFinalize("2",FALSE); // passing wan instance number for ethwan interface
+        v_secure_system("sysevent set phylink_wan_state up");
+        if (*pValue == TRUE)
+        {
+            v_secure_system("sysevent set ethwan-initialized 1");
+            v_secure_system("syscfg set ntp_enabled 1"); // Enable NTP in case of ETHWAN
+            v_secure_system("syscfg commit"); 
+        }
+        else
+        {
+            v_secure_system("sysevent set ethwan-initialized 0");
+        }
     }
-
-        // Request wan manager to enable wan.
+    // Request wan manager to enable wan.
     ret = CosaDmlEthSetParamValues(WAN_COMPONENT_NAME,
             WAN_DBUS_PATH,
             WAN_ENABLE_PARAM,
@@ -1406,6 +1434,7 @@ ANSC_STATUS CosaDmlConfigureEthWan(BOOL bEnable)
     PCOSA_DATAMODEL_ETHERNET    pEthernet = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
     COSA_DATAMODEL_ETH_WAN_AGENT ethWanCfg = {0};
     int bridgemode = 0;
+    int retvalue = -1;
 #if defined (_BRIDGE_UTILS_BIN_)
     int ovsEnable = 0;
     if( 0 == syscfg_get( NULL, "mesh_ovs_enable", buf, sizeof( buf ) ) )
@@ -1522,7 +1551,11 @@ ANSC_STATUS CosaDmlConfigureEthWan(BOOL bEnable)
         }
 #endif
 
-        EthwanEnableWithoutReboot(TRUE,bridgemode);
+        retvalue = EthwanEnableWithoutReboot(TRUE,bridgemode);
+        if (retvalue != ANSC_STATUS_SUCCESS)
+        {
+            return retvalue;
+        }
 
         /* ETH WAN Interface must be retrieved a second time in case MACsec
            modified the interfaces. */
@@ -1564,7 +1597,11 @@ ANSC_STATUS CosaDmlConfigureEthWan(BOOL bEnable)
     }
     else
     {
-        EthwanEnableWithoutReboot(FALSE,bridgemode);
+        retvalue = EthwanEnableWithoutReboot(FALSE,bridgemode);
+        if (retvalue != ANSC_STATUS_SUCCESS)
+        {
+            return retvalue;
+        }
 #if defined (_MACSEC_SUPPORT_)
         CcspTraceInfo(("%s - Stopping MACsec on %d\n",__FUNCTION__,ETHWAN_DEF_INTF_NUM));
         /* Stopping MACsec on Port since DOCSIS Succeeded */
@@ -1623,13 +1660,7 @@ CosaDmlEthWanSetEnable
 {
 
 #if defined (ENABLE_WANMODECHANGE_NOREBOOT)
-    BOOL bGetStatus = FALSE;
-    CcspHalExtSw_getEthWanEnable(&bGetStatus);
-
-    if (bEnable != bGetStatus)
-    {
-        ConfigEthWan(bEnable);
-    }
+    ConfigEthWan(bEnable);
     return ANSC_STATUS_SUCCESS;
 #elif defined (ENABLE_ETH_WAN)
     BOOL bGetStatus = FALSE;

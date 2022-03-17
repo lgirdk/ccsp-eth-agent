@@ -220,6 +220,7 @@ _COSA_DATAMODEL_ETH_WAN_AGENT_CONTENT
     char                   wanInstanceNumber[4];
 #if defined (FEATURE_RDKB_WAN_MANAGER)
     WanOperStateAck        wanOperState;
+    INT                    PrevSelMode;
 #endif
     char                   ethWanIfMac[32];
 }
