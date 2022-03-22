@@ -1496,19 +1496,17 @@ EthRdkInterface_GetParamBoolValue
     if (strcmp(ParamName, "WanConfigPort") == 0)
     {
         UINT WanPort = 0;
-        
-        if(TRUE != pEthLink->Upstream)
-        {
-            *pBool = FALSE;
-            return TRUE;
-        }
 
         if(0 != CcspHalExtSw_getEthWanPort(&WanPort))
         {
             AnscTraceInfo(("Failed to get WanPort[%u] in CPE \n",WanPort));
         }
 
-        if(WanPort == pEthLink->ulInstanceNumber)
+        if(WanPort == pEthLink->ulInstanceNumber
+#ifdef FEATURE_RDKB_AUTO_PORT_SWITCH
+                && CcspHalExtSw_getCurrentWanHWConf()
+#endif
+          )
         {
             *pBool = TRUE;
         }
