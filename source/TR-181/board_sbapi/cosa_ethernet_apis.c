@@ -1196,7 +1196,13 @@ ANSC_STATUS CosaDmlIfaceFinalize(char *pValue, BOOL isAutoWanMode)
             break;
         default:
             {
-                configureBridge = FALSE;
+                // if last known mode is unknown, then default last wan mode is primary wan.
+                // Hence if ethwan is enabled when last known mode is primary, then configure bridge.
+                // Note: Configure bridge will need to do when prev wan mode and new wan mode is different.
+                if (ethwanEnabled == TRUE)
+                {
+                    configureBridge = TRUE;
+                }
             }
             break;
     }
