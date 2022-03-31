@@ -52,6 +52,7 @@
 #include "safec_lib_common.h"
 
 cap_user appcaps;
+
 #if defined(FEATURE_RDKB_WAN_MANAGER) || defined (FEATURE_RDKB_WAN_AGENT)
 #if !defined(AUTOWAN_ENABLE) && !defined(_PLATFORM_RASPBERRYPI_) // This is not needed when auto wan is enabled for TCXBX platforms
 
@@ -67,35 +68,28 @@ static void waitUntilSystemReady(void);
 static int checkIfSystemReady()
 {
     char str[256] = {0};
-    int val;
+    int val, ret;
     snprintf(str, sizeof(str), "eRT.%s", CCSP_DBUS_INTERFACE_CR);
     // Query CR for system ready
-    CcspBaseIf_isSystemReady(bus_handle, str, (dbus_bool *)&val);
-    return val;
+    ret = CcspBaseIf_isSystemReady(bus_handle, str, (dbus_bool *)&val);
+    CcspTraceError(("checkIfSystemReady(): ret %d, val %d\n", ret, val));
+    return val;    
 }
 
 static void waitUntilSystemReady()
 {
     int wait_time = 0;
-    int ready_check_flag = 0;
 
     /* Check CR is ready in every 5 seconds. This needs
     to be continued upto 3 mins (36 * 5 = 180s) */
     while(wait_time <= 180)
     {
         if(checkIfSystemReady()) {
-            ready_check_flag = 1;
             break;
         }
 
         wait_time++;
         sleep(1);
-    }
-    if (ready_check_flag) {
-        CcspTraceInfo(("checkIfSystemReady(): SUCCESS\n"));
-    }
-    else {
-        CcspTraceError(("checkIfSystemReady(): TIMEOUT\n"));
     }
 }
 
@@ -455,6 +449,7 @@ CcspTraceWarning(("\nAfter Cdm_Init\n"));
         read_capability(&appcaps);
     }
 #endif
+    
 #if defined (FEATURE_RDKB_WAN_MANAGER) || defined(FEATURE_RDKB_WAN_AGENT)
 #if !defined(AUTOWAN_ENABLE) && !defined(_PLATFORM_RASPBERRYPI_)// This is not needed when auto wan is enabled for TCXBX platforms
     waitUntilSystemReady();
