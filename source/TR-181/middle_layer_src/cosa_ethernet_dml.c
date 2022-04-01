@@ -1738,6 +1738,13 @@ EthRdkInterface_GetParamUlongValue
         *puLong = pEthLink->WanStatus;
         return TRUE;
     }
+#ifdef FEATURE_RDKB_AUTO_PORT_SWITCH
+    if (strcmp(ParamName, "PortCapability") == 0)
+    {
+        *puLong = pEthLink->PortCapability;
+        return TRUE;
+    }
+#endif  //FEATURE_RDKB_AUTO_PORT_SWITCH
     return FALSE;
 }
 
@@ -1791,6 +1798,19 @@ EthRdkInterface_SetParamUlongValue
         CosaDmlEthPortSetWanStatus(pEthLink->Name, pEthLink->WanStatus);
         return TRUE;
     }
+#ifdef FEATURE_RDKB_AUTO_PORT_SWITCH
+    if (strcmp(ParamName, "PortCapability") == 0)
+    {
+        ULONG prevValue = pEthLink->PortCapability;
+        pEthLink->PortCapability = uValue;
+        if ( ANSC_STATUS_FAILURE == CosaDmlEthPortSetPortCapability(pEthLink) )
+        {
+            pEthLink->PortCapability = prevValue;
+            CcspTraceWarning(("%s Failed to update PortCapability\n",__FUNCTION__));
+        }
+        return TRUE;
+    }
+#endif  //FEATURE_RDKB_AUTO_PORT_SWITCH
     return FALSE;
 }
 
@@ -1844,7 +1864,7 @@ EthRdkInterface_SetParamBoolValue
         pEthLink->Upstream = bValue;
         CosaDmlEthPortSetUpstream( pEthLink->Name , pEthLink->Upstream );
 #ifdef FEATURE_RDKB_WAN_UPSTREAM
-        EthInterfaceSetUpstream( pEthLink->ulInstanceNumber - 1, pEthLink->Upstream );
+        EthRdkInterfaceSetUpstream(pEthLink);
 #endif
         return TRUE;
     }

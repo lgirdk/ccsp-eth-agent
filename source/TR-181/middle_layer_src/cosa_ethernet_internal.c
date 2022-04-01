@@ -919,61 +919,89 @@ ANSC_STATUS InitEthIfaceEntry(ANSC_HANDLE hDml, PCOSA_DML_ETH_PORT_CONFIG pEntry
 #endif // FEATURE_RDKB_WAN_MANAGER
 
 #ifdef FEATURE_RDKB_WAN_UPSTREAM
-
-ANSC_STATUS CosaDmlSetWanOEMode (PCOSA_DML_ETH_PORT_FULL pEthernetPortFull, BOOL enable)
+ANSC_STATUS CosaDmlSetWanOEMode (PCOSA_DML_ETH_PORT_FULL pEthernetPortFull,PCOSA_DML_ETH_PORT_CONFIG pEthLink)
 {
 
-    UINT WanPort = 0;
     char buf[8] = {0};
-
-    if (pEthernetPortFull == NULL)
+    BOOL bUpstream = FALSE;
+    CHAR ifName[BUFLEN_32] = {0};
+    if (pEthernetPortFull == NULL && pEthLink != NULL)
     {
-        AnscTraceError(("[%s][%d] Invalid memeory! \n",__FUNCTION__, __LINE__));
-        return ANSC_STATUS_FAILURE;
-    }
+        /* Ethernet.X_RDK_Interface. */
+        snprintf(ifName, sizeof(ifName), "%s", pEthLink->Name);
+        bUpstream = pEthLink->Upstream;
+#ifdef FEATURE_RDKB_AUTO_PORT_SWITCH
+        COSA_DML_ETH_PORT_CAP_OPER ePortCapability = pEthLink->PortCapability;
 
-    /**
-     * Check request initiated for ethernet interface.
-     */
-    if (strncmp(pEthernetPortFull->StaticInfo.Name, WAN_ETHERNET_IFNAME, strlen(WAN_ETHERNET_IFNAME)) != 0)
-    {
-        AnscTraceInfo(("Update for wan.upstream is not requested for ethernet interface, not doing anything at this moment. \n"));
-        return ANSC_STATUS_SUCCESS;
-    }
-
-    if(0 != CcspHalExtSw_getEthWanPort(&WanPort))
-    {
-        AnscTraceInfo(("Failed to get WanPort[%u] in CPE \n",WanPort));
-    }
-
-    if(WanPort != pEthernetPortFull->Cfg.InstanceNumber)
-    {
-        AnscTraceInfo(("[%s][%d] WanPort[%u] from EthSW, InstanceNumber[%lu]! \n",__FUNCTION__, __LINE__,WanPort, pEthernetPortFull->Cfg.InstanceNumber));
-        if(0 != CcspHalExtSw_setEthWanPort(WanPort))
+        AnscTraceInfo(("[%s][%d] ifName[%s],ePortCapability[%d],bUpstream[%d]\n",__FUNCTION__,  __LINE__, ifName,ePortCapability,bUpstream));
+        if(ePortCapability == PORT_CAP_WAN_LAN)
         {
-            AnscTraceInfo(("Failed to set WanPort[%u] in CPE \n",WanPort));
+            if(0 != CcspHalExtSw_ethPortConfigure(ifName,bUpstream))
+            {
+                AnscTraceError(("[%s][%d] CcspHalExtSw_ethPortConfigure[Wan_lan Failed]\n",__FUNCTION__,  __LINE__));
+                return ANSC_STATUS_FAILURE;
+            }
+#endif
+            if(0!=CcspHalExtSw_setEthWanEnable(bUpstream))
+            {
+                AnscTraceError(("[%s][%d] CcspHalExtSw_setEthWanEnable[Wan_lan Failed]\n",__FUNCTION__,  __LINE__));
+                return ANSC_STATUS_FAILURE;
+            }
+            return ANSC_STATUS_SUCCESS;
+#ifdef FEATURE_RDKB_AUTO_PORT_SWITCH
+        }
+        else if(pEthLink->PortCapability == PORT_CAP_WAN )
+        {
+            if(0 != CcspHalExtSw_ethPortConfigure(ifName,TRUE))
+            {
+                AnscTraceError(("[%s][%d] CcspHalExtSw_ethPortConfigure[Wan Failed]\n",__FUNCTION__,  __LINE__));
+                return ANSC_STATUS_FAILURE;
+            }
+            if(0!=CcspHalExtSw_setEthWanEnable(TRUE))
+            {
+                AnscTraceError(("[%s][%d] CcspHalExtSw_setEthWanEnable[Wan Failed]\n",__FUNCTION__,  __LINE__));
+                return ANSC_STATUS_FAILURE;
+            }
+            return ANSC_STATUS_SUCCESS;
+        }
+        else
+        {
             return ANSC_STATUS_FAILURE;
         }
+#endif
     }
+    else if(pEthernetPortFull != NULL && pEthLink == NULL)
+    {
+        /* Ethernet.Interface. */
+        bUpstream = pEthernetPortFull->StaticInfo.bUpstream;
+        snprintf(ifName, sizeof(ifName), "%s", pEthernetPortFull->StaticInfo.Name);
 
-    if (0 != CcspHalExtSw_setEthWanEnable(enable))
-    {
-        AnscTraceInfo(("Failed to %s ETH_WAN_MODE in CPE \n", (enable ? "Enable" : "Disable")));
-        return ANSC_STATUS_FAILURE;
-    }
+        AnscTraceInfo(("[%s][%d] ifName[%s],bUpstream[%d]\n",__FUNCTION__,  __LINE__, ifName,bUpstream));
+        if(0!=CcspHalExtSw_setEthWanEnable(bUpstream))
+        {
+            AnscTraceError(("[%s][%d] CcspHalExtSw_setEthWanEnable[Failed]\n",__FUNCTION__,  __LINE__));
+            return ANSC_STATUS_FAILURE;
+        }
 
-    /** Update local storage with new value. **/
-    snprintf(buf, sizeof(buf), "%d", !enable);
-    if (syscfg_set(NULL, "Ethwan_Disable_Upstream", buf) != 0)
-    {
-        AnscTraceWarning(("syscfg_set failed\n"));
-        return ANSC_STATUS_FAILURE;
+        /** Update local storage with new value. **/
+        snprintf(buf, sizeof(buf), "%d", !bUpstream);
+
+        if (syscfg_set(NULL, "Ethwan_Disable_Upstream", buf) != 0)
+        {
+            AnscTraceWarning(("syscfg_set failed\n"));
+            return ANSC_STATUS_FAILURE;
+        }
+        if (syscfg_commit() != 0)
+        {
+            AnscTraceWarning(("syscfg_commit failed\n"));
+            return ANSC_STATUS_FAILURE;
+        }
+        return ANSC_STATUS_SUCCESS;
     }
-    if (syscfg_commit() != 0)
+    else
     {
-        AnscTraceWarning(("syscfg_commit failed\n"));
-        return ANSC_STATUS_FAILURE;
+        AnscTraceError(("[%s][%d] Invalid Input! \n",__FUNCTION__, __LINE__));
     }
-    return ANSC_STATUS_SUCCESS;
+    return ANSC_STATUS_FAILURE;
 }
 #endif

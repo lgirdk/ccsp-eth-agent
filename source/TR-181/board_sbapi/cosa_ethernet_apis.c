@@ -115,6 +115,10 @@
 
 #if defined (FEATURE_RDKB_WAN_MANAGER)
 #include "cosa_ethernet_manager.h"
+#ifdef FEATURE_RDKB_AUTO_PORT_SWITCH
+#include "ccsp_psm_helper.h"
+extern  char g_Subsystem[BUFLEN_32];
+#endif  //FEATURE_RDKB_AUTO_PORT_SWITCH
 #endif //FEATURE_RDKB_WAN_MANAGER
 
 #include "syscfg.h"
@@ -1908,7 +1912,15 @@ CosaDmlEthInit(
     char WanOEInterface[16] = {0};
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)phContext;
     int ifIndex;
+#if FEATURE_RDKB_WAN_MANAGER
+    char wanoe_ifname[WANOE_IFACENAME_LENGTH] = {0};
 
+    /* To initialize PhyStatus for Manager we set Down */
+    if (ANSC_STATUS_SUCCESS == GetWan_InterfaceName (wanoe_ifname, sizeof(wanoe_ifname))) 
+    {
+        CosaDmlEthSetPhyStatusForWanManager(wanoe_ifname, WANOE_IFACE_DOWN);
+    }
+#endif
     //ETH Port Init.
     CosaDmlEthPortInit((PANSC_HANDLE)pMyObject);
 #ifdef AUTOWAN_ENABLE 
@@ -2065,6 +2077,10 @@ CosaDmlEthPortInit(
     PCOSA_CONTEXT_LINK_OBJECT pEthCxtLink    = NULL;
     INT iTotalInterfaces = 0;
     INT iLoopCount = 0;
+#ifdef FEATURE_RDKB_AUTO_PORT_SWITCH
+    char infPortCapability[BUFLEN_32] = {0};
+    char acGetParamName[BUFLEN_256] = {0};
+#endif  //FEATURE_RDKB_AUTO_PORT_SWITCH
     iTotalInterfaces = CosaDmlEthGetTotalNoOfInterfaces();
     pMyObject->ulTotalNoofEthInterfaces = iTotalInterfaces;
     for (iLoopCount = 0; iLoopCount < iTotalInterfaces; iLoopCount++)
@@ -2089,6 +2105,29 @@ CosaDmlEthPortInit(
         // Get  Name.
         snprintf(pETHTemp->Name, sizeof(pETHTemp->Name), "eth%d", iLoopCount);
         snprintf(pETHTemp->LowerLayers, sizeof(pETHTemp->LowerLayers), "%s%d", ETHERNET_IF_LOWERLAYERS, iLoopCount + 1);
+#ifdef FEATURE_RDKB_AUTO_PORT_SWITCH
+
+    snprintf(acGetParamName, sizeof(acGetParamName), PSM_ETHAGENT_IF_PORTCAPABILITY, iLoopCount + 1);
+
+    CcspTraceInfo(("%s query[%s]\n",__FUNCTION__,acGetParamName));
+    Ethagent_GetParamValuesFromPSM(acGetParamName,infPortCapability,sizeof(infPortCapability));
+
+    CcspTraceInfo(("%s infPortCapability[%s]\n",__FUNCTION__,infPortCapability));
+
+    if(!strcmp(infPortCapability,"WAN_LAN"))
+    {
+        pETHTemp->PortCapability = PORT_CAP_WAN_LAN;
+    }
+    else if(!strcmp(infPortCapability,"WAN"))
+    {
+        pETHTemp->PortCapability = PORT_CAP_WAN;
+    }
+    else
+    {
+        pETHTemp->PortCapability = PORT_CAP_LAN;
+    }
+
+#endif  //FEATURE_RDKB_AUTO_PORT_SWITCH
         pEthCxtLink->hContext = (ANSC_HANDLE)pETHTemp;
         pEthCxtLink->bNew     = TRUE;
         pEthCxtLink->InstanceNumber = pETHTemp->ulInstanceNumber ;
@@ -3112,7 +3151,7 @@ ANSC_STATUS CosaDmlEthSetWanLinkStatusForWanManager(char *ifname, char *WanStatu
     {
        free(acSetParamValue);
     }
-    CcspTraceInfo(("%s %d Successfully notified %s event to WAN Agent for %s interface\n", __FUNCTION__, __LINE__, WanStatus, ifname));
+    CcspTraceInfo(("%s %d Successfully notified %s event to WANMANAGER for %s interface\n", __FUNCTION__, __LINE__, WanStatus, ifname));
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -3770,3 +3809,186 @@ void EthWanLinkDown_callback() {
 }
 #endif // defined (FEATURE_RDKB_WAN_MANAGER)
 #endif // defined (FEATURE_RDKB_WAN_MANAGER) || defined (FEATURE_RDKB_WAN_AGENT)
+#ifdef FEATURE_RDKB_WAN_UPSTREAM
+BOOL EthRdkInterfaceSetUpstream( PCOSA_DML_ETH_PORT_CONFIG pEthLink )
+{
+    int  ret = -1;
+    char wanoe_ifname[WANOE_IFACENAME_LENGTH] = {0};
+
+    if ( pEthLink == NULL )
+    {
+        AnscTraceError(("[%s][%d] Invalid pEthLink\n",__FUNCTION__, __LINE__));
+        return FALSE;
+    }
+
+    if (ANSC_STATUS_SUCCESS != GetWan_InterfaceName (wanoe_ifname, sizeof(wanoe_ifname)))
+    {
+        AnscTraceError(("[%s][%d] GetWan_InterfaceName Failed\n",__FUNCTION__, __LINE__));
+        return FALSE;
+    }
+
+    if (!strcmp(wanoe_ifname,pEthLink->Name))
+    {
+        ret =  CosaDmlSetWanOEMode(NULL, pEthLink );
+    }
+
+    AnscTraceInfo(("[%s][%d] X_RDK_Interface.UpStream set to [%s] [%s]\n",__FUNCTION__, __LINE__,
+        ((pEthLink->Upstream) ? "Enable" : "Disable"),((ret == 0)?"Success":"Failed")));
+    if(ret == 0)
+    {
+        return TRUE;
+    }
+
+     return FALSE;
+}
+
+BOOL EthInterfaceSetUpstream( PCOSA_DML_ETH_PORT_FULL pEthernetPortFull )
+{
+    int  ret = -1;
+
+    if(pEthernetPortFull == NULL)
+    {
+        AnscTraceError(("[%s][%d] Null Pointer\n",__FUNCTION__, __LINE__));
+        return FALSE;
+    }
+
+    AnscTraceInfo(("[%s][%d] EthName[%s] Upstream[%s]\n",__FUNCTION__, __LINE__, pEthernetPortFull->StaticInfo.Name, ((pEthernetPortFull->StaticInfo.bUpstream) ? "Enable" : "Disable")));
+
+    if (strncmp(pEthernetPortFull->StaticInfo.Name, WAN_ETHERNET_IFNAME, strlen(WAN_ETHERNET_IFNAME)) == 0)
+    {
+        ret = CosaDmlSetWanOEMode(pEthernetPortFull,  NULL);
+    }
+
+    AnscTraceInfo(("[%s][%d] Interface.UpStream set to %s status[%s]\n",__FUNCTION__, __LINE__,
+        ((pEthernetPortFull->StaticInfo.bUpstream) ? "Enable" : "Disable"),((ret == 0)?"Success":"Failed")));
+    if(ret == 0)
+    {
+        return TRUE;
+    }
+    return FALSE;
+}
+#endif //FEATURE_RDKB_WAN_UPSTREAM
+
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+#ifdef FEATURE_RDKB_AUTO_PORT_SWITCH
+int Ethagent_GetParamValuesFromPSM( char *pParamName, char *pReturnVal, int returnValLength )
+{
+    int     retPsmGet     = CCSP_SUCCESS;
+    CHAR   *param_value   = NULL;
+
+    /* Input Validation */
+    if( ( NULL == pParamName) || ( NULL == pReturnVal ) || ( 0 >= returnValLength ) )
+    {
+        CcspTraceError(("%s Invalid Input Parameters\n",__FUNCTION__));
+        return CCSP_FAILURE;
+    }
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle,g_Subsystem, pParamName, NULL, &param_value);
+    if (retPsmGet != CCSP_SUCCESS)
+    {
+        CcspTraceError(("%s Error %d reading %s\n", __FUNCTION__, retPsmGet, pParamName));
+    }
+    else
+    {
+        /* Copy DB Value */
+        snprintf(pReturnVal, returnValLength, "%s", param_value);
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(param_value);
+    }
+   return retPsmGet;
+}
+
+int Ethagent_SetParamValuesToPSM( char *pParamName, char *pParamVal )
+{
+    int     retPsmSet  = CCSP_SUCCESS;
+
+    /* Input Validation */
+    if( ( NULL == pParamName) || ( NULL == pParamVal ) )
+    {
+        CcspTraceError(("%s Invalid Input Parameters\n",__FUNCTION__));
+        return CCSP_FAILURE;
+    }
+
+    CcspTraceInfo(("%s  pParamName[%s] pParamVal[%s]\n",__FUNCTION__,pParamName,pParamVal));
+
+    retPsmSet = PSM_Set_Record_Value2(bus_handle,g_Subsystem, pParamName, ccsp_string, pParamVal);
+    if (retPsmSet != CCSP_SUCCESS)
+    {
+        CcspTraceError(("%s Error %d writing %s\n", __FUNCTION__, retPsmSet, pParamName));
+    }
+
+    return retPsmSet;
+}
+
+ANSC_STATUS CosaDmlEthPortSetPortCapability( PCOSA_DML_ETH_PORT_CONFIG pEthLink )
+{
+    char WanOEInterface[16] = {0};
+    char acGetParamName[256] = {0};
+    char portCapability[16] = {0};
+    int  ifIndex = -1;
+
+    if (pEthLink->Name == NULL)
+    {
+        CcspTraceError(("%s Invalid data \n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    if (ANSC_STATUS_SUCCESS == CosaDmlEthPortGetIndexFromIfName(pEthLink->Name, &ifIndex))
+    {
+        if (ANSC_STATUS_SUCCESS == CosaDmlGetWanOEInterfaceName(WanOEInterface, sizeof(WanOEInterface)))
+        {
+            if (0 == strcmp(pEthLink->Name, WanOEInterface))
+            {
+                if (pEthLink->PortCapability != PORT_CAP_LAN)
+                {
+                    if (0 == CosaDmlSetWanOEMode(NULL, pEthLink))
+                    {
+                        snprintf(acGetParamName, sizeof(acGetParamName), PSM_ETHAGENT_IF_PORTCAPABILITY, (ifIndex + 1));
+                        Ethagent_SetParamValuesToPSM(acGetParamName,(pEthLink->PortCapability == PORT_CAP_WAN)?"WAN":"WAN_LAN");
+                        CcspTraceInfo(("%s %d - [%s] PSM set \n", __FUNCTION__, __LINE__,acGetParamName));
+                    }
+                    else
+                    {
+                        CcspTraceError(("%s %d  CosaDmlSetWanOEMode failed \n",__FUNCTION__, __LINE__));
+                        return ANSC_STATUS_FAILURE;
+                    }
+                }
+                else
+                {
+                    CcspTraceWarning(("%s %d operation not allowed \n",__FUNCTION__, __LINE__));
+                    return ANSC_STATUS_FAILURE;
+                }
+            }
+            else
+            {
+                snprintf(acGetParamName, sizeof(acGetParamName), PSM_ETHAGENT_IF_PORTCAPABILITY, (ifIndex + 1));
+                CcspTraceInfo(("%s %d - [%s] PSM set \n", __FUNCTION__, __LINE__,acGetParamName));
+                if (pEthLink->PortCapability == PORT_CAP_LAN)
+                {
+                    strcpy(portCapability, "LAN");
+                }
+                else if (pEthLink->PortCapability == PORT_CAP_WAN)
+                {
+                    strcpy(portCapability, "WAN");
+                }
+                else
+                {
+                    strcpy(portCapability, "WAN_LAN");
+                }
+                Ethagent_SetParamValuesToPSM(acGetParamName,portCapability);
+            }
+        }
+        else
+        {
+            CcspTraceError(("%s %d  CosaDmlGetWanOEInterfaceName failed \n",__FUNCTION__, __LINE__));
+            return ANSC_STATUS_FAILURE;
+        }
+    }
+    else
+    {
+        CcspTraceError(("%s %d CosaDmlEthPortGetIndexFromIfName failed \n",__FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+    return ANSC_STATUS_SUCCESS;
+}
+#endif //FEATURE_RDKB_AUTO_PORT_SWITCH
+#endif //FEATURE_RDKB_WAN_MANAGER
