@@ -1585,6 +1585,13 @@ ANSC_STATUS CosaDmlConfigureEthWan(BOOL bEnable)
 #endif
         v_secure_system("ifconfig %s up", ethwan_ifname);
 
+        // Get Macaddress from platform hal and update into sysevent.
+        // eth_wan_mac event is used by paradous.
+        memset(wan_mac,0,sizeof(wan_mac));
+        platform_hal_GetBaseMacAddress(wan_mac);
+        v_secure_system("sysevent set eth_wan_mac %s", wan_mac);
+
+
         if (bridgemode > 0)
         {
 #if defined (ENABLE_WANMODECHANGE_NOREBOOT)
