@@ -166,6 +166,15 @@ extern  char g_Subsystem[BUFLEN_32];
 #define MACSEC_TIMEOUT_SEC    10
 #endif
 
+#ifdef WAN_FAILOVER_SUPPORTED
+#include "sysevent/sysevent.h"
+#include "cosa_apis.h"
+#include "plugin_main_apis.h"
+#include <sys/stat.h>
+int sysevent_fd;
+token_t sysevent_token;
+#endif
+
 int _getMac(char* ifName, char* mac){
 
     int skfd = -1;
@@ -706,6 +715,93 @@ BOOL isEthWanEnabled()
     return FALSE;
 }
 
+#ifdef WAN_FAILOVER_SUPPORTED
+static BOOLEAN isMTAblocked(char *ifname, int length,char *default_wan_ifname )
+{
+    if (ifname && isEthWanEnabled() )
+    {
+              if(strncmp(ifname,default_wan_ifname,length) != 0)
+             {
+			   CcspTraceWarning(("current_wan_ifname not equal to default_wan_ifname\n"));
+               return TRUE; 
+             }
+    }
+         return FALSE;
+}
+
+
+
+/*Checking the Current_wan_ifname Value*/
+void *SysEventHandlerThrd(void *data)
+{
+    UNREFERENCED_PARAMETER(data);
+    pthread_detach(pthread_self());
+    async_id_t interface_asyncid;
+    char default_wan_ifname[64];
+    int err;
+    char name[64] = {0}, ifname[64] = {0};
+    CcspTraceWarning(("%s started\n",__FUNCTION__));
+    sysevent_fd = sysevent_open("127.0.0.1", SE_SERVER_WELL_KNOWN_PORT, SE_VERSION, "MTAHandler", &sysevent_token);
+    sysevent_set_options(sysevent_fd, sysevent_token, "current_wan_ifname", TUPLE_FLAG_EVENT);
+    sysevent_setnotification(sysevent_fd, sysevent_token, "current_wan_ifname",  &interface_asyncid);
+    memset(default_wan_ifname, 0, sizeof(default_wan_ifname));
+    sysevent_get(sysevent_fd, sysevent_token, "wan_ifname", default_wan_ifname, sizeof(default_wan_ifname));
+    while(1)
+    {
+        async_id_t getnotification_asyncid;
+        memset(name,0,sizeof(name));
+        memset(ifname,0,sizeof(ifname));
+        int namelen = sizeof(name);
+        int vallen  = sizeof(ifname);
+        err = sysevent_getnotification(sysevent_fd, sysevent_token, name, &namelen, ifname , &vallen, &getnotification_asyncid);
+        if (err)
+        {
+            CcspTraceWarning(("sysevent_getnotification failed with error: %d %s\n", err,__FUNCTION__));
+            CcspTraceWarning(("sysevent_getnotification failed name: %s val : %s\n", name,ifname));
+            if ( 0 != v_secure_system("pidof syseventd")) {
+                CcspTraceWarning(("%s syseventd not running ,breaking the receive notification loop \n",__FUNCTION__));
+                break;
+            }
+        }
+        else
+        {
+           CcspTraceWarning(("%s Recieved notification event  %s for interface %s\n",__FUNCTION__,name,ifname));
+           if(isMTAblocked(ifname,vallen,default_wan_ifname))
+           {
+               CcspTraceWarning(("%s Making %s down\n",__FUNCTION__,ETHWAN_DOCSIS_INF_NAME));
+               v_secure_system("ifconfig %s down",ETHWAN_DOCSIS_INF_NAME); 
+           }
+           else
+           {
+               CcspTraceWarning(("%s Making %s up\n",__FUNCTION__,ETHWAN_DOCSIS_INF_NAME));
+               v_secure_system("ifconfig %s up",ETHWAN_DOCSIS_INF_NAME);
+           }
+        }
+    }
+    return NULL;
+}
+
+/* Start event handler thread. */
+static void TriggerSysEventMonitorThread(void)
+{
+    pthread_t EvtThreadId;
+    int iErrorCode = 0;
+
+    //Eth event handler thread
+    iErrorCode = pthread_create(&EvtThreadId, NULL,&SysEventHandlerThrd ,NULL);
+
+    if (0 != iErrorCode)
+    {
+        CcspTraceInfo(("%s %d - Failed to start Event Handler Thread EC:%d\n", __FUNCTION__, __LINE__, iErrorCode));
+    }
+    else
+    {
+        CcspTraceInfo(("%s %d - Event Handler Thread Started Successfully\n", __FUNCTION__, __LINE__));
+    }
+}
+#endif        
+        
+
 ANSC_STATUS CosaDmlIfaceFinalize(char *pValue, BOOL isAutoWanMode)
 {
     char wanPhyName[64] = {0};
@@ -936,6 +1032,7 @@ ANSC_STATUS CosaDmlIfaceFinalize(char *pValue, BOOL isAutoWanMode)
             v_secure_system("touch /tmp/autowan_iface_finalized");
         }
         UpdateInformMsgToWanMgr();
+    
     }
     return ANSC_STATUS_SUCCESS;
 }
@@ -1974,6 +2071,11 @@ CosaDmlEthInit(
     }
 #endif //AUTOWAN_ENABLE
 #endif
+
+    #ifdef WAN_FAILOVER_SUPPORTED
+      TriggerSysEventMonitorThread();
+    #endif
+
 #ifdef AUTOWAN_ENABLE 
     {
         PCOSA_DATAMODEL_ETH_WAN_AGENT pEthWanCfg = NULL;
