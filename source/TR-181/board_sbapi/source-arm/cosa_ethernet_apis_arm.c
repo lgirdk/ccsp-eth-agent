@@ -75,6 +75,7 @@
 #include "cosa_ethernet_apis.h"
 #include "secure_wrapper.h"
 #include "safec_lib_common.h"
+#include <sysevent/sysevent.h>
 
 #ifdef _COSA_SIM_
 /*Removed code for simulator, because this is usg platform*/
@@ -93,6 +94,9 @@
 #else
   #include "linux/if.h"
 #endif
+
+#define SE_IP_ADDR      "127.0.0.1"
+#define SE_PROG_NAME    "CcspEthAgent"
 
 static int saveID(char* ifName, char* pAlias, ULONG ulInstanceNumber);
 static int loadID(char* ifName, char* pAlias, ULONG* ulInstanceNumber);
@@ -321,10 +325,22 @@ for (i=0; i < g_EthernetIntNum; ++i) {
     /*  Iterate through Ethernet ports, assign LAN mac to downstream ports
         Keep track of the index of upstream ports to assign their MAC addresses
      */
+     CHAR lan_st[64]={0};
+     int sysevent_fd = -1;
+     token_t sysevent_token;
+     sysevent_fd = sysevent_open(SE_IP_ADDR, SE_SERVER_WELL_KNOWN_PORT, SE_VERSION, SE_PROG_NAME, &sysevent_token);
+     if(sysevent_fd >= 0)
+    {
+        sysevent_get(sysevent_fd, sysevent_token, "lan-status", lan_st, sizeof(lan_st));
+        CcspTraceInfo((" lan-status = %s\n", lan_st));
+        sysevent_close(sysevent_fd, sysevent_token);
+    }
     for (i=0; i < g_EthernetIntNum; ++i) {
         if (!g_EthIntSInfo[i].bUpstream) {
+            if (strcmp(lan_st,"started") == 0){
             if ( AnscSizeOfString(strMac) != 0 )
                 AnscCopyMemory(g_EthIntSInfo[i].MacAddress, strMac, 6);
+        }
         }
         else {
             if (AnscEqualString(g_EthIntSInfo[i].Name, DMSB_ETH_IF_NAME_DFT_WanRouting, TRUE))
@@ -351,7 +367,7 @@ for (i=0; i < g_EthernetIntNum; ++i) {
     if ( (-1 != _getMac("erouter0", strMac)))
 #endif
                 AnscCopyMemory(g_EthIntSInfo[wanIndex].MacAddress, strMac, 6);
-
+                
 #if !defined(_HUB4_PRODUCT_REQ_)
     if ( (-1 != _getMac("lbr0", strMac)) )
                 AnscCopyMemory(g_EthIntSInfo[lbrIndex].MacAddress, strMac, 6);
