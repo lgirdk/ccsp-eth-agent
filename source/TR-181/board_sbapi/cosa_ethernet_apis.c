@@ -138,13 +138,21 @@ extern  char g_Subsystem[BUFLEN_32];
 #if defined (FEATURE_RDKB_WAN_AGENT) || defined(FEATURE_RDKB_WAN_MANAGER)
 #include "cosa_ethernet_manager.h"
 #if defined (FEATURE_RDKB_WAN_MANAGER)
-#define TOTAL_NUMBER_OF_INTERNAL_INTERFACES 4
+#if defined (_CBR2_PRODUCT_REQ_)
+#define TOTAL_NUMBER_OF_INTERNAL_INTERFACES 6
+#else
+#define TOTAL_NUMBER_OF_INTERNAL_INTERFACES 4 
+#endif
 #define DATAMODEL_PARAM_LENGTH 256
 #define WANOE_IFACENAME_LENGTH 32
 #endif //FEATURE_RDKB_WAN_MANAGER
 #define WANOE_IFACE_UP "Up"
 #define WANOE_IFACE_DOWN "Down"
-#define TOTAL_NUMBER_OF_INTERFACES 4
+#if defined (_CBR2_PRODUCT_REQ_)
+#define TOTAL_NUMBER_OF_INTERFACES 6 
+#else
+#define TOTAL_NUMBER_OF_INTERFACES 4 
+#endif
 #define COSA_ETH_EVENT_QUEUE_NAME "/ETH_event_queue"
 #define MAX_QUEUE_MSG_SIZE (512) 
 #define MAX_QUEUE_LENGTH (100)
@@ -2214,6 +2222,9 @@ ANSC_STATUS EthWanBridgeInit(PCOSA_DATAMODEL_ETHERNET pEthernet)
 
 #ifdef INTEL_PUMA7
     v_secure_system("ifconfig %s up",ethwan_ifname);
+#endif
+#if defined (_CBR2_PRODUCT_REQ_)
+    v_secure_system("ip link set %s up",ethwan_ifname);
 #endif
     CcspTraceError(("Func %s Exited\n",__FUNCTION__));
     return ANSC_STATUS_SUCCESS;
