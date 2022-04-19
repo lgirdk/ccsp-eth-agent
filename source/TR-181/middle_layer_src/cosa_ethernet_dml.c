@@ -705,7 +705,6 @@ EthernetWAN_SetParamStringValue
             {
                 pEthWanCfgObj->wanOperState = WAN_OPER_STATE_NONE;
             }
-
         }
 #endif
         rc = strcmp_s("DOCSIS",strlen("DOCSIS"),pString,&ind);
@@ -737,7 +736,17 @@ EthernetWAN_SetParamStringValue
 		CcspTraceWarning(("SelectedOperationalMode - %s is not valid\n", pString));
 		return FALSE;
 	}
-
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+    if (pEthWanCfgObj)
+    {
+        if (syscfg_get(NULL, "selected_wan_mode", buf, sizeof(buf)) == 0)
+        {
+            pEthWanCfgObj->PrevSelMode = atoi(buf);
+        }
+        rc =  memset_s(buf,sizeof(buf), 0, sizeof(buf));
+        ERR_CHK(rc);
+    }
+#endif
         snprintf(buf, sizeof(buf), "%d", wan_mode);
 	if (syscfg_set(NULL, "selected_wan_mode", buf) != 0)
         {
@@ -846,7 +855,8 @@ BOOL EthernetWAN_SetParamBoolValue
     ERR_CHK(rc);
     if ((!ind) && (rc == EOK))
     {
-        CosaDmlConfigureEthWan(bValue);
+        if (ANSC_STATUS_SUCCESS != CosaDmlConfigureEthWan(bValue))
+            return FALSE;
         return TRUE;
     }
 #else
