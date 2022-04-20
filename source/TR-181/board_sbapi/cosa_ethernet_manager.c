@@ -47,7 +47,7 @@ typedef enum
     ETH_IF_WAN_VALIDATED
 } ethInterfaceState_t;
 
-static void *CcspEthManager_StateMachineThread(void *arg);
+static void *CcspEthManager_StateMachineThread();
 
 /* ---- Global Variables ------------------------------------ */
 ethSmState_t geCurrentState = STATE_EXIT;
@@ -56,13 +56,16 @@ ethInterfaceState_t geInterfaceState = ETH_IF_DOWN; // This stores the connectio
 fd_set readFdsMaster;
 static fd_set errorFdsMaster;
 int maxFd = 0;
+static int CcspEthManager_StateMachineThread_start = FALSE;
 
+PETH_SM_PRIVATE_INFO pstInfo = NULL;
 /* ---- Private Function Prototypes -------------------------- */
 /* STATES */
 static ethSmState_t State_EthDisconnected(PETH_SM_PRIVATE_INFO pstInfo);    // waits for Ethernet to be physically connected.
 static ethSmState_t State_EthValidatingLink(PETH_SM_PRIVATE_INFO pstInfo);  // waits for Ethernet Link to be validated
 static ethSmState_t State_EthVLANConfiguring(PETH_SM_PRIVATE_INFO pstInfo); // waits for VLAN to be configure on Ethernet Link
 static ethSmState_t State_EthWanLinkUp(PETH_SM_PRIVATE_INFO pstInfo);       // monitors the Ethernet interface
+static ethSmState_t State_Exit(PETH_SM_PRIVATE_INFO pstInfo);       // monitors the Ethernet Exit state
 
 /* TRANSITIONS */
 static ethSmState_t Transition_Start(void);                                       // initiliases the state machine.
@@ -78,7 +81,7 @@ static char *PrintEnumToString(const ethSmState_t state); // Convert enum state 
 void CosaEthManager_Start_StateMachine(PETH_SM_PRIVATE_INFO pstMPrivateInfo)
 {
     pthread_t EthStateMachineThread;
-    PETH_SM_PRIVATE_INFO pstPInfo = NULL;
+    //PETH_SM_PRIVATE_INFO pstInfo = NULL;
     int iErrorCode = 0;
 
     if (pstMPrivateInfo == NULL)
@@ -86,19 +89,27 @@ void CosaEthManager_Start_StateMachine(PETH_SM_PRIVATE_INFO pstMPrivateInfo)
         CcspTraceError(("Invalid argument \n"));
         return;
     }
+
     //Allocate the memory and pass to the thread.
-    pstPInfo = (PETH_SM_PRIVATE_INFO)malloc(sizeof(ETH_SM_PRIVATE_INFO));
-    if (NULL == pstPInfo)
+    pstInfo = (PETH_SM_PRIVATE_INFO)malloc(sizeof(ETH_SM_PRIVATE_INFO));
+    if (NULL == pstInfo)
     {
         CcspTraceError(("%s %d Failed to allocate memory\n", __FUNCTION__, __LINE__));
         return;
     }
 
     //Copy buffer.
-    memcpy(pstPInfo, pstMPrivateInfo, sizeof(ETH_SM_PRIVATE_INFO));
+    memcpy(pstInfo, pstMPrivateInfo, sizeof(ETH_SM_PRIVATE_INFO));
+
+    CcspTraceInfo(("%s %d - ETH State Machine Thread Interface Name: %s\n", __FUNCTION__, __LINE__, pstInfo->Name));
+
+    if(CcspEthManager_StateMachineThread_start == TRUE){
+        CcspTraceInfo(("%s %d - ETH State Machine Thread already running, not starting new\n", __FUNCTION__, __LINE__));
+	return;
+    }
 
     //ETH state machine thread
-    iErrorCode = pthread_create(&EthStateMachineThread, NULL, &CcspEthManager_StateMachineThread, (void *)pstPInfo);
+    iErrorCode = pthread_create(&EthStateMachineThread, NULL, &CcspEthManager_StateMachineThread, NULL);
 
     if (0 != iErrorCode)
     {
@@ -106,12 +117,13 @@ void CosaEthManager_Start_StateMachine(PETH_SM_PRIVATE_INFO pstMPrivateInfo)
     }
     else
     {
+        CcspEthManager_StateMachineThread_start = TRUE;
         CcspTraceInfo(("%s %d - ETH State Machine Thread Started Successfully\n", __FUNCTION__, __LINE__));
     }
 }
 
 /* CcspEthManager_StateMachineThread() */
-static void *CcspEthManager_StateMachineThread(void *arg)
+static void *CcspEthManager_StateMachineThread()
 {
     // event handler
     int n = 0;
@@ -119,10 +131,10 @@ static void *CcspEthManager_StateMachineThread(void *arg)
     fd_set errorFds;
     struct timeval tv;
 
-    PETH_SM_PRIVATE_INFO pstInfo = (PETH_SM_PRIVATE_INFO)arg;
+    //pstInfo = (PETH_SM_PRIVATE_INFO)arg;
     if (pstInfo == NULL)
     {
-        CcspTraceError(("%s %d Invalid Argument \n", __FUNCTION__, __LINE__));
+        CcspTraceError(("%s %d Invalid Argument pstInfo = NULL \n", __FUNCTION__, __LINE__));
         pthread_exit(NULL);
     }
 
@@ -183,6 +195,11 @@ static void *CcspEthManager_StateMachineThread(void *arg)
         }
 
         case STATE_EXIT:
+        {
+            geCurrentState = State_Exit(pstInfo);
+            break;
+        }
+
         default:
         {
             bRunning = false;
@@ -193,12 +210,42 @@ static void *CcspEthManager_StateMachineThread(void *arg)
             }
 
             CcspTraceInfo(("%s %d - Exit from state machine\n", __FUNCTION__, __LINE__));
-            pthread_exit(NULL);
         }
         }
     }
 
+    CcspTraceInfo(("%s %d - Exit from state machine\n", __FUNCTION__, __LINE__));
+    CcspEthManager_StateMachineThread_start = FALSE;
+    if (NULL != pstInfo)
+    {
+         free(pstInfo);
+         pstInfo = NULL;
+    }
+
+    pthread_exit(NULL);
+
     return NULL;
+}
+
+static ethSmState_t State_Exit(PETH_SM_PRIVATE_INFO pstInfo)
+{
+
+    COSA_DML_ETH_PORT_GLOBAL_CONFIG stGlobalInfo;
+
+    memset(&stGlobalInfo, 0, sizeof(stGlobalInfo));
+
+    if (ANSC_STATUS_SUCCESS != CosaDmlEthPortGetCopyOfGlobalInfoForGivenIfName(pstInfo->Name, &stGlobalInfo))
+    {
+        CcspTraceError(("Failed to get the global link status info \n"));
+        return STATE_EXIT;
+    }
+
+    if (TRUE == stGlobalInfo.Upstream)
+    {
+        return STATE_ETH_DISCONNECTED;
+    }
+
+    return STATE_EXIT;
 }
 
 static ethSmState_t State_EthDisconnected(PETH_SM_PRIVATE_INFO pstInfo)
@@ -299,7 +346,7 @@ static ethSmState_t State_EthWanLinkUp(PETH_SM_PRIVATE_INFO pstInfo)
 static ethSmState_t Transition_Start()
 {
     CcspTraceInfo(("[%s] State = [%s]\n", __FUNCTION__, PrintEnumToString(geCurrentState)));
-    return STATE_ETH_DISCONNECTED;
+    return STATE_EXIT;
 }
 
 static ethSmState_t Transition_EthPhyInterfaceUp(PETH_SM_PRIVATE_INFO pstInfo)
@@ -417,7 +464,7 @@ static ethSmState_t Transition_EthPhyInterfaceDown(PETH_SM_PRIVATE_INFO pstInfo)
      * TODO: Move base  interface into LAN bridge.
      */
 
-    return STATE_ETH_DISCONNECTED;
+    return STATE_EXIT;
 }
 
 static ethSmState_t TransitionExit(PETH_SM_PRIVATE_INFO pstInfo)
@@ -436,7 +483,6 @@ static ethSmState_t TransitionExit(PETH_SM_PRIVATE_INFO pstInfo)
      *  1. Exit fro state machine
      */
 
-    CcspTraceInfo(("%s %d - RDKB_ETH_CFG_CHANGED:ETH state machine stopped\n", __FUNCTION__, __LINE__));
     return STATE_EXIT;
 }
 
