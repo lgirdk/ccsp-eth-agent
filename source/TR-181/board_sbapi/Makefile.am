@@ -26,4 +26,4 @@ libCcspEthAgent_board_sbapi_la_CPPFLAGS = -I$(top_srcdir)/source/TR-181/include 
 libCcspEthAgent_board_sbapi_la_SOURCES = cosa_ethernet_apis.c eth_hal_interface.c ../middle_layer_src/cosa_apis_util.c ../middle_layer_src/cosa_apis_busutil.c cosa_ethernet_manager.c
 libCcspEthAgent_board_sbapi_la_SOURCES += source-arm/cosa_ethernet_apis_arm.c
 
-libCcspEthAgent_board_sbapi_la_LDFLAGS = -lccsp_common -lhal_ethsw -lhal_platform -llmapi -lsecure_wrapper -lrt
+libCcspEthAgent_board_sbapi_la_LDFLAGS = -lccsp_common -lutapi -lutctx -lhal_ethsw -lhal_platform -llmapi -lprivilege -lsecure_wrapper -lrt
