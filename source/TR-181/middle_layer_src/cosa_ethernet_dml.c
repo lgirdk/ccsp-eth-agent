@@ -1605,7 +1605,7 @@ EthRdkInterface_GetParamStringValue
            return 1;
        }
     }
-    return FALSE;
+    return -1;
 }
 
 
@@ -2205,7 +2205,7 @@ EthInterface_GetParamStringValue
            return 1;
        }
     }
-    return FALSE;
+    return -1;
 }
 
 /**********************************************************************
