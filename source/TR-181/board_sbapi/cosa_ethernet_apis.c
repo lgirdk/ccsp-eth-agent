@@ -380,9 +380,10 @@ typedef struct _CosaETHMSGQWanData
     COSA_DML_ETH_LINK_STATUS LinkStatus;
 } CosaETHMSGQWanData;
 
-pthread_t bootInformThreadId;
-PCOSA_DML_ETH_PORT_GLOBAL_CONFIG gpstEthGInfo = NULL;
+static pthread_t bootInformThreadId;
+static PCOSA_DML_ETH_PORT_GLOBAL_CONFIG gpstEthGInfo = NULL;
 static pthread_mutex_t gmEthGInfo_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 static ANSC_STATUS CosDmlEthPortPrepareGlobalInfo();
 static ANSC_STATUS CosaDmlEthGetParamValues(char *pComponent, char *pBus, char *pParamName, char *pReturnVal);
 static ANSC_STATUS CosaDmlEthGetParamNames(char *pComponent, char *pBus, char *pParamName, char a2cReturnVal[][256], int *pReturnSize);
@@ -405,7 +406,7 @@ static ANSC_STATUS CosaDmlEthSetParamValues(char *pComponent, char *pBus, char *
 static ANSC_STATUS CosaDmlEthSetParamValues(const char *pComponent, const char *pBus, const char *pParamName, const char *pParamVal, enum dataType_e type, unsigned int bCommitFlag);
 static ANSC_STATUS DmlEthCheckIfaceConfiguredAsPPPoE( char *ifname, BOOL *isPppoeIface);
 static ANSC_STATUS  GetWan_InterfaceName (char* wanoe_ifacename, int length);
-INT gTotal = TOTAL_NUMBER_OF_INTERNAL_INTERFACES;
+static INT gTotal = TOTAL_NUMBER_OF_INTERNAL_INTERFACES;
 #endif //FEATURE_RDKB_WAN_MANAGER
 
 void Notify_To_LMLite(Eth_host_t *host)
