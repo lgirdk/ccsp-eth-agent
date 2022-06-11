@@ -3121,7 +3121,7 @@ INT CosaDmlEthPortLinkStatusCallback(CHAR *ifname, CHAR *state)
 
 static ANSC_STATUS CosaDmlEthPortGetIndexFromIfName(char *ifname, INT *IfIndex)
 {
-    INT iTotalInterfaces = CosaDmlEthGetTotalNoOfInterfaces();
+    INT iTotalInterfaces;
     INT iLoopCount;
 
     if (NULL == ifname || IfIndex == NULL || gpstEthGInfo == NULL)
@@ -3132,6 +3132,9 @@ static ANSC_STATUS CosaDmlEthPortGetIndexFromIfName(char *ifname, INT *IfIndex)
 
     *IfIndex = -1;
     pthread_mutex_lock(&gmEthGInfo_mutex);
+
+    iTotalInterfaces = CosaDmlEthGetTotalNoOfInterfaces();
+
     for (iLoopCount = 0; iLoopCount < iTotalInterfaces; iLoopCount++)
     {
         if ((NULL != &gpstEthGInfo[iLoopCount]) && (0 == strcmp(gpstEthGInfo[iLoopCount].Name, ifname)))
