@@ -206,6 +206,33 @@ Interface_GetParamBoolValue
         return TRUE;
     }
 
+    if (strcmp(ParamName, "EEECapability") == 0)
+    {
+        UINT PortIdx = getPortID(pEthernetPortFull->Cfg.InstanceNumber);
+        if (PortIdx > 0)
+        {
+            *pBool = TRUE;
+        }
+        else
+        {
+            *pBool = FALSE;
+        }
+        return TRUE;
+    }
+
+    if (strcmp(ParamName, "EEEEnable") == 0)
+    {
+        if (CosaDmlEEEPortGetPsmCfg(pEthernetPortFull->Cfg.InstanceNumber, &pEthernetPortFull->Cfg) == CCSP_SUCCESS)
+        {
+            *pBool = pEthernetPortFull->Cfg.bEEEEnabled;
+        }
+        else
+        {
+            *pBool = FALSE;
+        }
+
+        return TRUE;
+    }
 
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
@@ -556,6 +583,17 @@ Interface_SetParamBoolValue
     {
         /* save update to backup */
         pEthernetPortFull->Cfg.bEnabled = bValue;
+        return TRUE;
+    }
+
+    if (strcmp(ParamName, "EEEEnable") == 0)
+    {
+        // Call HAL API and on success store the bValue in PSM.
+        pEthernetPortFull->Cfg.bEEEEnabled = bValue;
+        if (CosaDmlEEEPortSetCfg(pEthernetPortFull->Cfg.InstanceNumber, &pEthernetPortFull->Cfg)== ANSC_STATUS_SUCCESS)
+        {
+            CosaDmlEEEPortSetPsmCfg(pEthernetPortFull->Cfg.InstanceNumber, &pEthernetPortFull->Cfg);
+        }
         return TRUE;
     }
 

@@ -95,6 +95,9 @@
   #include "linux/if.h"
 #endif
 
+extern ANSC_HANDLE bus_handle;
+extern char g_Subsystem[32];
+
 #define SE_IP_ADDR      "127.0.0.1"
 #define SE_PROG_NAME    "CcspEthAgent"
 
@@ -442,6 +445,51 @@ CosaDmlEthPortSetValues
     return ANSC_STATUS_SUCCESS;
 }
 
+ANSC_STATUS CosaDmlEEEPortGetCfg (ULONG ulInstanceNumber, PCOSA_DML_ETH_PORT_CFG pCfg)
+{
+    int portIdx = getPortID(ulInstanceNumber);
+
+    if ((portIdx == CCSP_HAL_ETHSW_EthPort1) ||
+        (portIdx == CCSP_HAL_ETHSW_EthPort2) ||
+        (portIdx == CCSP_HAL_ETHSW_EthPort3) ||
+        (portIdx == CCSP_HAL_ETHSW_EthPort4))
+    {
+        BOOLEAN enable = FALSE;
+
+        if (CcspHalEthSwGetEEEPortEnable(portIdx, &enable) == RETURN_OK)
+        {
+            pCfg->bEEEEnabled = enable;
+
+            return ANSC_STATUS_SUCCESS;
+        }
+    }
+
+    pCfg->bEEEEnabled = FALSE;
+
+    return ANSC_STATUS_FAILURE;
+}
+
+ANSC_STATUS CosaDmlEEEPortSetCfg (ULONG ulInstanceNumber, PCOSA_DML_ETH_PORT_CFG pCfg)
+{
+    ANSC_STATUS returnStatus = ANSC_STATUS_FAILURE;
+    int portIdx;
+
+    portIdx = getPortID(ulInstanceNumber);
+
+    if ((portIdx == CCSP_HAL_ETHSW_EthPort1) ||
+        (portIdx == CCSP_HAL_ETHSW_EthPort2) ||
+        (portIdx == CCSP_HAL_ETHSW_EthPort3) ||
+        (portIdx == CCSP_HAL_ETHSW_EthPort4))
+    {
+        if (CcspHalEthSwSetEEEPortEnable(portIdx, pCfg->bEEEEnabled) == RETURN_OK)
+        {
+            returnStatus = ANSC_STATUS_SUCCESS;
+        }
+    }
+
+    return returnStatus;
+}
+
 ANSC_STATUS
 CosaDmlEthPortSetCfg
     (
@@ -485,6 +533,8 @@ CosaDmlEthPortSetCfg
         saveID(pEthIf->sInfo->Name, pCfg->Alias, pCfg->InstanceNumber);
     }
 
+    CosaDmlEEEPortSetCfg(pCfg->InstanceNumber, pCfg);
+
     return ANSC_STATUS_SUCCESS;
 }
 
@@ -519,6 +569,54 @@ CosaDmlEthPortGetCfg
     pCfg->InstanceNumber = pEthIf->instanceNumber;
 
     return ANSC_STATUS_SUCCESS;
+}
+
+ANSC_STATUS CosaDmlEEEPortGetPsmCfg (ULONG ulInstanceNumber, PCOSA_DML_ETH_PORT_CFG pCfg)
+{
+    char recName[50];
+    char *strValue = NULL;
+    int retPsmGet;
+    int portIdx;
+
+    portIdx = getPortID(ulInstanceNumber);
+
+    if ((portIdx < CCSP_HAL_ETHSW_EthPort1) || (portIdx > CCSP_HAL_ETHSW_EthPort4))
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+
+    snprintf(recName, sizeof(recName), "Device.Ethernet.Interface.%d.EEEEnable", portIdx);
+    retPsmGet = PSM_Get_Record_Value2(bus_handle, g_Subsystem, recName, NULL, &strValue);
+    if ((retPsmGet == CCSP_SUCCESS) && (strValue != NULL))
+    {
+        pCfg->bEEEEnabled = (strcasecmp(strValue, "true") == 0) ? TRUE : FALSE;
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
+
+    return retPsmGet;
+}
+
+ANSC_STATUS CosaDmlEEEPortSetPsmCfg (ULONG ulInstanceNumber, PCOSA_DML_ETH_PORT_CFG pCfg)
+{
+    char recName[50];
+    int retPsmSet;
+    int portIdx;
+
+    portIdx = getPortID(ulInstanceNumber);
+
+    if ((portIdx < CCSP_HAL_ETHSW_EthPort1) || (portIdx > CCSP_HAL_ETHSW_EthPort4))
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+
+    snprintf(recName, sizeof(recName), "Device.Ethernet.Interface.%d.EEEEnable", portIdx);
+    retPsmSet = PSM_Set_Record_Value2(bus_handle, g_Subsystem, recName, ccsp_string, pCfg->bEEEEnabled ? "true" : "false");
+    if (retPsmSet != CCSP_SUCCESS)
+    {
+        CcspTraceWarning(("%s - PSM_Set_Record_Value2 error %d setting %s\n", __FUNCTION__, retPsmSet, recName));
+    }
+
+    return retPsmSet;
 }
 
 ANSC_STATUS
@@ -834,6 +932,11 @@ int puma6_getSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg)
                 pcfg->DuplexMode = COSA_DML_ETH_DUPLEX_Auto;
                 break;
             }
+        }
+        //Get value from PSM and set in HAL
+        if (CosaDmlEEEPortGetPsmCfg(port,pcfg) == CCSP_SUCCESS)
+        {
+            CosaDmlEEEPortSetCfg(port,pcfg);
         }
     }
     else
@@ -1269,6 +1372,19 @@ PCosaEthInterfaceInfo getIF(const ULONG instanceNumber) {
         return NULL;
     }
     return g_EthEntries + i;
+}
+
+int getPortID(const ULONG instanceNumber)
+{
+    int PortIdx = 0;
+    PCosaEthInterfaceInfo pEthIf = getIF(instanceNumber);
+
+    if ((pEthIf != NULL) && (pEthIf->hwid != NULL))
+    {
+        PortIdx = *((PCCSP_HAL_ETHSW_PORT)pEthIf->hwid);
+    }
+
+    return PortIdx;
 }
 
 static int saveID(char* ifName, char* pAlias, ULONG ulInstanceNumber) {

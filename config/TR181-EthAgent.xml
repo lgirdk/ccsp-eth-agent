@@ -263,6 +263,18 @@
          <syntax>uint32/mapped</syntax>
          <writable>true</writable>
        </parameter>
+        <parameter>
+            <name>EEECapability</name>
+            <type>boolean</type>
+            <syntax>bool</syntax>
+            <writable>false</writable>
+          </parameter>
+          <parameter>
+            <name>EEEEnable</name>
+            <type>boolean</type>
+            <syntax>bool</syntax>
+            <writable>true</writable>
+          </parameter>
        <parameter>
          <name>X_CISCO_COM_AssociatedDevice</name>
          <type>string</type>
