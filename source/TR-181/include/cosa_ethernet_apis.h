@@ -385,6 +385,7 @@ _COSA_DML_ETH_PORT_CFG
 
     BOOLEAN                         bEnabled;
     BOOLEAN                         bEnabledChanged;
+    BOOLEAN                         bEEEEnabled;
     LONG                            MaxBitRate;
     COSA_DML_ETH_DUPLEX_MODE        DuplexMode;
 }
@@ -435,6 +436,10 @@ COSA_DML_ETH_PORT_FULL, *PCOSA_DML_ETH_PORT_FULL;
 ANSC_STATUS CosaDmlEthPortSetCfg ( ANSC_HANDLE hContext, PCOSA_DML_ETH_PORT_CFG pCfg );
 
 ANSC_STATUS CosaDmlEthPortGetCfg ( ANSC_HANDLE hContext, PCOSA_DML_ETH_PORT_CFG pCfg );
+
+ANSC_STATUS CosaDmlEEEPortGetPsmCfg(ULONG ulInstanceNumber, PCOSA_DML_ETH_PORT_CFG pCfg);
+
+ANSC_STATUS CosaDmlEEEPortSetPsmCfg(ULONG ulInstanceNumber, PCOSA_DML_ETH_PORT_CFG pCfg);
 
 ANSC_STATUS CosaDmlEthPortSetValues ( ANSC_HANDLE hContext, ULONG ulIndex, ULONG ulInstanceNumber, char* pAlias );
 
