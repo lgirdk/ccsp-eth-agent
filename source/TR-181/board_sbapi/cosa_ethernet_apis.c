@@ -2942,12 +2942,13 @@ ANSC_STATUS CosaDmlEthPortSetName(char *ifname, char *newIfname)
         CcspTraceError(("%s Failed to get index for %s\n", __FUNCTION__,ifname));
         return ANSC_STATUS_FAILURE;
     }
-    if (IfIndex >= TOTAL_NUMBER_OF_INTERNAL_INTERFACES)
+    pthread_mutex_lock(&gmEthGInfo_mutex);
+    if (IfIndex >= CosaDmlEthGetTotalNoOfInterfaces())
     {
-        CcspTraceError(("%s Invalid or Default index[%d]\n", __FUNCTION__, IfIndex));
+        pthread_mutex_unlock(&gmEthGInfo_mutex);
+        CcspTraceError(("%s Invalid index[%d]\n", __FUNCTION__, IfIndex));
         return ANSC_STATUS_FAILURE;
     }
-    pthread_mutex_lock(&gmEthGInfo_mutex);
     strncpy(gpstEthGInfo[IfIndex].Name,newIfname, sizeof(gpstEthGInfo[IfIndex].Name) - 1);
     pthread_mutex_unlock(&gmEthGInfo_mutex);
     CcspTraceError(("%s name[%s] updated successfully[%d]\n", __FUNCTION__, newIfname,IfIndex));
