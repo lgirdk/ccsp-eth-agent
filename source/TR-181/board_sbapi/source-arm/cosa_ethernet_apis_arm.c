@@ -442,6 +442,51 @@ CosaDmlEthPortSetValues
     return ANSC_STATUS_SUCCESS;
 }
 
+ANSC_STATUS CosaDmlEEEPortGetCfg (ULONG ulInstanceNumber, PCOSA_DML_ETH_PORT_CFG pCfg)
+{
+    ANSC_STATUS returnStatus = ANSC_STATUS_FAILURE;
+    BOOLEAN enable = FALSE;
+    int portIdx;
+
+    portIdx = getPortID(ulInstanceNumber);
+
+    if ((portIdx == CCSP_HAL_ETHSW_EthPort1) ||
+        (portIdx == CCSP_HAL_ETHSW_EthPort2) ||
+        (portIdx == CCSP_HAL_ETHSW_EthPort3) ||
+        (portIdx == CCSP_HAL_ETHSW_EthPort4))
+    {
+        if (CcspHalEthSwGetEEEPortEnable(portIdx, &enable) == RETURN_OK)
+        {
+            returnStatus = ANSC_STATUS_SUCCESS;
+        }
+    }
+
+    pCfg->bEEEEnabled = enable;
+
+    return returnStatus;
+}
+
+ANSC_STATUS CosaDmlEEEPortSetCfg (ULONG ulInstanceNumber, PCOSA_DML_ETH_PORT_CFG pCfg)
+{
+    ANSC_STATUS returnStatus = ANSC_STATUS_FAILURE;
+    int portIdx;
+
+    portIdx = getPortID(ulInstanceNumber);
+
+    if ((portIdx == CCSP_HAL_ETHSW_EthPort1) ||
+        (portIdx == CCSP_HAL_ETHSW_EthPort2) ||
+        (portIdx == CCSP_HAL_ETHSW_EthPort3) ||
+        (portIdx == CCSP_HAL_ETHSW_EthPort4))
+    {
+        if (CcspHalEthSwSetEEEPortEnable(portIdx, pCfg->bEEEEnabled) == RETURN_OK)
+        {
+            returnStatus = ANSC_STATUS_SUCCESS;
+        }
+    }
+
+    return returnStatus;
+}
+
 ANSC_STATUS
 CosaDmlEthPortSetCfg
     (
@@ -484,6 +529,8 @@ CosaDmlEthPortSetCfg
         AnscCopyString(pEthIf->Alias, pCfg->Alias);
         saveID(pEthIf->sInfo->Name, pCfg->Alias, pCfg->InstanceNumber);
     }
+
+    CosaDmlEEEPortSetCfg(pCfg->InstanceNumber, pCfg);
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -1269,6 +1316,19 @@ PCosaEthInterfaceInfo getIF(const ULONG instanceNumber) {
         return NULL;
     }
     return g_EthEntries + i;
+}
+
+int getPortID(const ULONG instanceNumber)
+{
+    int PortIdx = 0;
+    PCosaEthInterfaceInfo pEthIf = getIF(instanceNumber);
+
+    if ((pEthIf != NULL) && (pEthIf->hwid != NULL))
+    {
+        PortIdx = *((PCCSP_HAL_ETHSW_PORT)pEthIf->hwid);
+    }
+
+    return PortIdx;
 }
 
 static int saveID(char* ifName, char* pAlias, ULONG ulInstanceNumber) {
