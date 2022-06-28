@@ -278,5 +278,5 @@ int IPv4Addr_IsClassD(uint32_t addr);
 int vsystem(const char *fmt, ...);
 
 int get_if_hwaddr(const char *ifname, char *mac, size_t size);
-
+int IsFileExists(char *file_name);
 #endif
