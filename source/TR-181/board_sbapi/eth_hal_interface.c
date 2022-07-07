@@ -30,7 +30,7 @@
 #define DNSMASQ_CACHE "/tmp/dns.txt"
 #define DNSMASQ_FILE "/nvram/dnsmasq.leases"
 #endif /*_SR213_PRODUCT_REQ_*/
-#define ETH_POLLING_PERIOD 180
+#define ETH_POLLING_PERIOD 20
 #define ETH_NODE_HASH_SIZE 256
 
 CcspHalExtSw_ethAssociatedDevice_callback AssociatedDevice_callback = NULL;
