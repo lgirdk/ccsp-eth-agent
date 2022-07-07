@@ -28,7 +28,7 @@
 #define ARP_CACHE "/tmp/arp.txt"
 #define DNSMASQ_CACHE "/tmp/dns.txt"
 #define DNSMASQ_FILE "/nvram/dnsmasq.leases"
-#define ETH_POLLING_PERIOD 180
+#define ETH_POLLING_PERIOD 20
 #define ETH_NODE_HASH_SIZE 256
 
 CcspHalExtSw_ethAssociatedDevice_callback AssociatedDevice_callback = NULL;
