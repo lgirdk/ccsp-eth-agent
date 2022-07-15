@@ -175,6 +175,8 @@ int sysevent_fd;
 token_t sysevent_token;
 #endif
 
+#define ONEWIFI_ENABLED "/etc/onewifi_enabled"
+
 int _getMac(char* ifName, char* mac){
 
     int skfd = -1;
@@ -1114,6 +1116,11 @@ ANSC_STATUS CosaDmlIfaceFinalize(char *pValue, BOOL isAutoWanMode)
           CcspTraceError(("syscfg_get failed to retrieve ovs_enable\n"));
 
     }
+    if( 0 == access( ONEWIFI_ENABLED , F_OK ) )
+    {
+        CcspTraceInfo(("%s Setting ovsEnabled to TRUE [OneWifi]\n",__FUNCTION__));
+        ovsEnabled = TRUE;
+    }
 #endif
 
     memset(buf,0,sizeof(buf));
@@ -1727,6 +1734,11 @@ ANSC_STATUS CosaDmlConfigureEthWan(BOOL bEnable)
           CcspTraceError(("syscfg_get failed to retrieve ovs_enable\n"));
 
     }
+    if( 0 == access( ONEWIFI_ENABLED , F_OK ) )
+    {
+        CcspTraceInfo(("%s Setting ovsEnable to 1 [OneWifi]\n",__FUNCTION__));
+        ovsEnable = 1;
+    }
 #endif
 
     CcspTraceInfo(("Func %s Entered arg %d\n",__FUNCTION__,bEnable));
@@ -2100,6 +2112,11 @@ ANSC_STATUS EthWanBridgeInit(PCOSA_DATAMODEL_ETHERNET pEthernet)
     {
           CcspTraceError(("syscfg_get failed to retrieve ovs_enable\n"));
 
+    }
+    if( 0 == access( ONEWIFI_ENABLED , F_OK ) )
+    {
+        CcspTraceInfo(("%s Setting ovsEnable to 1 [OneWifi]\n",__FUNCTION__));
+        ovsEnable = 1;
     }
 #endif
 
