@@ -1084,7 +1084,7 @@ AssociatedDevice1_GetParamStringValue
 
     if (strcmp(ParamName, "MACAddress") == 0)
     {
-        AnscCopyMemory(pValue, pAssocClient->MacAddress, 17);
+        AnscCopyMemory(pValue, pAssocClient->MacAddress, 18);
         return 0;
     }
 
