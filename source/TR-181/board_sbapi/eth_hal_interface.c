@@ -150,8 +150,6 @@ eth_device_t* CcspHalExtSw_FindHost( eth_device_t *pstEthHost, eth_device_t* eth
         pstEthHost->eth_devMacAddress[5]
     );
  
-   recv_mac_id[ 17 ] = '\0';
-   
    //get the hash 
    unsigned int hashIndex = mac_hash( recv_mac_id );  
    unsigned int start_index = hashIndex;
@@ -176,8 +174,6 @@ eth_device_t* CcspHalExtSw_FindHost( eth_device_t *pstEthHost, eth_device_t* eth
 			eth_device_ArrayList[hashIndex]->eth_devMacAddress[4],
 			eth_device_ArrayList[hashIndex]->eth_devMacAddress[5]
 	    );
-
-	   tmp_mac_id[ 17 ] = '\0';
 
 	   //Compare with received host and current host 
        rc = strcmp_s(tmp_mac_id,sizeof(tmp_mac_id),recv_mac_id,&ind);
@@ -239,7 +235,7 @@ int CcspHalExtSw_AddHost( eth_device_t *pstEthHost, eth_device_t* eth_device_Arr
    snprintf
    (
         recv_mac_id,
-		sizeof( recv_mac_id ),
+        sizeof( recv_mac_id ),
         "%02X:%02X:%02X:%02X:%02X:%02X",
         pstEthLocalHost->eth_devMacAddress[0],
         pstEthLocalHost->eth_devMacAddress[1],
@@ -248,8 +244,6 @@ int CcspHalExtSw_AddHost( eth_device_t *pstEthHost, eth_device_t* eth_device_Arr
         pstEthLocalHost->eth_devMacAddress[4],
         pstEthLocalHost->eth_devMacAddress[5]
    );
-
-   recv_mac_id[ 17 ] = '\0';
 
    //get the hash 
    unsigned int hashIndex = mac_hash( recv_mac_id );
@@ -460,8 +454,6 @@ void* CcspHalExtSw_AssociatedDeviceMonitorThread( void *arg )
 						pstRecvEthDevice[ iLoopCount ].eth_devMacAddress[5]
 					);
 
-					tmp_mac_id[ 17 ] = '\0';
-						
 					// If valid then it will return 1
 					// If invalid then it will return 0
 					if( 0 == ValidateClient( tmp_mac_id ) )
