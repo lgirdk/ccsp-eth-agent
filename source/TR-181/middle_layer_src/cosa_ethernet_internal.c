@@ -933,25 +933,13 @@ ANSC_STATUS CosaDmlSetWanOEMode (PCOSA_DML_ETH_PORT_FULL pEthernetPortFull,PCOSA
                 AnscTraceError(("[%s][%d] CcspHalExtSw_ethPortConfigure[Wan_lan Failed]\n",__FUNCTION__,  __LINE__));
                 return ANSC_STATUS_FAILURE;
             }
-#endif
-            if(0!=CcspHalExtSw_setEthWanEnable(bUpstream))
-            {
-                AnscTraceError(("[%s][%d] CcspHalExtSw_setEthWanEnable[Wan_lan Failed]\n",__FUNCTION__,  __LINE__));
-                return ANSC_STATUS_FAILURE;
-            }
             return ANSC_STATUS_SUCCESS;
-#ifdef FEATURE_RDKB_AUTO_PORT_SWITCH
         }
         else if(pEthLink->PortCapability == PORT_CAP_WAN )
         {
             if(0 != CcspHalExtSw_ethPortConfigure(ifName,TRUE))
             {
                 AnscTraceError(("[%s][%d] CcspHalExtSw_ethPortConfigure[Wan Failed]\n",__FUNCTION__,  __LINE__));
-                return ANSC_STATUS_FAILURE;
-            }
-            if(0!=CcspHalExtSw_setEthWanEnable(TRUE))
-            {
-                AnscTraceError(("[%s][%d] CcspHalExtSw_setEthWanEnable[Wan Failed]\n",__FUNCTION__,  __LINE__));
                 return ANSC_STATUS_FAILURE;
             }
             return ANSC_STATUS_SUCCESS;

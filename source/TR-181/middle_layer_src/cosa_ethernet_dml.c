@@ -1778,6 +1778,11 @@ EthRdkInterface_SetParamUlongValue
     {
         ULONG prevValue = pEthLink->PortCapability;
         pEthLink->PortCapability = uValue;
+        if(prevValue == uValue)
+        {
+            CcspTraceInfo(("%s The new PortCapability value matched with the set value, so not updating \n",__FUNCTION__));
+            return TRUE;
+        }
         if ( ANSC_STATUS_FAILURE == CosaDmlEthPortSetPortCapability(pEthLink) )
         {
             pEthLink->PortCapability = prevValue;
