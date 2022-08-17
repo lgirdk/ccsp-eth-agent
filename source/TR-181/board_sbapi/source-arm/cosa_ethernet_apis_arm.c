@@ -313,7 +313,7 @@ CosaDmlEthInterfaceInit
 /* Get upstream from system and assign it to upstream */
 
 for (i=0; i < g_EthernetIntNum; ++i) {
-    if (AnscEqualString(g_EthIntSInfo[i].Name, DMSB_ETH_IF_NAME_DFT_WanRouting, TRUE))
+    if (strcmp(g_EthIntSInfo[i].Name, DMSB_ETH_IF_NAME_DFT_WanRouting) == 0)
     {
         g_EthIntSInfo[i].bUpstream = getSystemUpstream();
         CcspTraceInfo(("%s g_EthIntSInfo[%ld].bUpstream=[%s]\n", __FUNCTION__, i+1, g_EthIntSInfo[i].bUpstream?"TRUE":"FALSE"));
@@ -341,10 +341,10 @@ for (i=0; i < g_EthernetIntNum; ++i) {
         }
         }
         else {
-            if (AnscEqualString(g_EthIntSInfo[i].Name, DMSB_ETH_IF_NAME_DFT_WanRouting, TRUE))
+            if (strcmp(g_EthIntSInfo[i].Name, DMSB_ETH_IF_NAME_DFT_WanRouting) == 0)
                 wanIndex = i;
 #if !defined(_HUB4_PRODUCT_REQ_)
-            if (AnscEqualString(g_EthIntSInfo[i].Name, DMSB_ETH_IF_NAME_DFT_WanBridging, TRUE))
+            else if (strcmp(g_EthIntSInfo[i].Name, DMSB_ETH_IF_NAME_DFT_WanBridging) == 0)
                 lbrIndex = i;
 #endif
         }
@@ -479,7 +479,7 @@ CosaDmlEthPortSetCfg
         pEthIf->LastChange = AnscGetTickInSeconds();
     }
 
-    if ( !AnscEqualString(pCfg->Alias, pEthIf->Alias, TRUE) )
+    if (strcmp(pCfg->Alias, pEthIf->Alias) != 0)
     {
         AnscCopyString(pEthIf->Alias, pCfg->Alias);
         saveID(pEthIf->sInfo->Name, pCfg->Alias, pCfg->InstanceNumber);

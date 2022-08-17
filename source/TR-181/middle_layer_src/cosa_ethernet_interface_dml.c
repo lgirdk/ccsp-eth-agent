@@ -785,7 +785,7 @@ Interface_Validate
     {
         if (
                 ((ULONG)pEthernetPortFull != (ULONG)&pMyObject->EthernetPortFullTable[ulIndex]) &&
-                AnscEqualString(pEthernetPortFull->Cfg.Alias, pMyObject->EthernetPortFullTable[ulIndex].Cfg.Alias, TRUE)
+                (strcmp(pEthernetPortFull->Cfg.Alias, pMyObject->EthernetPortFullTable[ulIndex].Cfg.Alias) == 0)
             )
         {
             AnscCopyString(pReturnParamName, "Alias");
