@@ -65,7 +65,6 @@
 
         01/30/2011    initial revision.
         06/15/2012    add IPv4 address utils
-        06/15/2012    add vsystem()
 
 **********************************************************************/
 
@@ -1766,23 +1765,6 @@ int IPv4Addr_IsClassC(uint32_t addr)
 int IPv4Addr_IsClassD(uint32_t addr)
 {
     return IPV4_CLASSD(ntohl(addr));
-}
-
-int vsystem(const char *fmt, ...)
-{
-    char cmd[512];
-    va_list ap;
-    int n;
-
-    va_start(ap, fmt);
-    n = vsnprintf(cmd, sizeof(cmd), fmt, ap);
-    va_end(ap);
-
-    if (n < 0 || (unsigned int)n >= sizeof(cmd))
-        return -1;
-
-    fprintf(stderr, "%s: %s\n", __FUNCTION__, cmd);
-    return v_secure_system("%s",cmd);
 }
 
 int get_if_hwaddr(const char *ifname, char *mac, size_t size)
