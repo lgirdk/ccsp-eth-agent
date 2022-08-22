@@ -221,6 +221,8 @@ int CcspHalExtSw_AddHost( eth_device_t *pstEthHost, eth_device_t* eth_device_Arr
    ( NULL == pstEthHost ))
    {
        CcspTraceInfo(("%s %d - Null\n" ,__FUNCTION__,__LINE__ ));
+       if(pstEthLocalHost)
+           free(pstEthLocalHost);
        return -1;
    }
    //Copy received host details
