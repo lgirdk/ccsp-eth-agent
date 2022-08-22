@@ -3611,6 +3611,10 @@ ANSC_STATUS CosaDmlEthSetWanLinkStatusForWanManager(char *ifname, char *WanStatu
     if(acSetParamName == NULL || acSetParamValue == NULL)
     {
         CcspTraceError(("%s Memory allocation failure \n", __FUNCTION__));
+        if(acSetParamName)
+            free(acSetParamName);
+        if(acSetParamValue)
+            free(acSetParamValue);
         return ANSC_STATUS_FAILURE;
     }
  
