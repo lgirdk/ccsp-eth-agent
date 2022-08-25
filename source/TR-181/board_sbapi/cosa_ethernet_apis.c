@@ -2083,7 +2083,6 @@ void getInterfaceMacAddress(macaddr_t* macAddr,char *pIfname)
     FILE *f = NULL;
     char line[256], *lineptr = line, fname[128];
     size_t size;
-    int i, macaddr[18];
 
     if (pIfname)
     {
@@ -2093,9 +2092,7 @@ void getInterfaceMacAddress(macaddr_t* macAddr,char *pIfname)
         {
             if ((getline(&lineptr, &size, f) >= 0))
             {
-                sscanf(lineptr, "%02x:%02x:%02x:%02x:%02x:%02x", &macaddr[0], &macaddr[1], &macaddr[2], &macaddr[3], &macaddr[4], &macaddr[5]);
-                for (i = 0; i < 18; i++)
-                    macAddr->hw[i] = (uint8_t) macaddr[i];
+                sscanf(lineptr, "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx", &macAddr->hw[0], &macAddr->hw[1], &macAddr->hw[2], &macAddr->hw[3], &macAddr->hw[4], &macAddr->hw[5]);
             }
             fclose(f);
         }
