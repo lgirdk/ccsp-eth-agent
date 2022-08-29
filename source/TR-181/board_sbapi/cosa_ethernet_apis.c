@@ -1044,13 +1044,14 @@ INT WanBridgeConfigurationBcm(WAN_MODE_BRIDGECFG *pCfg)
         {
             if (0 == pCfg->bridgemode)
             {
-
                 v_secure_system("brctl delif %s %s", pCfg->wanPhyName,ETHWAN_DOCSIS_INF_NAME);
                 v_secure_system("ifconfig %s down", pCfg->wanPhyName);
                 v_secure_system("brctl delbr %s", pCfg->wanPhyName);
-                v_secure_system("ifconfig %s down", ETHWAN_DOCSIS_INF_NAME);
+                v_secure_system("ifconfig %s down", ETHWAN_DOCSIS_INF_NAME);      
                 v_secure_system("ip link set %s name %s", ETHWAN_DOCSIS_INF_NAME,pCfg->wanPhyName);
                 v_secure_system("ifconfig %s up", pCfg->wanPhyName);
+                // BCOMB-1508 - update 2 into /sys/class/net/erouter0/netdev_group
+                v_secure_system("ip link set dev %s group 2", pCfg->wanPhyName);
                 v_secure_system("echo addif %s > /proc/driver/flowmgr/cmd", pCfg->wanPhyName);
                 v_secure_system("echo delif %s > /proc/driver/flowmgr/cmd", ETHWAN_DOCSIS_INF_NAME);
             }
