@@ -866,7 +866,7 @@ BOOL EthernetWAN_GetParamBoolValue
     UNREFERENCED_PARAMETER(hInsContext);
     UNREFERENCED_PARAMETER(ParamName);
     UNREFERENCED_PARAMETER(pBool);
-    return TRUE;
+    return FALSE;
 }
 
 /***********************************************************************
