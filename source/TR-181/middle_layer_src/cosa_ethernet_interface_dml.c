@@ -1244,20 +1244,6 @@ Stats_GetParamUlongValue
     CosaDmlEthPortGetStats(NULL, pEthernetPortFull->Cfg.InstanceNumber, &stats);
 
     /* check the parameter name and return the corresponding value */
-    if (strcmp(ParamName, "BytesSent") == 0)
-    {
-        /* collect value */
-        *puLong = stats.BytesSent;
-        return TRUE;
-    }
-
-    if (strcmp(ParamName, "BytesReceived") == 0)
-    {
-        /* collect value */
-        *puLong = stats.BytesReceived;
-        return TRUE;
-    }
-
     if (strcmp(ParamName, "PacketsSent") == 0)
     {
         /* collect value */
@@ -1402,12 +1388,28 @@ Stats_GetParamStringValue
     )
 {
     /* check the parameter name and return the corresponding value */
+    PCOSA_DML_ETH_PORT_FULL         pEthernetPortFull = (PCOSA_DML_ETH_PORT_FULL)hInsContext;
+    COSA_DML_ETH_STATS              stats;
 
-    /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
+    CosaDmlEthPortGetStats(NULL, pEthernetPortFull->Cfg.InstanceNumber, &stats);
+        if (strcmp(ParamName, "BytesSent") == 0)
+    {
+        /* collect value */
+        snprintf(pValue,*pUlSize,"%llu",stats.BytesSent);
+        return 0;
+    }
+
+    if (strcmp(ParamName, "BytesReceived") == 0)
+    {
+        /* collect value */
+        snprintf(pValue,*pUlSize,"%llu",stats.BytesReceived);
+        return 0;
+    }
+    /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); 
     UNREFERENCED_PARAMETER(hInsContext);
     UNREFERENCED_PARAMETER(ParamName);
     UNREFERENCED_PARAMETER(pValue);
-    UNREFERENCED_PARAMETER(pUlSize);
+    UNREFERENCED_PARAMETER(pUlSize);*/
 
     return -1;
 }

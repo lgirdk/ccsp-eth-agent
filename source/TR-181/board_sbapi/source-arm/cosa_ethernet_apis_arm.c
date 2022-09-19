@@ -1058,7 +1058,7 @@ static int getIfStats2(const PUCHAR pName, PCOSA_DML_ETH_STATS pStats)
             ptr = NULL;
             switch (idx) {
             case 2:
-                pStats->BytesReceived = (ULONG)atol(tok);
+                pStats->BytesReceived = (ULLONG)atoll(tok);
                 break;
             case 3:
                 pStats->PacketsReceived = (ULONG)atol(tok);
@@ -1070,7 +1070,7 @@ static int getIfStats2(const PUCHAR pName, PCOSA_DML_ETH_STATS pStats)
                 pStats->DiscardPacketsReceived = (ULONG)atol(tok);
                 break;
             case 10:
-                pStats->BytesSent = (ULONG)atol(tok);
+                pStats->BytesSent = (ULLONG)atoll(tok);
                 break;
             case 11:
                 pStats->PacketsSent = (ULONG)atol(tok);

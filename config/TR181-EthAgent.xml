@@ -300,14 +300,14 @@
            <parameters>
          <parameter>
            <name>BytesSent</name>
-           <type>unsignedInt</type>
-           <syntax>uint32</syntax>
+           <type>string</type>
+           <syntax>string</syntax>
            <notify>off</notify>
          </parameter>
          <parameter>
            <name>BytesReceived</name>
-           <type>unsignedInt</type>
-           <syntax>uint32</syntax>
+           <type>string</type>
+           <syntax>string</syntax>
            <notify>off</notify>
          </parameter>
          <parameter>

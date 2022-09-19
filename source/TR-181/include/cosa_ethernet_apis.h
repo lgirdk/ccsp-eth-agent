@@ -353,8 +353,8 @@ COSA_DML_ETH_DUPLEX_MODE, *PCOSA_DML_ETH_DUPLEX_MODE;
 typedef  struct
 _COSA_DML_ETH_STATS
 {
-    ULONG                           BytesSent;
-    ULONG                           BytesReceived;
+    ULLONG                           BytesSent;
+    ULLONG                           BytesReceived;
     ULONG                           PacketsSent;
     ULONG                           PacketsReceived;
     ULONG                           ErrorsSent;
