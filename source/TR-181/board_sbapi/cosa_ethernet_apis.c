@@ -269,18 +269,18 @@ COSA_DML_IF_STATUS getIfStatus(const PUCHAR name, struct ifreq *pIfr)
     skfd = socket(AF_INET, SOCK_DGRAM, 0);
     /* CID: 56442 Argument cannot be negative*/
     if(skfd == -1)
-       return -1;
+       return COSA_DML_IF_STATUS_Error;
 
     AnscCopyString(ifr.ifr_name, (char*)name);
 
     if (!isValid((char*)name)) {
-        return -1;
+        return COSA_DML_IF_STATUS_Error;
     }
     AnscTraceFlow(("%s...\n", __FUNCTION__));
     if (ioctl(skfd, SIOCGIFFLAGS, &ifr) < 0) {
         if (errno == ENODEV) {
             close(skfd);
-            return -1;
+            return COSA_DML_IF_STATUS_Error;
         }
 		
         CcspTraceWarning(("cosa_ethernet_apis.c - getIfStatus: Get interface %s error...\n", name));
