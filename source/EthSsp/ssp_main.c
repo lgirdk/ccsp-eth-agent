@@ -47,7 +47,7 @@
 #include "ccsp_dm_api.h"
 
 #define DEBUG_INI_NAME  "/etc/debug.ini"
-#include "syscfg/syscfg.h"
+#include <syscfg/syscfg.h>
 #include "cap.h"
 #include "safec_lib_common.h"
 #ifdef _HUB4_PRODUCT_REQ_
@@ -370,7 +370,7 @@ int main(int argc, char* argv[])
 
     pComponentName          = CCSP_COMPONENT_NAME_ETHAGENT;
 
-    if ( bRunAsDaemon ) 
+    if ( bRunAsDaemon )
         daemonize();
 
 CcspTraceInfo(("\nAfter daemonize before signal\n"));

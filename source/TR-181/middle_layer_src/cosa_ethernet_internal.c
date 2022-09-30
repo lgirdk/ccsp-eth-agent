@@ -75,7 +75,7 @@
 #include <sys/inotify.h>
 #include <sys/stat.h>
 #include "safec_lib_common.h"
-#include "syscfg/syscfg.h"
+#include <syscfg/syscfg.h>
 #include "secure_wrapper.h"
 #if defined (FEATURE_RDKB_WAN_MANAGER) || defined (FEATURE_RDKB_WAN_AGENT)
 #include "cosa_ethernet_manager.h"

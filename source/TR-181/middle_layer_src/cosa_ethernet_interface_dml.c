@@ -44,7 +44,7 @@
 #endif
 #if defined(MULTILAN_FEATURE) && defined (INTEL_PUMA7)
 #if defined (ETH_4_PORTS) && defined (ENABLE_ETH_WAN)
-#include "syscfg/syscfg.h"
+#include <syscfg/syscfg.h>
 #define BUFLEN_6 6
 #endif
 #endif

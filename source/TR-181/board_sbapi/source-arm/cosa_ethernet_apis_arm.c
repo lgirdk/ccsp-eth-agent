@@ -116,7 +116,7 @@ void rdkb_api_platform_hal_GetLanMacAddr(char* mac);
 
 #if defined _COSA_INTEL_USG_ARM_ || _COSA_BCM_MIPS_
 
-#include "syscfg/syscfg.h"
+#include <syscfg/syscfg.h>
 
 int puma6_getSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg);
 int puma6_setSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg);

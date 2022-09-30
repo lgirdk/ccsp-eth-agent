@@ -128,7 +128,7 @@ extern  char g_Subsystem[BUFLEN_32];
 #endif  //FEATURE_RDKB_AUTO_PORT_SWITCH
 #endif //FEATURE_RDKB_WAN_MANAGER
 
-#include "syscfg.h"
+#include <syscfg/syscfg.h>
 #ifdef FEATURE_SUPPORT_ONBOARD_LOGGING
 
 

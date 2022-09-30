@@ -70,7 +70,7 @@
 #include "cosa_ethernet_dml.h"
 #include "safec_lib_common.h"
 #include "cosa_ethernet_apis.h"
-#include "syscfg/syscfg.h"
+#include <syscfg/syscfg.h>
 #include "cosa_ethernet_internal.h"
 #include "cosa_ethernet_interface_dml.h"
 
