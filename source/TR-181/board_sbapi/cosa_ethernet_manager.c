@@ -21,9 +21,7 @@
 /* ---- Include Files ---------------------------------------- */
 #include "cosa_ethernet_manager.h"
 #include "cosa_ethernet_apis.h"
-#if defined(_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
-#include "syscfg.h"
-#endif
+#include <syscfg/syscfg.h>
 
 /* ---- Global Constants -------------------------- */
 #define LOOP_TIMEOUT 500000 // timeout in milliseconds. This is the state machine loop interval
