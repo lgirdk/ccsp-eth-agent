@@ -212,15 +212,22 @@ int CcspHalExtSw_AddHost( eth_device_t *pstEthHost, eth_device_t* eth_device_Arr
    char 	     recv_mac_id[ 18 ];
    errno_t rc = -1;
 
-   //Validate received pointer
-   if(( NULL == pstEthLocalHost ) || \
-   ( NULL == pstEthHost ))
+   /* Validate pointers CID 54723 fix */
+   if( NULL == pstEthLocalHost )
    {
-       CcspTraceInfo(("%s %d - Null\n" ,__FUNCTION__,__LINE__ ));
-       if(pstEthLocalHost)
-           free(pstEthLocalHost);
+       CcspTraceInfo(("%s %d - pstEthLocalHost Null\n" ,__FUNCTION__,__LINE__ ));
        return -1;
    }
+
+   if( NULL == pstEthHost )
+   {
+	if(pstEthLocalHost)
+           free(pstEthLocalHost);
+
+       CcspTraceInfo(("%s %d - pstEthHost Null\n" ,__FUNCTION__,__LINE__ ));
+       return -1;
+   }
+
    //Copy received host details
    rc =  memset_s( pstEthLocalHost,sizeof(eth_device_t), 0 , sizeof( eth_device_t ) );
    ERR_CHK(rc);

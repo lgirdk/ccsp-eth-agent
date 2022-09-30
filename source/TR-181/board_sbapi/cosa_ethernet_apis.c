@@ -1711,7 +1711,8 @@ void* ThreadConfigEthWan(void *arg)
         pEthWanCfgObj->wanOperState = WAN_OPER_STATE_RESET_COMPLETED;
     }
  
-    free(pValue);
+    /* CID 192716 fix */
+    //free(pValue);
     return arg;
 }
 
@@ -3613,16 +3614,22 @@ ANSC_STATUS CosaDmlEthSetWanLinkStatusForWanManager(char *ifname, char *WanStatu
         CcspTraceError(("%s %d WAN instance not present\n", __FUNCTION__, __LINE__));
         return ANSC_STATUS_FAILURE;
     }
-    acSetParamName = (char *) malloc(sizeof(char) * DATAMODEL_PARAM_LENGTH);
-    acSetParamValue = (char *) malloc(sizeof(char) * DATAMODEL_PARAM_LENGTH);
 
-    if(acSetParamName == NULL || acSetParamValue == NULL)
+    /* CID 187279 fix and CID 187365 fix */
+    acSetParamName = (char *) malloc(sizeof(char) * DATAMODEL_PARAM_LENGTH);
+    if(acSetParamName == NULL)
     {
-        CcspTraceError(("%s Memory allocation failure \n", __FUNCTION__));
+        CcspTraceError(("%s Memory allocation failure acSetParamName \n", __FUNCTION__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    acSetParamValue = (char *) malloc(sizeof(char) * DATAMODEL_PARAM_LENGTH);
+    if(acSetParamValue == NULL)
+    {
         if(acSetParamName)
             free(acSetParamName);
-        if(acSetParamValue)
-            free(acSetParamValue);
+        
+	CcspTraceError(("%s Memory allocation failure acSetParamValue \n", __FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
  
