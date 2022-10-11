@@ -184,6 +184,7 @@ token_t sysevent_token;
 #endif
 
 #define ONEWIFI_ENABLED "/etc/onewifi_enabled"
+#define OPENVSWITCH_LOADED "/sys/module/openvswitch"
 
 int _getMac(char* ifName, char* mac){
 
@@ -1125,7 +1126,7 @@ ANSC_STATUS CosaDmlIfaceFinalize(char *pValue, BOOL isAutoWanMode)
           CcspTraceError(("syscfg_get failed to retrieve ovs_enable\n"));
 
     }
-    if( 0 == access( ONEWIFI_ENABLED , F_OK ) )
+    if( (0 == access( ONEWIFI_ENABLED , F_OK )) || (0 == access( OPENVSWITCH_LOADED, F_OK )) )
     {
         CcspTraceInfo(("%s Setting ovsEnabled to TRUE [OneWifi]\n",__FUNCTION__));
         ovsEnabled = TRUE;
@@ -1743,7 +1744,7 @@ ANSC_STATUS CosaDmlConfigureEthWan(BOOL bEnable)
           CcspTraceError(("syscfg_get failed to retrieve ovs_enable\n"));
 
     }
-    if( 0 == access( ONEWIFI_ENABLED , F_OK ) )
+    if( (0 == access( ONEWIFI_ENABLED , F_OK )) || (0 == access( OPENVSWITCH_LOADED, F_OK )) )
     {
         CcspTraceInfo(("%s Setting ovsEnable to 1 [OneWifi]\n",__FUNCTION__));
         ovsEnable = 1;
@@ -2122,7 +2123,7 @@ ANSC_STATUS EthWanBridgeInit(PCOSA_DATAMODEL_ETHERNET pEthernet)
           CcspTraceError(("syscfg_get failed to retrieve ovs_enable\n"));
 
     }
-    if( 0 == access( ONEWIFI_ENABLED , F_OK ) )
+    if( (0 == access( ONEWIFI_ENABLED , F_OK )) || (0 == access( OPENVSWITCH_LOADED, F_OK )) )
     {
         CcspTraceInfo(("%s Setting ovsEnable to 1 [OneWifi]\n",__FUNCTION__));
         ovsEnable = 1;
