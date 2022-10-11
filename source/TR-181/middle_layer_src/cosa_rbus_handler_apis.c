@@ -16,7 +16,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#if defined (WAN_FAILOVER_SUPPORTED)
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,9 +23,12 @@
 #include "ccsp_trace.h"
 #include "cosa_rbus_handler_apis.h"
 
-EthAgent_Link_Status ethAgent_Link_Status;
-
+#if  defined  (WAN_FAILOVER_SUPPORTED) ||  defined(RBUS_BUILD_FLAG_ENABLE) || defined (_HUB4_PRODUCT_REQ_)
 rbusHandle_t handle;
+#endif
+
+#if defined (WAN_FAILOVER_SUPPORTED)
+EthAgent_Link_Status ethAgent_Link_Status;
 
 unsigned int gSubscribersCount = 0;
 
@@ -37,7 +39,7 @@ unsigned int gSubscribersCount = 0;
  ***********************************************************************/
 rbusDataElement_t ethAgentRbusDataElements[NUM_OF_RBUS_PARAMS] = {
 
-	{ETHWAN_LINK_STATUS_TR181, RBUS_ELEMENT_TYPE_EVENT, {getBoolHandler, NULL, NULL, NULL, eventSubHandler, NULL}},
+    {ETHWAN_LINK_STATUS_TR181, RBUS_ELEMENT_TYPE_EVENT, {getBoolHandler, NULL, NULL, NULL, eventSubHandler, NULL}},
 
 };
 
@@ -104,37 +106,6 @@ rbusError_t eventSubHandler(rbusHandle_t handle, rbusEventSubAction_t action, co
 	return RBUS_ERROR_SUCCESS;
 }
 
-/***********************************************************************
-
-  ethAgentRbusInit(): Initialize Rbus and data elements
-
- ***********************************************************************/
-rbusError_t ethAgentRbusInit()
-{
-	int rc = RBUS_ERROR_SUCCESS;
-	rc = rbus_open(&handle, RBUS_COMPONENT_NAME);
-	if (rc != RBUS_ERROR_SUCCESS)
-	{
-		CcspTraceWarning(("EthAgent rbus initialization failed\n"));
-		rc = RBUS_ERROR_NOT_INITIALIZED;
-		return rc;
-	}
-
-	// Register data elements
-	rc = rbus_regDataElements(handle, NUM_OF_RBUS_PARAMS, ethAgentRbusDataElements);
-
-	if (rc != RBUS_ERROR_SUCCESS)
-	{
-		CcspTraceWarning(("rbus register data elements failed\n"));
-		rc = rbus_close(handle);
-		return rc;
-	}
-	
-	initLinkStatus();
-
-	return rc;
-}
-
 /*******************************************************************************
 
   initLinkStatus(): Initialize EthAgent_Link_Status struct with default values
@@ -142,8 +113,8 @@ rbusError_t ethAgentRbusInit()
  ********************************************************************************/
 void initLinkStatus()
 {
-	ethAgent_Link_Status.EWanLinkStatus = false;
-	CcspTraceWarning(("Initialized EWAN link status with default values.\n"));
+    ethAgent_Link_Status.EWanLinkStatus = false;
+    CcspTraceWarning(("Initialized EWAN link status with default values.\n"));
 }
 
 
@@ -213,5 +184,100 @@ void publishEWanLinkStatus(bool link_status)
 		}
 		
 	}
+}
+#endif //WAN_FAILOVER_SUPPORTED
+
+#if defined (_HUB4_PRODUCT_REQ_)
+BOOL EthAgent_Rbus_discover_components(char const *pModuleList)
+{
+    rbusError_t rc = RBUS_ERROR_SUCCESS;
+    int componentCnt = 0;
+    char **pComponentNames;
+    BOOL ret = FALSE;
+    char ModuleList[1024] = {0};
+    char const *rbusModuleList[7];
+    int count = 0;
+    const char delimit[2] = " ";
+    char *token;
+
+    strcpy(ModuleList,pModuleList);
+
+    /* get the first token */
+    token = strtok(ModuleList, delimit);
+
+    /* walk through other tokens */
+    while( token != NULL ) {
+        printf( " %s\n", token );
+        rbusModuleList[count]=token;
+        count++;
+        token = strtok(NULL, delimit);
+    }
+
+    for(int i=0; i<count;i++)
+    {
+        CcspTraceInfo(("EthAgent_Rbus_discover_components rbusModuleList[%s]\n", rbusModuleList[i]));
+    }
+
+    rc = rbus_discoverComponentName (handle, count, rbusModuleList, &componentCnt, &pComponentNames);
+
+    if(RBUS_ERROR_SUCCESS != rc)
+    {
+        CcspTraceInfo(("Failed to discover components. Error Code = %d\n", rc));
+        return ret;
+    }
+
+    for (int i = 0; i < componentCnt; i++)
+    {
+        free(pComponentNames[i]);
+    }
+
+    free(pComponentNames);
+
+    if(componentCnt == count)
+    {
+        ret = TRUE;
+    }
+
+    CcspTraceInfo( ("EthAgent_Rbus_discover_components (%d-%d)ret[%s]\n",componentCnt,count,(ret)?"TRUE":"FALSE"));
+
+    return ret;
+}
+
+#endif //_HUB4_PRODUCT_REQ_
+
+#if  defined  (WAN_FAILOVER_SUPPORTED) ||  defined(RBUS_BUILD_FLAG_ENABLE) || defined (_HUB4_PRODUCT_REQ_)
+/***********************************************************************
+
+  ethAgentRbusInit(): Initialize Rbus and data elements
+
+ ***********************************************************************/
+rbusError_t ethAgentRbusInit()
+{
+	int rc = RBUS_ERROR_SUCCESS;
+	rc = rbus_open(&handle, RBUS_COMPONENT_NAME);
+	if (rc != RBUS_ERROR_SUCCESS)
+	{
+		CcspTraceWarning(("EthAgent rbus initialization failed\n"));
+		rc = RBUS_ERROR_NOT_INITIALIZED;
+		return rc;
+	}
+
+#if  defined  (WAN_FAILOVER_SUPPORTED)
+	// Register data elements
+	rc = rbus_regDataElements(handle, NUM_OF_RBUS_PARAMS, ethAgentRbusDataElements);
+#endif
+
+	if (rc != RBUS_ERROR_SUCCESS)
+	{
+		CcspTraceWarning(("rbus register data elements failed\n"));
+		rc = rbus_close(handle);
+		return rc;
+	}
+
+#if  defined  (WAN_FAILOVER_SUPPORTED)	
+	initLinkStatus();
+#endif
+
+	return rc;
 }
 #endif

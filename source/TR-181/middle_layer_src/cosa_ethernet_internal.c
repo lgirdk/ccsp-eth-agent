@@ -81,7 +81,7 @@
 #include "cosa_ethernet_manager.h"
 #endif //#if defined (FEATURE_RDKB_WAN_MANAGER)
 
-#if defined (WAN_FAILOVER_SUPPORTED)
+#if defined (WAN_FAILOVER_SUPPORTED)  ||  defined(RBUS_BUILD_FLAG_ENABLE) || defined (_HUB4_PRODUCT_REQ_)
 #include "cosa_rbus_handler_apis.h"
 #endif
 
@@ -369,7 +369,7 @@ CosaEthernetInitialize
 
 #if defined(FEATURE_RDKB_WAN_MANAGER)
 
-#if defined (WAN_FAILOVER_SUPPORTED)
+#if defined (WAN_FAILOVER_SUPPORTED) || defined(RBUS_BUILD_FLAG_ENABLE) || defined (_HUB4_PRODUCT_REQ_)
 	ethAgentRbusInit();
 #endif
 
@@ -635,13 +635,6 @@ static const char *eth_telemetry_log = "/rdklogs/logs/eth_telemetry.txt";
 
 static unsigned int gEthLogInterval;
 static char gEthLogEnable[7] = {0};
-
-static int IsFileExists(char *file_name)
-{
-    struct stat file;
-
-    return (stat(file_name, &file));
-}
 
 static char *get_formatted_time(char *time)
 {

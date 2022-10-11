@@ -1838,6 +1838,13 @@ int get_if_hwaddr(const char *ifname, char *mac, size_t size)
     return 0;
 }
 
+int IsFileExists(char *file_name)
+{
+    struct stat file;
+
+    return (stat(file_name, &file));
+}
+
 #ifdef IPV4ADDR_TEST
 
 #define NEXTARG    argc--, argv++

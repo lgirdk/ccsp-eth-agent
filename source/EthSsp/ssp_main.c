@@ -50,49 +50,56 @@
 #include "syscfg/syscfg.h"
 #include "cap.h"
 #include "safec_lib_common.h"
-
+#ifdef _HUB4_PRODUCT_REQ_
+#include "cosa_rbus_handler_apis.h"
+#include "cosa_apis_util.h"
+#endif
 cap_user appcaps;
 
 #if defined(FEATURE_RDKB_WAN_MANAGER) || defined (FEATURE_RDKB_WAN_AGENT)
 #if !defined(AUTOWAN_ENABLE) && !defined(_PLATFORM_RASPBERRYPI_) // This is not needed when auto wan is enabled for TCXBX platforms
 
 extern ANSC_HANDLE bus_handle;
+#ifdef _HUB4_PRODUCT_REQ_
 
-static int checkIfSystemReady(void);
-static void waitUntilSystemReady(void);
+#define  ARRAY_SZ(x) (sizeof(x) / sizeof((x)[0]))
 
-/**
-* @brief checkIfSystemReady Function to query CR and check if system is ready.
-* If SystemReadySignal is already sent then this will return 1 indicating system is ready.
-*/
-static int checkIfSystemReady()
+typedef struct
 {
-    char str[256] = {0};
-    int val, ret;
-    snprintf(str, sizeof(str), "eRT.%s", CCSP_DBUS_INTERFACE_CR);
-    // Query CR for system ready
-    ret = CcspBaseIf_isSystemReady(bus_handle, str, (dbus_bool *)&val);
-    CcspTraceError(("checkIfSystemReady(): ret %d, val %d\n", ret, val));
-    return val;    
-}
+    char binaryLocation[64];
+    char rbusName[64];
+}Rbus_Module;
 
 static void waitUntilSystemReady()
 {
     int wait_time = 0;
+    char pModule[1024] = {0};
+    Rbus_Module pModuleNames[] = {{"/usr/bin/PsmSsp",      "rbusPsmSsp"},
+                                  {"/usr/bin/wanmanager",  "WANMANAGER"},
+                                  {"/usr/bin/CcspPandMSsp","CcspPandMSsp"}};
 
-    /* Check CR is ready in every 5 seconds. This needs
-    to be continued upto 3 mins (36 * 5 = 180s) */
-    while(wait_time <= 180)
+    int elementCnt = ARRAY_SZ(pModuleNames);
+    for(int i=0; i<elementCnt;i++)
     {
-        if(checkIfSystemReady()) {
+        if (IsFileExists(pModuleNames[i].binaryLocation) == 0)
+        {
+            strcat(pModule,pModuleNames[i].rbusName);
+            strcat(pModule," ");
+        }
+    }
+
+    /* Check RBUS is ready. This needs to be continued upto 3 mins (180s) */
+    while(wait_time <= 90)
+    {
+        if(EthAgent_Rbus_discover_components(pModule)){
             break;
         }
 
         wait_time++;
-        sleep(1);
+        sleep(2);
     }
 }
-
+#endif //#ifdef _HUB4_PRODUCT_REQ_
 #endif
 #endif
 
@@ -123,7 +130,7 @@ int  cmd_dispatch(int  command)
                 }
 
                 ssp_Mbi_MessageBusEngage
-                    ( 
+                    (
                         CName,
                         CCSP_MSG_BUS_CFG,
                         CCSP_COMPONENT_PATH_ETHAGENT
@@ -149,7 +156,7 @@ int  cmd_dispatch(int  command)
                 break;
 
         case    'c':
-                
+
                 ssp_cancel();
 
                 break;
@@ -251,7 +258,7 @@ void sig_handler(int sig)
     	signal(SIGPIPE, sig_handler); /* reset it to this function */
     	CcspTraceInfo(("SIGPIPE received!\n"));
     }
-    else if ( sig == SIGALRM ) 
+    else if ( sig == SIGALRM )
     {
 
         signal(SIGALRM, sig_handler); /* reset it to this function */
@@ -306,7 +313,7 @@ int main(int argc, char* argv[])
     appcaps.caps = NULL;
     appcaps.user_name = NULL;
     extern ANSC_HANDLE bus_handle;
-    char *subSys            = NULL;  
+    char *subSys            = NULL;
     DmErr_t    err;
     errno_t        rc = -1;
     int ind = -1;
@@ -352,7 +359,7 @@ int main(int argc, char* argv[])
            {
                CcspTraceError(("parameter after -subsys is missing"));
            }
-             
+
         }
         else
         {
@@ -380,14 +387,14 @@ int main(int argc, char* argv[])
         cmd_dispatch(cmdChar);
     }
 #elif defined(_ANSC_LINUX)
-    if ( bRunAsDaemon ) 
+    if ( bRunAsDaemon )
         daemonize();
 
 CcspTraceInfo(("\nAfter daemonize before signal\n"));
 
 #ifdef INCLUDE_BREAKPAD
     breakpad_ExceptionHandler();
-    signal(SIGUSR1, sig_handler);    
+    signal(SIGUSR1, sig_handler);
 #else
     if (is_core_dump_opened())
     {
@@ -445,11 +452,12 @@ CcspTraceWarning(("\nAfter Cdm_Init\n"));
         read_capability(&appcaps);
     }
 #endif
-    
+
 #if defined (FEATURE_RDKB_WAN_MANAGER) || defined(FEATURE_RDKB_WAN_AGENT)
 #if !defined(AUTOWAN_ENABLE) && !defined(_PLATFORM_RASPBERRYPI_)// This is not needed when auto wan is enabled for TCXBX platforms
+#ifdef _HUB4_PRODUCT_REQ_
     waitUntilSystemReady();
-
+#endif //ifdef _HUB4_PRODUCT_REQ_
 #endif
 #endif //#if defined (FEATURE_RDKB_WAN_MANAGER) || defined(FEATURE_RDKB_WAN_AGENT)
 

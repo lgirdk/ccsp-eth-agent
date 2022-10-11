@@ -20,13 +20,14 @@
 #ifndef  RBUS_HANDLER_APIS_H
 #define  RBUS_HANDLER_APIS_H
 
-#if defined (WAN_FAILOVER_SUPPORTED)
+#if defined (WAN_FAILOVER_SUPPORTED) ||  defined(RBUS_BUILD_FLAG_ENABLE) || defined (_HUB4_PRODUCT_REQ_)
 #include <stdbool.h>
 #include <rbus.h>
 
 #define NUM_OF_RBUS_PARAMS	1
 #define RBUS_COMPONENT_NAME	"RbusEthAgent"
 
+#if defined (WAN_FAILOVER_SUPPORTED)
 #define ETHWAN_LINK_STATUS_TR181	"Device.X_RDKCENTRAL-COM_EthernetWAN.LinkStatus"
 
 typedef struct 
@@ -40,13 +41,16 @@ rbusError_t getBoolHandler(rbusHandle_t handle, rbusProperty_t property, rbusGet
 
 rbusError_t eventSubHandler(rbusHandle_t handle, rbusEventSubAction_t action, const char* eventName, rbusFilter_t filter, int32_t interval, bool* autoPublish);
 
-rbusError_t ethAgentRbusInit();
-
 void initLinkStatus();
 
 rbusError_t sendBoolUpdateEvent(char* event_name , bool eventNewData, bool eventOldData);
 
 void publishEWanLinkStatus(bool link_status);
 
-#endif
+#endif //WAN_FAILOVER_SUPPORTED
+rbusError_t ethAgentRbusInit();
+#if defined (_HUB4_PRODUCT_REQ_)
+BOOL EthAgent_Rbus_discover_components(char const *pModuleList);
+#endif //_HUB4_PRODUCT_REQ_
+#endif // WAN_FAILOVER_SUPPORTED RBUS_BUILD_FLAG_ENABLE _HUB4_PRODUCT_REQ_
 #endif
