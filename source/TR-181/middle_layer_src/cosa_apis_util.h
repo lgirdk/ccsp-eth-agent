@@ -135,13 +135,6 @@ LINKTYPE_MAP
 LINKTYPE_MAP_T;
 
 
-ULONG
-CosaUtilGetIfAddr
-    (
-        char*       netdev
-    );
-
-
 PUCHAR
 CosaUtilGetLowerLayers
     (

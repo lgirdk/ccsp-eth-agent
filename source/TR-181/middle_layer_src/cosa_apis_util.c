@@ -129,52 +129,6 @@ CosaUtilStringToHex
     return ANSC_STATUS_SUCCESS;
 }
 
-ULONG
-CosaUtilGetIfAddr
-    (
-        char*       netdev
-    )
-{
-    ANSC_IPV4_ADDRESS       ip4_addr = {};
-
-
-    struct ifreq            ifr;
-    int                     fd = 0;
-    errno_t rc = -1;
-
-    rc = strcpy_s(ifr.ifr_name,sizeof(ifr.ifr_name),netdev);
-    if(rc != EOK)
-    {
-        ERR_CHK(rc);
-        return -1;
-    }
-
-    if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) >= 0)
-    {
-        if (!ioctl(fd, SIOCGIFADDR, &ifr))
-        {
-          rc = memcpy_s(&ip4_addr.Value,sizeof(ip4_addr.Value), ifr.ifr_ifru.ifru_addr.sa_data + 2,4);
-          if(rc != EOK)
-          {
-            ERR_CHK(rc);
-            close(fd);
-            return -1;
-          }
-        }
-        else {
-           perror("CosaUtilGetIfAddr IOCTL failure.");
-           CcspTraceWarning(("Cannot get ipv4 address of netdev:%s\n",netdev));
-        }
-        close(fd);
-    }
-    else
-        perror("CosaUtilGetIfAddr failed to open socket.");
-
-
-    return ip4_addr.Value;
-
-}
-
 ANSC_STATUS
 CosaSListPushEntryByInsNum
     (
