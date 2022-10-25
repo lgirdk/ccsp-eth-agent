@@ -2369,7 +2369,15 @@ CosaDmlEthInit(
         }
     }
 #elif defined (FEATURE_RDKB_WAN_MANAGER)
-    CcspHalExtSw_setEthWanEnable(TRUE);
+    if (isEthWanEnabled() == TRUE)
+    {
+        CcspHalExtSw_setEthWanPort(ETHWAN_DEF_INTF_NUM);
+        if (CcspHalExtSw_setEthWanEnable(TRUE) != ANSC_STATUS_SUCCESS)
+        {
+            CcspTraceError(("CcspHalExtSw_setEthWanEnable failed during bootup\n"));
+        }
+    }
+
     if(CosaDmlGetWanOEInterfaceName(WanOEInterface, sizeof(WanOEInterface)) == ANSC_STATUS_SUCCESS) {
 #if defined (INTEL_PUMA7) && !defined (AUTOWAN_ENABLE)
         if(FALSE) 
