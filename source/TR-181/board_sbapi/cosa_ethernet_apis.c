@@ -585,7 +585,11 @@ CosaDmlEthWanGetCfg
 void* CosaDmlEthWanChangeHandling( void* buff )
 {
     CCSP_MESSAGE_BUS_INFO *bus_info 		  = (CCSP_MESSAGE_BUS_INFO *)bus_handle;
+#if defined(_COSA_BCM_ARM_)
+	parameterValStruct_t param_val[ 1 ] 	  = {{ "Device.X_CISCO_COM_DeviceControl.RebootDevice", "Device delay", ccsp_string }};
+#else
 	parameterValStruct_t param_val[ 1 ] 	  = {{ "Device.X_CISCO_COM_DeviceControl.RebootDevice", "Device", ccsp_string }};
+#endif
 	char 				 pComponentName[ 64 ] = "eRT.com.cisco.spvtg.ccsp.pam";
 	char 				 pComponentPath[ 64 ] = "/com/cisco/spvtg/ccsp/pam";
 	char				*faultParam 		  = NULL;
