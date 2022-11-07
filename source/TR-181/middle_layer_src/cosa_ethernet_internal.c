@@ -364,7 +364,6 @@ CosaEthernetInitialize
 
     CosaDmlEthGetLogStatus(&pMyObject->LogStatus);
     CosaEthernetLogger();
-    CcspHalExtSw_ethAssociatedDevice_callback_register(CosaDmlEth_AssociatedDevice_callback);
     CosaDmlEthWanGetCfg(&pMyObject->EthWanCfg);
 
 #if defined(FEATURE_RDKB_WAN_MANAGER)
@@ -386,6 +385,7 @@ CosaEthernetInitialize
     CosaDmlEthInit(NULL, (PANSC_HANDLE)pMyObject);
     CcspHalEthSw_RegisterLinkEventCallback(CosaDmlEthPortLinkStatusCallback); //Register cb for link event.
 #endif
+    CcspHalExtSw_ethAssociatedDevice_callback_register(CosaDmlEth_AssociatedDevice_callback);
     CosaEthTelemetryxOpsLogSettingsSync();
     if (CosaEthTelemetryInit() < 0) {
         CcspTraceError(("RDK_LOG_ERROR, CcspEth %s : CosaEthTelemetryInit create Error!!!\n", __FUNCTION__));
