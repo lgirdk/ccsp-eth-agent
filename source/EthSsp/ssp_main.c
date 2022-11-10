@@ -50,17 +50,17 @@
 #include "syscfg/syscfg.h"
 #include "cap.h"
 #include "safec_lib_common.h"
-#ifdef _HUB4_PRODUCT_REQ_
+#if defined(_HUB4_PRODUCT_REQ_) || defined(_PLATFORM_RASPBERRYPI_)
 #include "cosa_rbus_handler_apis.h"
 #include "cosa_apis_util.h"
 #endif
 cap_user appcaps;
 
 #if defined(FEATURE_RDKB_WAN_MANAGER) || defined (FEATURE_RDKB_WAN_AGENT)
-#if !defined(AUTOWAN_ENABLE) && !defined(_PLATFORM_RASPBERRYPI_) // This is not needed when auto wan is enabled for TCXBX platforms
+#if !defined(AUTOWAN_ENABLE) // This is not needed when auto wan is enabled for TCXBX platforms
 
 extern ANSC_HANDLE bus_handle;
-#ifdef _HUB4_PRODUCT_REQ_
+#if defined(_HUB4_PRODUCT_REQ_) || defined(_PLATFORM_RASPBERRYPI_)
 
 #define  ARRAY_SZ(x) (sizeof(x) / sizeof((x)[0]))
 
@@ -99,7 +99,7 @@ static void waitUntilSystemReady()
         sleep(2);
     }
 }
-#endif //#ifdef _HUB4_PRODUCT_REQ_
+#endif //#if defined(_HUB4_PRODUCT_REQ_) || defined(_PLATFORM_RASPBERRYPI_)
 #endif
 #endif
 
@@ -437,10 +437,10 @@ CcspTraceWarning(("\nAfter Cdm_Init\n"));
 #endif
 
 #if defined (FEATURE_RDKB_WAN_MANAGER) || defined(FEATURE_RDKB_WAN_AGENT)
-#if !defined(AUTOWAN_ENABLE) && !defined(_PLATFORM_RASPBERRYPI_)// This is not needed when auto wan is enabled for TCXBX platforms
-#ifdef _HUB4_PRODUCT_REQ_
+#if !defined(AUTOWAN_ENABLE) // This is not needed when auto wan is enabled for TCXBX platforms
+#if defined(_HUB4_PRODUCT_REQ_) || defined(_PLATFORM_RASPBERRYPI_)
     waitUntilSystemReady();
-#endif //ifdef _HUB4_PRODUCT_REQ_
+#endif //if defined(_HUB4_PRODUCT_REQ_) || defined(_PLATFORM_RASPBERRYPI_)
 #endif
 #endif //#if defined (FEATURE_RDKB_WAN_MANAGER) || defined(FEATURE_RDKB_WAN_AGENT)
 

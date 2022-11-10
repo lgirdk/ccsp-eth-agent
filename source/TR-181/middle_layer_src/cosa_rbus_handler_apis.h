@@ -20,7 +20,7 @@
 #ifndef  RBUS_HANDLER_APIS_H
 #define  RBUS_HANDLER_APIS_H
 
-#if defined (WAN_FAILOVER_SUPPORTED) ||  defined(RBUS_BUILD_FLAG_ENABLE) || defined (_HUB4_PRODUCT_REQ_)
+#if defined (WAN_FAILOVER_SUPPORTED) ||  defined(RBUS_BUILD_FLAG_ENABLE) || defined (_HUB4_PRODUCT_REQ_) || defined (_PLATFORM_RASPBERRYPI_)
 #include <stdbool.h>
 #include <rbus.h>
 
@@ -49,7 +49,7 @@ void publishEWanLinkStatus(bool link_status);
 
 #endif //WAN_FAILOVER_SUPPORTED
 rbusError_t ethAgentRbusInit();
-#if defined (_HUB4_PRODUCT_REQ_)
+#if defined (_HUB4_PRODUCT_REQ_) || defined (_PLATFORM_RASPBERRYPI_)
 BOOL EthAgent_Rbus_discover_components(char const *pModuleList);
 #endif //_HUB4_PRODUCT_REQ_
 #endif // WAN_FAILOVER_SUPPORTED RBUS_BUILD_FLAG_ENABLE _HUB4_PRODUCT_REQ_

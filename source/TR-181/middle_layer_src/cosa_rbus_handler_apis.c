@@ -23,7 +23,7 @@
 #include "ccsp_trace.h"
 #include "cosa_rbus_handler_apis.h"
 
-#if  defined  (WAN_FAILOVER_SUPPORTED) ||  defined(RBUS_BUILD_FLAG_ENABLE) || defined (_HUB4_PRODUCT_REQ_)
+#if  defined  (WAN_FAILOVER_SUPPORTED) ||  defined(RBUS_BUILD_FLAG_ENABLE) || defined (_HUB4_PRODUCT_REQ_) || defined (_PLATFORM_RASPBERRYPI_)
 rbusHandle_t handle;
 #endif
 
@@ -187,7 +187,7 @@ void publishEWanLinkStatus(bool link_status)
 }
 #endif //WAN_FAILOVER_SUPPORTED
 
-#if defined (_HUB4_PRODUCT_REQ_)
+#if defined (_HUB4_PRODUCT_REQ_) || defined (_PLATFORM_RASPBERRYPI_)
 BOOL EthAgent_Rbus_discover_components(char const *pModuleList)
 {
     rbusError_t rc = RBUS_ERROR_SUCCESS;
@@ -245,7 +245,7 @@ BOOL EthAgent_Rbus_discover_components(char const *pModuleList)
 
 #endif //_HUB4_PRODUCT_REQ_
 
-#if  defined  (WAN_FAILOVER_SUPPORTED) ||  defined(RBUS_BUILD_FLAG_ENABLE) || defined (_HUB4_PRODUCT_REQ_)
+#if  defined  (WAN_FAILOVER_SUPPORTED) ||  defined(RBUS_BUILD_FLAG_ENABLE) || defined (_HUB4_PRODUCT_REQ_) || defined(_PLATFORM_RASPBERRYPI_)
 /***********************************************************************
 
   ethAgentRbusInit(): Initialize Rbus and data elements
