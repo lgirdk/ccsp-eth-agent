@@ -16,9 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
-AM_CFLAGS = -D_ANSC_LINUX
-AM_CFLAGS += -D_ANSC_USER
-AM_CFLAGS += -D_ANSC_LITTLE_ENDIAN_
+AM_CFLAGS =
 
 ACLOCAL_AMFLAGS = -I m4
 
@@ -39,4 +37,4 @@ if FEATURE_WAN_FAIL_OVER
 libCcspEthAgent_board_sbapi_la_DEPENDENCIES = ${top_builddir}/source/TR-181/middle_layer_src/libCcspEthAgent_middle_layer_src.la
 libCcspEthAgent_board_sbapi_la_LIBADD = $(libCcspEthAgent_board_sbapi_la_DEPENDENCIES)
 endif
-libCcspEthAgent_board_sbapi_la_LDFLAGS = -lccsp_common -lhal_ethsw -lhal_platform -llmapi -lsecure_wrapper -lrt -lsysevent
+libCcspEthAgent_board_sbapi_la_LDFLAGS = -lccsp_common -lutapi -lutctx -lhal_ethsw -lhal_platform -llmapi -lsecure_wrapper -lrt -lsysevent
