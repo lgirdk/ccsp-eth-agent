@@ -208,37 +208,31 @@ eth_device_t* CcspHalExtSw_FindHost( eth_device_t *pstEthHost, eth_device_t* eth
 /* CcspHalExtSw_AddHost() */
 int CcspHalExtSw_AddHost( eth_device_t *pstEthHost, eth_device_t* eth_device_ArrayList[ ], BOOL bIsNeed2Notify )
 {
-   eth_device_t *pstEthLocalHost 	= ( eth_device_t* ) malloc( sizeof( eth_device_t ) );
-   char 	     recv_mac_id[ 18 ];
+   eth_device_t *pstEthLocalHost;
+   char recv_mac_id[ 18 ];
    errno_t rc = -1;
 
-   /* Validate pointers CID 54723 fix */
-   if( NULL == pstEthLocalHost )
+   if (pstEthHost == NULL)
+   {
+       CcspTraceInfo(("%s %d - pstEthHost Null\n" ,__FUNCTION__,__LINE__ ));
+       return -1;
+   }
+
+   pstEthLocalHost = malloc(sizeof(eth_device_t));
+   if (pstEthLocalHost == NULL)
    {
        CcspTraceInfo(("%s %d - pstEthLocalHost Null\n" ,__FUNCTION__,__LINE__ ));
        return -1;
    }
 
-   if( NULL == pstEthHost )
-   {
-	if(pstEthLocalHost)
-           free(pstEthLocalHost);
-
-       CcspTraceInfo(("%s %d - pstEthHost Null\n" ,__FUNCTION__,__LINE__ ));
-       return -1;
-   }
-
    //Copy received host details
-   rc =  memset_s( pstEthLocalHost,sizeof(eth_device_t), 0 , sizeof( eth_device_t ) );
-   ERR_CHK(rc);
-   rc =  memcpy_s( pstEthLocalHost,sizeof( eth_device_t ), pstEthHost, sizeof( eth_device_t ) );
+   rc = memcpy_s(pstEthLocalHost, sizeof(eth_device_t), pstEthHost, sizeof(eth_device_t));
    if(rc != EOK)
    {
       ERR_CHK(rc);
       free(pstEthLocalHost);
       return -1;
    }
-
 
    //MAC Conversion
    snprintf
