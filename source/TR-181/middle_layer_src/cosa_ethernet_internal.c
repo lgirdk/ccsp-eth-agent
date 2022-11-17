@@ -372,8 +372,6 @@ CosaEthernetInitialize
 #if defined (WAN_FAILOVER_SUPPORTED) || defined(RBUS_BUILD_FLAG_ENABLE) || defined (_HUB4_PRODUCT_REQ_)
 	ethAgentRbusInit();
 #endif
-    //Initialise global data and initalise hal
-    CosaDmlEthInit(NULL, (PANSC_HANDLE)pMyObject);
 
     //Register callbacks with ethsw-hal for link events, so hal can update initial link status if needed
     appCallBack obj;
@@ -381,6 +379,8 @@ CosaEthernetInitialize
     obj.pGWP_act_EthWanLinkDown = EthWanLinkDown_callback;
     obj.pGWP_act_EthWanLinkUP   = EthWanLinkUp_callback;
     GWP_RegisterEthWan_Callback ( &obj );
+    //Initialise global data and initalise hal
+    CosaDmlEthInit(NULL, (PANSC_HANDLE)pMyObject);
 
 #elif defined(FEATURE_RDKB_WAN_AGENT)
     CosaDmlEthInit(NULL, (PANSC_HANDLE)pMyObject);
