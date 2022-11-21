@@ -1281,7 +1281,12 @@ INT WanBridgeConfigurationBcm(WAN_MODE_BRIDGECFG *pCfg)
                 }
                 else
                 {
+                    
+#if defined (_CBR2_PRODUCT_REQ_)
+                    v_secure_system("/bin/sh /etc/utopia/service.d/vlan_util_tchcbr.sh multinet-syncMembers 1");
+#else
                     v_secure_system("/bin/sh /etc/utopia/service.d/vlan_util_tchxb6.sh multinet-syncMembers 1");
+#endif
                     v_secure_system("brctl delif brlan0 %s",pCfg->ethwan_ifname);
                 }
                 v_secure_system("rm /tmp/wanmodechange");
@@ -1335,7 +1340,11 @@ INT WanBridgeConfigurationBcm(WAN_MODE_BRIDGECFG *pCfg)
                 }
                 else
                 {
+#if defined (_CBR2_PRODUCT_REQ_)
+                    v_secure_system("/bin/sh /etc/utopia/service.d/vlan_util_tchcbr.sh multinet-syncMembers 1");
+#else
                     v_secure_system("/bin/sh /etc/utopia/service.d/vlan_util_tchxb6.sh multinet-syncMembers 1");
+#endif
                 }
                 v_secure_system("rm /tmp/wanmodechange");
 #endif
