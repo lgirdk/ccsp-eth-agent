@@ -95,6 +95,9 @@
   #include "linux/if.h"
 #endif
 
+extern ANSC_HANDLE bus_handle;
+extern char g_Subsystem[32];
+
 #define SE_IP_ADDR      "127.0.0.1"
 #define SE_PROG_NAME    "CcspEthAgent"
 
@@ -568,6 +571,54 @@ CosaDmlEthPortGetCfg
     return ANSC_STATUS_SUCCESS;
 }
 
+ANSC_STATUS CosaDmlEEEPortGetPsmCfg (ULONG ulInstanceNumber, PCOSA_DML_ETH_PORT_CFG pCfg)
+{
+    char recName[50];
+    char *strValue = NULL;
+    int retPsmGet;
+    int portIdx;
+
+    portIdx = getPortID(ulInstanceNumber);
+
+    if ((portIdx < CCSP_HAL_ETHSW_EthPort1) || (portIdx > CCSP_HAL_ETHSW_EthPort4))
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+
+    snprintf(recName, sizeof(recName), "Device.Ethernet.Interface.%d.EEEEnable", portIdx);
+    retPsmGet = PSM_Get_Record_Value2(bus_handle, g_Subsystem, recName, NULL, &strValue);
+    if ((retPsmGet == CCSP_SUCCESS) && (strValue != NULL))
+    {
+        pCfg->bEEEEnabled = (strcasecmp(strValue, "true") == 0) ? TRUE : FALSE;
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
+
+    return retPsmGet;
+}
+
+ANSC_STATUS CosaDmlEEEPortSetPsmCfg (ULONG ulInstanceNumber, PCOSA_DML_ETH_PORT_CFG pCfg)
+{
+    char recName[50];
+    int retPsmSet;
+    int portIdx;
+
+    portIdx = getPortID(ulInstanceNumber);
+
+    if ((portIdx < CCSP_HAL_ETHSW_EthPort1) || (portIdx > CCSP_HAL_ETHSW_EthPort4))
+    {
+        return ANSC_STATUS_FAILURE;
+    }
+
+    snprintf(recName, sizeof(recName), "Device.Ethernet.Interface.%d.EEEEnable", portIdx);
+    retPsmSet = PSM_Set_Record_Value2(bus_handle, g_Subsystem, recName, ccsp_string, pCfg->bEEEEnabled ? "true" : "false");
+    if (retPsmSet != CCSP_SUCCESS)
+    {
+        CcspTraceWarning(("%s - PSM_Set_Record_Value2 error %d setting %s\n", __FUNCTION__, retPsmSet, recName));
+    }
+
+    return retPsmSet;
+}
+
 ANSC_STATUS
 CosaDmlEthPortGetDinfo
     (
@@ -882,6 +933,9 @@ int puma6_getSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg)
                 break;
             }
         }
+        //Get value from PSM and set in HAL
+        CosaDmlEEEPortGetPsmCfg(port,pcfg);
+        CosaDmlEEEPortSetCfg(port,pcfg);
     }
     else
     {
