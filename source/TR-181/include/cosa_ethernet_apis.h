@@ -430,6 +430,10 @@ ANSC_STATUS CosaDmlEthPortSetCfg ( ANSC_HANDLE hContext, PCOSA_DML_ETH_PORT_CFG 
 
 ANSC_STATUS CosaDmlEthPortGetCfg ( ANSC_HANDLE hContext, PCOSA_DML_ETH_PORT_CFG pCfg );
 
+ANSC_STATUS CosaDmlEEEPortGetPsmCfg(ULONG ulInstanceNumber, PCOSA_DML_ETH_PORT_CFG pCfg);
+
+ANSC_STATUS CosaDmlEEEPortSetPsmCfg(ULONG ulInstanceNumber, PCOSA_DML_ETH_PORT_CFG pCfg);
+
 ANSC_STATUS CosaDmlEthPortSetValues ( ANSC_HANDLE hContext, ULONG ulIndex, ULONG ulInstanceNumber, char* pAlias );
 
 ANSC_STATUS CosaDmlEthPortGetDinfo ( ANSC_HANDLE hContext, ULONG ulInstanceNumber, PCOSA_DML_ETH_PORT_DINFO pInfo );
