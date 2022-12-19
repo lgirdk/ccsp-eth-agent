@@ -254,6 +254,7 @@
          <name>CurrentBitRate</name>
          <type>unsignedInt</type>
          <syntax>uint32</syntax>
+         <notify>off</notify>
          <writable>false</writable>
        </parameter>
        <parameter>
