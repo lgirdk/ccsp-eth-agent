@@ -2321,7 +2321,7 @@ CosaDmlEthInit(
             CcspTraceError(("Hal initialization failed \n"));
             return ANSC_STATUS_FAILURE;
         }
-#if defined(INTEL_PUMA7)
+
         if (TRUE == isEthWanEnabled())
         {
             CcspHalExtSw_setEthWanPort ( ETHWAN_DEF_INTF_NUM );
@@ -2330,7 +2330,7 @@ CosaDmlEthInit(
                 CcspTraceError(("CcspHalExtSw_setEthWanEnable failed in bootup \n"));
             }
         }
-#endif 
+ 
     }
 #else
     #if defined(_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
