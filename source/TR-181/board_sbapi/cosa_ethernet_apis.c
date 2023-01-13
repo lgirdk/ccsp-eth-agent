@@ -192,6 +192,7 @@ token_t sysevent_token;
 
 #define ONEWIFI_ENABLED "/etc/onewifi_enabled"
 #define OPENVSWITCH_LOADED "/sys/module/openvswitch"
+#define WFO_ENABLED     "/etc/WFO_enabled"
 
 int _getMac(char* ifName, char* mac){
 
@@ -1144,9 +1145,10 @@ ANSC_STATUS CosaDmlIfaceFinalize(char *pValue, BOOL isAutoWanMode)
           CcspTraceError(("syscfg_get failed to retrieve ovs_enable\n"));
 
     }
-    if( (0 == access( ONEWIFI_ENABLED , F_OK )) || (0 == access( OPENVSWITCH_LOADED, F_OK )) )
+    if( (0 == access( ONEWIFI_ENABLED , F_OK )) || (0 == access( OPENVSWITCH_LOADED, F_OK ))
+                                                || (access(WFO_ENABLED, F_OK) == 0 ) )
     {
-        CcspTraceInfo(("%s Setting ovsEnabled to TRUE [OneWifi]\n",__FUNCTION__));
+        CcspTraceInfo(("%s Setting ovsEnabled to TRUE [OneWifi/WFO]\n",__FUNCTION__));
         ovsEnabled = TRUE;
     }
 #endif
@@ -1770,9 +1772,10 @@ ANSC_STATUS CosaDmlConfigureEthWan(BOOL bEnable)
           CcspTraceError(("syscfg_get failed to retrieve ovs_enable\n"));
 
     }
-    if( (0 == access( ONEWIFI_ENABLED , F_OK )) || (0 == access( OPENVSWITCH_LOADED, F_OK )) )
+    if( (0 == access( ONEWIFI_ENABLED , F_OK )) || (0 == access( OPENVSWITCH_LOADED, F_OK ))
+                                                || (access(WFO_ENABLED, F_OK) == 0 ) )
     {
-        CcspTraceInfo(("%s Setting ovsEnable to 1 [OneWifi]\n",__FUNCTION__));
+        CcspTraceInfo(("%s Setting ovsEnable to 1 [OneWifi/WFO]\n",__FUNCTION__));
         ovsEnable = 1;
     }
 #endif
@@ -2146,9 +2149,10 @@ ANSC_STATUS EthWanBridgeInit(PCOSA_DATAMODEL_ETHERNET pEthernet)
           CcspTraceError(("syscfg_get failed to retrieve ovs_enable\n"));
 
     }
-    if( (0 == access( ONEWIFI_ENABLED , F_OK )) || (0 == access( OPENVSWITCH_LOADED, F_OK )) )
+    if( (0 == access( ONEWIFI_ENABLED , F_OK )) || (0 == access( OPENVSWITCH_LOADED, F_OK ))
+                                                || (access(WFO_ENABLED, F_OK) == 0 ) )
     {
-        CcspTraceInfo(("%s Setting ovsEnable to 1 [OneWifi]\n",__FUNCTION__));
+        CcspTraceInfo(("%s Setting ovsEnable to 1 [OneWifi/WFO]\n",__FUNCTION__));
         ovsEnable = 1;
     }
 #endif
