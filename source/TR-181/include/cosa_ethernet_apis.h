@@ -70,6 +70,9 @@
 
 #define WAN_ETHERNET_IFNAME "erouter0"
 
+#define PSM_ETHMANAGER_CFG_UPSTREAM      "dmsb.ethagent.if.%d.Upstream"
+#define PSM_ETHMANAGER_CFG_ADDTOBRIDGE   "dmsb.ethagent.if.%d.AddToLanBridge"
+
 /**********************************************************************
                 STRUCTURE AND CONSTANT DEFINITIONS
 **********************************************************************/
@@ -162,6 +165,7 @@ wanmanager could able to handle vlan interface creation and management */
 #define PHY_STATUS_MONITOR_MAX_TIMEOUT 240
 #define PHY_STATUS_QUERY_INTERVAL 2
 #define CFG_TR181_ETH_BORROW_MAC  1
+#define OVS_DIR_PATH "/sys/module/openvswitch"
 #if defined (FEATURE_RDKB_WAN_MANAGER)
 #ifdef FEATURE_RDKB_AUTO_PORT_SWITCH
 
@@ -293,6 +297,7 @@ _COSA_DML_ETH_PORT_CONFIG
     COSA_DML_ETH_WAN_STATUS WanStatus; /* Wan link status - Up/down */
     BOOL Upstream; /* Indicates interface is used for WAN. */
     BOOL WanValidated; /* Is it is a valid WAN interface */
+    BOOL AddToLanBridge; /* TRUE, if interface is in LAN bridge, FALSE if interface not in LAN bridge */
     CHAR Path[128]; /* contains current table path */
 #ifdef FEATURE_RDKB_WAN_MANAGER
     CHAR LowerLayers[128]; /* contains LowerLayers */
@@ -505,6 +510,7 @@ ANSC_STATUS CosaDmlEthGetPhyStatusForWanManager( char *ifname, char *PhyStatus )
 ANSC_STATUS CosaDmlEthSetPhyStatusForWanManager( char *ifname, char *PhyStatus );
 ANSC_STATUS CosaDmlEthSetPhyPathForWanManager(char *ifname);
 ANSC_STATUS CosDmlEthPortUpdateGlobalInfo(PANSC_HANDLE phContext, CHAR *ifname, COSA_DML_ETH_TABLE_OPER Oper );
+ANSC_STATUS EthMgr_AddPortToLanBridge (PCOSA_DML_ETH_PORT_CONFIG pEthLink, BOOLEAN AddToBridge);
 #ifdef _SR300_PRODUCT_REQ_
 void EthWanLinkUp_callback();
 void EthWanLinkDown_callback();

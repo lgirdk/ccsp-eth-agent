@@ -458,6 +458,12 @@
           <type>boolean</type>
           <syntax>bool</syntax>
         </parameter>
+        <parameter>
+          <name>AddToLanBridge</name>
+          <type>boolean</type>
+          <syntax>bool</syntax>
+          <writable>true</writable>
+        </parameter>
 <?ifdef FEATURE_RDKB_AUTO_PORT_SWITCH?>
         <parameter>
           <name>PortCapability</name>

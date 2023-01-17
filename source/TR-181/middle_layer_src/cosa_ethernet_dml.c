@@ -1465,6 +1465,11 @@ EthRdkInterface_GetParamBoolValue
         *pBool = pEthLink->Upstream;
         return TRUE;
     }
+    if (strcmp(ParamName, "AddToLanBridge") == 0)
+    {
+        *pBool = pEthLink->AddToLanBridge;
+        return TRUE;
+    }
     if (strcmp(ParamName, "WanValidated") == 0)
     {
         *pBool = pEthLink->WanValidated;
@@ -1843,9 +1848,6 @@ EthRdkInterface_SetParamBoolValue
         }
         pEthLink->Upstream = bValue;
         CosaDmlEthPortSetUpstream( pEthLink->Name , pEthLink->Upstream );
-#ifdef FEATURE_RDKB_WAN_UPSTREAM
-        EthRdkInterfaceSetUpstream(pEthLink);
-#endif
         return TRUE;
     }
     if (strcmp(ParamName, "Enable") == 0)
@@ -1867,6 +1869,29 @@ EthRdkInterface_SetParamBoolValue
         pEthLink->WanValidated = bValue;
         CosaDmlEthPortSetWanValidated(( pEthLink->ulInstanceNumber - 1 ), pEthLink->WanValidated );
         return TRUE;
+    }
+    if (strcmp(ParamName, "AddToLanBridge") == 0)
+    {
+#ifdef FEATURE_RDKB_AUTO_PORT_SWITCH
+        // check if port is WAN capable, before removing/adding into bridge
+        UINT WanPort = 0;
+        CcspHalExtSw_getEthWanPort(&WanPort);
+        if(WanPort != pEthLink->ulInstanceNumber)
+        {
+            CcspTraceError(("%s %d: Cannot set AddToLanBridge for non-WAN capable port\n", __FUNCTION__, __LINE__));
+            return FALSE;
+        }
+
+        if (ANSC_STATUS_SUCCESS == EthMgr_AddPortToLanBridge (pEthLink, bValue))
+        {
+            CcspTraceError(("%s %d: successfully set AddtoBridge = %d for interface %s \n", __FUNCTION__, __LINE__, bValue, pEthLink->Name));
+            pEthLink->AddToLanBridge = bValue;
+            return TRUE;
+        }
+        CcspTraceError(("%s %d: unable to set AddtoBridge = %d for interface %s \n", __FUNCTION__, __LINE__, bValue, pEthLink->Name));
+#else
+        return TRUE;
+#endif
     }
     return FALSE;
 }

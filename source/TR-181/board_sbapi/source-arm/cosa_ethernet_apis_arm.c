@@ -312,15 +312,30 @@ CosaDmlEthInterfaceInit
 
 #ifdef FEATURE_RDKB_WAN_UPSTREAM
 
-/* Get upstream from system and assign it to upstream */
+    /* Get upstream from system and assign it to upstream */
+    char acGetParamName[128] = {0};
+    char acPSMValue[128] = {0};
 
-for (i=0; i < g_EthernetIntNum; ++i) {
-    if (strcmp(g_EthIntSInfo[i].Name, DMSB_ETH_IF_NAME_DFT_WanRouting) == 0)
-    {
-        g_EthIntSInfo[i].bUpstream = getSystemUpstream();
-        CcspTraceInfo(("%s g_EthIntSInfo[%ld].bUpstream=[%s]\n", __FUNCTION__, i+1, g_EthIntSInfo[i].bUpstream?"TRUE":"FALSE"));
+    for (i=0; i < g_EthernetIntNum; ++i) {
+        if (strcmp(g_EthIntSInfo[i].Name, DMSB_ETH_IF_NAME_DFT_WanRouting) == 0)
+        {
+            g_EthIntSInfo[i].bUpstream = getSystemUpstream();
+            CcspTraceInfo(("%s %d : g_EthIntSInfo[%ld].bUpstream=[%s]\n", __FUNCTION__, __LINE__,  i+1, g_EthIntSInfo[i].bUpstream?"TRUE":"FALSE"));
+        }
+        else
+        {
+            snprintf(acGetParamName, sizeof(acGetParamName), PSM_ETHMANAGER_CFG_UPSTREAM, (int)i + 1);
+            if ( CCSP_SUCCESS == Ethagent_GetParamValuesFromPSM(acGetParamName, acPSMValue, sizeof(acPSMValue)) )
+            {
+                CcspTraceInfo(("%s %d: %s = %s from PSM\n", __FUNCTION__, __LINE__, acGetParamName, acPSMValue));
+                if (strcmp(acPSMValue, "TRUE") == 0)
+                {
+                    CcspTraceInfo(("%s %d : g_EthIntSInfo[%ld].bUpstream=[%s]\n", __FUNCTION__, __LINE__,  i+1, g_EthIntSInfo[i].bUpstream?"TRUE":"FALSE"));
+                    g_EthIntSInfo[i].bUpstream = TRUE;
+                }
+            }
+        }
     }
-}
 #endif
     /*  Iterate through Ethernet ports, assign LAN mac to downstream ports
         Keep track of the index of upstream ports to assign their MAC addresses

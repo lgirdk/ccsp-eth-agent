@@ -119,6 +119,9 @@ extern ANSC_HANDLE bus_handle;
 
 #define PSM_ETHMANAGER_CFG_COUNT  "dmsb.ethagent.ethifcount"
 #define PSM_ETHMANAGER_CFG_NAME   "dmsb.ethagent.if.%d.Name"
+#define PSM_ETHMANAGER_LAN_BRIDGE_PORT  "dmsb.ethagent.lanBridgePort"
+#define PSM_BRLAN0_ETH_MEMBERS    "dmsb.l2net.1.Members.Eth"
+#define BRLAN0_BRIDGE_INSTANCE    1
 
 #if defined (FEATURE_RDKB_WAN_MANAGER)
 #include "cosa_ethernet_manager.h"
@@ -193,6 +196,168 @@ token_t sysevent_token;
 #define ONEWIFI_ENABLED "/etc/onewifi_enabled"
 #define OPENVSWITCH_LOADED "/sys/module/openvswitch"
 #define WFO_ENABLED     "/etc/WFO_enabled"
+
+#if defined (FEATURE_RDKB_WAN_AGENT) || defined (FEATURE_RDKB_WAN_MANAGER)
+static int DmlEthGetPSMRecordValue(char *pPSMEntry, char *pOutputString)
+{
+    int   retPsmGet = CCSP_FAILURE;
+    char *strValue  = NULL;
+
+    //Validate buffer
+    if( ( NULL == pPSMEntry ) && ( NULL == pOutputString ) )
+    {
+        CcspTraceError(("%s %d Invalid buffer\n",__FUNCTION__,__LINE__));
+       return retPsmGet;
+    }
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle, g_Subsystem, pPSMEntry, NULL, &strValue);
+    if ( retPsmGet == CCSP_SUCCESS )
+    {
+        //Copy till end of the string
+       snprintf( pOutputString, strlen( strValue ) + 1, "%s", strValue );
+
+        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
+
+    return retPsmGet;
+}
+#endif
+
+#ifdef FEATURE_RDKB_AUTO_PORT_SWITCH
+/*
+    remove "sub" substring in "str"
+    eg: if str[] = "eth4 eth1 eth2 eth3 eth4 eth4 eth3"  & sub = "eth4"
+        str[] will be = "eth1 eth2 eth3 eth3" after this call
+*/
+
+static int removeSubStrWithSpace (char * str, char * sub)
+{
+
+    if (str == NULL || sub == NULL)
+    {
+        CcspTraceError(("%s %d: Invalid args\n", __FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    int len = strlen(str) + 1;
+
+    char * tmp = malloc (len);
+    if (tmp == NULL)
+    {
+        CcspTraceError(("%s %d: malloc failed\n", __FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+    memset (tmp, 0, sizeof(len));
+
+    char delimit[2] = " ";
+    char * token = strtok (str, delimit);
+
+    while (token != NULL)
+    {
+
+        if (strstr(token, sub) == NULL)
+        {
+            strncat (tmp, token, len - strlen(tmp) - 1);
+            strncat (tmp, " ", len - strlen(tmp) - 1);
+        }
+
+        token = strtok(NULL, delimit);
+    }
+
+    strcpy(str, tmp);
+    free(tmp);
+
+    // remove last char if its space
+    if (str[strlen(str) - 1] == ' ')
+        str[strlen(str) - 1] = '\0';
+
+    return ANSC_STATUS_SUCCESS;
+
+}
+
+ANSC_STATUS EthMgr_AddPortToLanBridge (PCOSA_DML_ETH_PORT_CONFIG pEthLink, BOOLEAN AddToBridge)
+{
+
+    if (pEthLink == NULL)
+    {
+        CcspTraceInfo(("%s %d: Invalid args\n",__FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    char ifname[128] = {0};
+    char acPSMValue[128] = {0};
+    bool wanMode = TRUE;
+
+    wanMode = (AddToBridge==TRUE)? FALSE: TRUE;
+
+    if (pEthLink->PortCapability == PORT_CAP_WAN_LAN)
+    {
+        // Port is WAN & LAN capable, get the correct port to add to LAN Bridge from PSM
+        DmlEthGetPSMRecordValue(PSM_ETHMANAGER_LAN_BRIDGE_PORT, ifname);
+    }
+
+    if (strlen(ifname) == 0 )
+    {
+        strncpy (ifname, pEthLink->Name, sizeof(ifname));
+    }
+    CcspTraceInfo(("%s %d: setting AddToLanBridge = %d for interface %s.\n",__FUNCTION__, __LINE__, AddToBridge, ifname));
+
+
+    // get the brlan0 member ports from PSM
+    if ( CCSP_SUCCESS != DmlEthGetPSMRecordValue(PSM_BRLAN0_ETH_MEMBERS, acPSMValue) )
+    {
+        CcspTraceError(("%s %d: unable to PSM get %s\n", __FUNCTION__, __LINE__, PSM_BRLAN0_ETH_MEMBERS));
+        return ANSC_STATUS_FAILURE;
+    }
+    CcspTraceInfo(("%s %d: from PSM %s = %s.\n", __FUNCTION__, __LINE__, PSM_BRLAN0_ETH_MEMBERS, acPSMValue));
+
+    // set the correct value in PSM_BRLAN0_ETH_MEMBERS
+    bool syncMembers = false;
+    char newPSMValue[128] = {0};
+    if (AddToBridge)
+    {
+        if (strstr(acPSMValue, ifname) == NULL)
+        {
+            // add LAN port into PSM_BRLAN0_ETH_MEMBERS and save it back to PSM
+            snprintf(newPSMValue, sizeof(newPSMValue), "%s %s", acPSMValue, ifname);
+            CcspTraceInfo (("%s %d: setting %s = %s in PSM\n", __FUNCTION__, __LINE__, PSM_BRLAN0_ETH_MEMBERS, newPSMValue));
+
+            syncMembers = TRUE;
+
+        }
+    }
+    else
+    {
+        if (strstr(acPSMValue, ifname) != NULL)
+        {
+            strncpy(newPSMValue, acPSMValue, sizeof(newPSMValue) - 1);
+            // remove LAN port from PSM_BRLAN0_ETH_MEMBERS and save it back to PSM
+            if (removeSubStrWithSpace(newPSMValue, ifname) != ANSC_STATUS_SUCCESS)
+            {
+                CcspTraceInfo (("%s %d: failed to remove %s from %s\n", __FUNCTION__, __LINE__, ifname, acPSMValue));
+                return ANSC_STATUS_FAILURE;
+            }
+            CcspTraceInfo(("%s %d: setting %s = %s in PSM\n", __FUNCTION__, __LINE__, PSM_BRLAN0_ETH_MEMBERS, newPSMValue));
+
+            syncMembers = TRUE;
+        }
+    }
+
+    // Sync Member ports of brlan0
+    if (syncMembers)
+    {
+        if (Ethagent_SetParamValuesToPSM(PSM_BRLAN0_ETH_MEMBERS, newPSMValue) != CCSP_SUCCESS)
+        {
+            CcspTraceInfo (("%s %d: faled to set %s = %s in PSM\n", __FUNCTION__, __LINE__, PSM_BRLAN0_ETH_MEMBERS, newPSMValue));
+            return ANSC_STATUS_FAILURE;
+        }
+        // sync brlan0 members
+        v_secure_system("sysevent set multinet-syncMembers %d", BRLAN0_BRIDGE_INSTANCE);
+    }
+
+    return CcspHalExtSw_ethPortConfigure(ifname, wanMode);
+}
+#endif
 
 int _getMac(char* ifName, char* mac){
 
@@ -433,6 +598,7 @@ static ANSC_STATUS DmlEthCheckIfaceConfiguredAsPPPoE( char *ifname, BOOL *isPppo
 static ANSC_STATUS  GetWan_InterfaceName (char* wanoe_ifacename, int length);
 static INT gTotal = TOTAL_NUMBER_OF_INTERNAL_INTERFACES;
 #endif //FEATURE_RDKB_WAN_MANAGER
+
 
 void Notify_To_LMLite(Eth_host_t *host)
 {
@@ -2533,6 +2699,8 @@ CosaDmlEthPortInit(
         snprintf(pETHlinkTemp[iLoopCount].Path, sizeof(pETHlinkTemp[iLoopCount].Path), "%s%d", ETHERNET_IF_PATH, iLoopCount + 1);
         pETHlinkTemp[iLoopCount].Upstream = FALSE;
         pETHlinkTemp[iLoopCount].WanValidated = FALSE;
+        CcspTraceInfo (("%s %d: Setting %d.AddToLanBridge = TRUE\n", __FUNCTION__, __LINE__, iLoopCount));
+        pETHlinkTemp[iLoopCount].AddToLanBridge = TRUE;    // make default as TRUE
     }
 
     //Assign the memory address to oringinal structure
@@ -2547,7 +2715,6 @@ CosaDmlEthPortInit(
     INT iLoopCount = 0;
 #ifdef FEATURE_RDKB_AUTO_PORT_SWITCH
     char infPortCapability[BUFLEN_32] = {0};
-    char acGetParamName[BUFLEN_256] = {0};
 #endif  //FEATURE_RDKB_AUTO_PORT_SWITCH
 
     char acPSMQuery[128] = {0};
@@ -2584,59 +2751,81 @@ CosaDmlEthPortInit(
         pETHTemp->ulInstanceNumber = iLoopCount + 1;
         pMyObject->ulPtNextInstanceNumber=  pETHTemp->ulInstanceNumber + 1;
         // Get  Name.
-        
-            // Get Name from the psmdb.
-            memset(acPSMQuery, 0, sizeof(acPSMQuery));
-            memset(acPSMValue, 0, sizeof(acPSMValue));
-            snprintf(acPSMQuery, sizeof(acPSMQuery), PSM_ETHMANAGER_CFG_NAME, iLoopCount + 1 );
-            if ( CCSP_SUCCESS == DmlEthGetPSMRecordValue(acPSMQuery, acPSMValue) )
-            {
-                snprintf(pETHTemp->Name, sizeof(pETHTemp->Name), "%s", acPSMValue);
-               // return ANSC_STATUS_FAILURE;
-            } else
-            {
-                CcspTraceError(("Failed to get %s\n", acPSMQuery));
+
+        // Get Name from the psmdb.
+        memset(acPSMQuery, 0, sizeof(acPSMQuery));
+        memset(acPSMValue, 0, sizeof(acPSMValue));
+        snprintf(acPSMQuery, sizeof(acPSMQuery), PSM_ETHMANAGER_CFG_NAME, iLoopCount + 1 );
+        if ( CCSP_SUCCESS == DmlEthGetPSMRecordValue(acPSMQuery, acPSMValue) )
+        {
+            snprintf(pETHTemp->Name, sizeof(pETHTemp->Name), "%s", acPSMValue);
+            // return ANSC_STATUS_FAILURE;
+        } else
+        {
+            CcspTraceError(("Failed to get %s\n", acPSMQuery));
 #if defined (INTEL_PUMA7)
-                if ( ANSC_STATUS_SUCCESS != GetEthPhyInterfaceName(iLoopCount + 1,pETHTemp->Name,sizeof(pETHTemp->Name)))
-                {
-                    snprintf(pETHTemp->Name, sizeof(pETHTemp->Name), "sw_%d", iLoopCount + 1);
-                }
-                CcspTraceWarning(("\n ifname copied %s index %d\n",pETHTemp->Name,iLoopCount));
-#else
-                // Generate Name.
-                snprintf(pETHTemp->Name, sizeof(pETHTemp->Name), "eth%d", iLoopCount);
-#endif /* INTEL_PUMA7 */
+            if ( ANSC_STATUS_SUCCESS != GetEthPhyInterfaceName(iLoopCount + 1,pETHTemp->Name,sizeof(pETHTemp->Name)))
+            {
+                snprintf(pETHTemp->Name, sizeof(pETHTemp->Name), "sw_%d", iLoopCount + 1);
             }
+            CcspTraceWarning(("\n ifname copied %s index %d\n",pETHTemp->Name,iLoopCount));
+#else
+            // Generate Name.
+            snprintf(pETHTemp->Name, sizeof(pETHTemp->Name), "eth%d", iLoopCount);
+#endif /* INTEL_PUMA7 */
+        }
 
         snprintf(pETHTemp->LowerLayers, sizeof(pETHTemp->LowerLayers), "%s%d", ETHERNET_IF_LOWERLAYERS, iLoopCount + 1);
 #ifdef FEATURE_RDKB_AUTO_PORT_SWITCH
 
-    snprintf(acGetParamName, sizeof(acGetParamName), PSM_ETHAGENT_IF_PORTCAPABILITY, iLoopCount + 1);
+        char acGetParamName[BUFLEN_256] = {0};
+        snprintf(acGetParamName, sizeof(acGetParamName), PSM_ETHAGENT_IF_PORTCAPABILITY, iLoopCount + 1);
 
-    CcspTraceInfo(("%s query[%s]\n",__FUNCTION__,acGetParamName));
-    Ethagent_GetParamValuesFromPSM(acGetParamName,infPortCapability,sizeof(infPortCapability));
+        CcspTraceInfo(("%s query[%s]\n",__FUNCTION__,acGetParamName));
+        Ethagent_GetParamValuesFromPSM(acGetParamName,infPortCapability,sizeof(infPortCapability));
 
-    CcspTraceInfo(("%s infPortCapability[%s]\n",__FUNCTION__,infPortCapability));
+        CcspTraceInfo(("%s infPortCapability[%s]\n",__FUNCTION__,infPortCapability));
 
-    if(!strcmp(infPortCapability,"WAN_LAN"))
-    {
-        pETHTemp->PortCapability = PORT_CAP_WAN_LAN;
-    }
-    else if(!strcmp(infPortCapability,"WAN"))
-    {
-        pETHTemp->PortCapability = PORT_CAP_WAN;
-    }
-    else
-    {
-        pETHTemp->PortCapability = PORT_CAP_LAN;
-    }
+        if(!strcmp(infPortCapability,"WAN_LAN"))
+        {
+            pETHTemp->PortCapability = PORT_CAP_WAN_LAN;
+        }
+        else if(!strcmp(infPortCapability,"WAN"))
+        {
+            pETHTemp->PortCapability = PORT_CAP_WAN;
+        }
+        else
+        {
+            pETHTemp->PortCapability = PORT_CAP_LAN;
+        }
 
+        // Get AddToLanBridge Config from PSM
+        snprintf(acGetParamName, sizeof(acGetParamName), PSM_ETHMANAGER_CFG_ADDTOBRIDGE, (int)pETHTemp->ulInstanceNumber);
+        if ( CCSP_SUCCESS == Ethagent_GetParamValuesFromPSM(acGetParamName, acPSMValue, sizeof(acPSMValue)) )
+        {
+            if (strcmp(acPSMValue, "FALSE") == 0)
+            {
+                pETHTemp->AddToLanBridge = FALSE;
+            }
+            else
+            {
+                pETHTemp->AddToLanBridge = TRUE;
+            }
+            CcspTraceInfo (("%s %d: Setting %d.AddToLanBridge = %d\n", __FUNCTION__, __LINE__, (iLoopCount + 1), pETHTemp->AddToLanBridge));
+        }
 #endif  //FEATURE_RDKB_AUTO_PORT_SWITCH
+/*
+        if (EthMgr_AddPortToLanBridge (pETHTemp, pETHTemp->AddToLanBridge) != ANSC_STATUS_SUCCESS)
+        {
+            CcspTraceError (("%s %d: unable to set %s with AddToLanBridge config %d to HAL\n", __FUNCTION__, __LINE__, pETHTemp->Name, pETHTemp->AddToLanBridge));
+        }
+*/
+
         pEthCxtLink->hContext = (ANSC_HANDLE)pETHTemp;
         pEthCxtLink->bNew     = TRUE;
         pEthCxtLink->InstanceNumber = pETHTemp->ulInstanceNumber ;
         CosaSListPushEntryByInsNum(&pMyObject->Q_EthList, (PCOSA_CONTEXT_LINK_OBJECT)pEthCxtLink);
-   }
+    }
     //Prepare global information.
     CosDmlEthPortPrepareGlobalInfo();
 #else
@@ -3367,29 +3556,6 @@ static ANSC_STATUS CosaDmlMapWanCPEtoEthInterfaces(char* pInterface, unsigned in
     return ANSC_STATUS_SUCCESS;
 }
 
-int DmlEthGetPSMRecordValue(char *pPSMEntry, char *pOutputString)
-{
-    int   retPsmGet = CCSP_FAILURE;
-    char *strValue  = NULL;
-
-    //Validate buffer
-    if( ( NULL == pPSMEntry ) && ( NULL == pOutputString ) )
-    {
-        CcspTraceError(("%s %d Invalid buffer\n",__FUNCTION__,__LINE__));
-       return retPsmGet;
-    }
-
-    retPsmGet = PSM_Get_Record_Value2(bus_handle, g_Subsystem, pPSMEntry, NULL, &strValue);
-    if ( retPsmGet == CCSP_SUCCESS )
-    {
-        //Copy till end of the string
-       snprintf( pOutputString, strlen( strValue ) + 1, "%s", strValue );
-
-        ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-    }
-
-    return retPsmGet;
-}
 
 
 /* Send link information to the message queue. */
@@ -4608,6 +4774,10 @@ BOOL EthInterfaceSetUpstream( PCOSA_DML_ETH_PORT_FULL pEthernetPortFull )
         ((pEthernetPortFull->StaticInfo.bUpstream) ? "Enable" : "Disable"),((ret == 0)?"Success":"Failed")));
     if(ret == 0)
     {
+        // save it to PSM
+        char acGetParamName[256] = {0};
+        snprintf(acGetParamName, sizeof(acGetParamName), PSM_ETHMANAGER_CFG_UPSTREAM, (int)(pEthernetPortFull->Cfg.InstanceNumber));
+        Ethagent_SetParamValuesToPSM(acGetParamName,(pEthernetPortFull->StaticInfo.bUpstream == TRUE)?"TRUE":"FALSE");
         return TRUE;
     }
     return FALSE;

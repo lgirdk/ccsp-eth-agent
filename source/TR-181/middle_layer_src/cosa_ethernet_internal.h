@@ -70,6 +70,9 @@
 #include "sys_definitions.h"
 #include "ccsp_hal_ethsw.h"
 
+#define PSM_ETHMANAGER_CFG_UPSTREAM      "dmsb.ethagent.if.%d.Upstream"
+#define PSM_ETHMANAGER_CFG_ADDTOBRIDGE   "dmsb.ethagent.if.%d.AddToLanBridge"
+
 #ifdef FEATURE_RDKB_WAN_MANAGER
 #define DML_ETHIF_INIT(Eth)                           \
     (Eth)->Enable = FALSE;                            \
