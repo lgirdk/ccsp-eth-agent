@@ -2084,7 +2084,7 @@ EthWanSetLED
         ledMgmt.LedColor = color;
         ledMgmt.State    = state;
         ledMgmt.Interval = interval;
-#if defined(_XB6_PRODUCT_REQ_)
+#if defined(_XB6_PRODUCT_REQ_) || defined(_CBR2_PRODUCT_REQ_)
         if(RETURN_ERR == platform_hal_setLed(&ledMgmt)) {
                 CcspTraceError(("platform_hal_setLed failed\n"));
                 return 1;
@@ -4519,6 +4519,11 @@ void EthWanLinkDown_callback() {
 	publishEWanLinkStatus(false);
 #endif
 	
+#endif
+
+#if defined (_CBR2_PRODUCT_REQ_)
+     CcspTraceInfo(("%s: EthWan link down, Setting LED to WHITE FAST BLINK \n", __FUNCTION__));
+     EthWanSetLED(WHITE, BLINK, 5);
 #endif
     if (ANSC_STATUS_SUCCESS == GetWan_InterfaceName (wanoe_ifname, sizeof(wanoe_ifname))) {
        // Update always Ethwan interface name into global structure if macsec is enabled.
