@@ -4467,7 +4467,7 @@ static ANSC_STATUS  GetWan_InterfaceName (char* wanoe_ifacename, int length) {
 
     char wanoe_ifname[WANOE_IFACENAME_LENGTH] = {0};
 
-#ifdef _LG_MV2_PLUS_
+#if defined (_LG_MV2_PLUS_) && defined (FEATURE_RDKB_AUTO_PORT_SWITCH)
     if (CosaDmlGetWanOEInterfaceName(wanoe_ifname, sizeof(wanoe_ifname)) != ANSC_STATUS_SUCCESS) {
         CcspTraceError(("[%s][%d] Failed to get wanoe interface name \n", __FUNCTION__, __LINE__));
         return ANSC_STATUS_FAILURE;
