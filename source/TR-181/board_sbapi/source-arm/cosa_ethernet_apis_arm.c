@@ -259,6 +259,7 @@ static CosaEthInterfaceInfo g_EthEntries[] =
 #ifdef FEATURE_RDKB_WAN_UPSTREAM
 BOOL getSystemUpstream()
 {
+#ifndef _SR300_PRODUCT_REQ_
     char buf[8]={0};
     if (syscfg_get(NULL, "Ethwan_Disable_Upstream", buf, sizeof(buf)) == 0)
     {
@@ -267,6 +268,7 @@ BOOL getSystemUpstream()
             return FALSE;
         }
     }
+#endif //_SR300_PRODUCT_REQ_
     return TRUE;
 }
 #endif
