@@ -222,8 +222,15 @@ Interface_GetParamBoolValue
 
     if (strcmp(ParamName, "EEEEnable") == 0)
     {
-        CosaDmlEEEPortGetPsmCfg(pEthernetPortFull->Cfg.InstanceNumber, &pEthernetPortFull->Cfg);
-        *pBool = pEthernetPortFull->Cfg.bEEEEnabled;
+        if (CosaDmlEEEPortGetPsmCfg(pEthernetPortFull->Cfg.InstanceNumber, &pEthernetPortFull->Cfg) == CCSP_SUCCESS)
+        {
+            *pBool = pEthernetPortFull->Cfg.bEEEEnabled;
+        }
+        else
+        {
+            *pBool = FALSE;
+        }
+
         return TRUE;
     }
 
@@ -581,10 +588,12 @@ Interface_SetParamBoolValue
 
     if (strcmp(ParamName, "EEEEnable") == 0)
     {
-        // Set in PSM and HAL
+        // Call HAL API and on success store the bValue in PSM.
         pEthernetPortFull->Cfg.bEEEEnabled = bValue;
-        CosaDmlEEEPortSetPsmCfg(pEthernetPortFull->Cfg.InstanceNumber, &pEthernetPortFull->Cfg);
-        CosaDmlEEEPortSetCfg(pEthernetPortFull->Cfg.InstanceNumber, &pEthernetPortFull->Cfg);
+        if (CosaDmlEEEPortSetCfg(pEthernetPortFull->Cfg.InstanceNumber, &pEthernetPortFull->Cfg)== ANSC_STATUS_SUCCESS)
+        {
+            CosaDmlEEEPortSetPsmCfg(pEthernetPortFull->Cfg.InstanceNumber, &pEthernetPortFull->Cfg);
+        }
         return TRUE;
     }
 
