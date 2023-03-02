@@ -4307,7 +4307,11 @@ ANSC_STATUS CosaDmlEthSetPhyStatusForWanManager(char *ifname, char *PhyStatus)
         return ANSC_STATUS_FAILURE;
     }
 
+#ifdef FEATURE_RDKB_WAN_AGENT
     CcspTraceInfo(("%s %d Successfully notified %s event to WAN Agent for %s interface\n", __FUNCTION__, __LINE__, PhyStatus, ifname));
+#else
+    CcspTraceInfo(("%s %d Successfully notified %s event to WAN Manager for %s interface\n", __FUNCTION__, __LINE__, PhyStatus, ifname));
+#endif
 
     return ANSC_STATUS_SUCCESS;
 }
