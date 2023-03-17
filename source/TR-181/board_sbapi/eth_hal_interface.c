@@ -26,8 +26,10 @@
 #include "secure_wrapper.h"
 
 #define ARP_CACHE "/tmp/arp.txt"
+#ifndef _SR213_PRODUCT_REQ_
 #define DNSMASQ_CACHE "/tmp/dns.txt"
 #define DNSMASQ_FILE "/nvram/dnsmasq.leases"
+#endif /*_SR213_PRODUCT_REQ_*/
 #define ETH_POLLING_PERIOD 180
 #define ETH_NODE_HASH_SIZE 256
 
@@ -53,9 +55,11 @@ int ValidateClient(char *mac)
 {
 	int ret = 0;
 	char buf[200]= {0};
+#ifndef _SR213_PRODUCT_REQ_
 	char buf1[200];
-	FILE *fp1 = NULL;
 	FILE *fp2 = NULL;
+#endif /*_SR213_PRODUCT_REQ_*/
+	FILE *fp1 = NULL;
         errno_t rc = -1;
 		//Need to ignore brlan1 - XHS clients when during CB case
         v_secure_system("ip nei show | grep -v brlan1 | grep -i %s | grep -i REACHABLE > " ARP_CACHE, mac);
@@ -74,6 +78,11 @@ int ValidateClient(char *mac)
 			return ret;
 
 	}
+#ifdef _SR213_PRODUCT_REQ_
+	fclose(fp1);
+	unlink(ARP_CACHE);
+	return ret;
+#else
 	else
 	{
 				//Need to ignore brlan1 - XHS clients when during CB case
@@ -97,8 +106,7 @@ int ValidateClient(char *mac)
         	        unlink(DNSMASQ_CACHE);
 			return ret;
 	}
-	
-
+#endif /*_SR213_PRODUCT_REQ_*/
 }
 
 /* hash() */
