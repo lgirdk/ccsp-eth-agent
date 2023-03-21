@@ -69,7 +69,9 @@
 #define LAN_ETHERNET_IFNAME "lan0"
 #define BRLAN_ETHERNET_IFNAME "brlan0"
 
-#if defined _COSA_INTEL_USG_ARM_ || _COSA_BCM_MIPS_
+#ifdef _LG_MV2_PLUS_
+#define WAN_ETHERNET_IFNAME "erouter1"
+#elif defined _COSA_INTEL_USG_ARM_ || _COSA_BCM_MIPS_
 #define WAN_ETHERNET_IFNAME "erouter0"
 #else
 #define WAN_ETHERNET_IFNAME "wan0"
