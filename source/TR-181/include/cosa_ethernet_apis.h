@@ -68,7 +68,11 @@
 #include "../middle_layer_src/plugin_main_apis.h"
 #include "ccsp_hal_ethsw.h"
 
+#ifdef _LG_MV2_PLUS_
+#define WAN_ETHERNET_IFNAME "erouter1"
+#else
 #define WAN_ETHERNET_IFNAME "erouter0"
+#endif
 
 #define PSM_ETHMANAGER_CFG_UPSTREAM      "dmsb.ethagent.if.%d.Upstream"
 #define PSM_ETHMANAGER_CFG_ADDTOBRIDGE   "dmsb.ethagent.if.%d.AddToLanBridge"
@@ -105,7 +109,11 @@
 
 #define BUFLEN_256 256
 #define BUFLEN_32  32
+#ifdef _LG_MV2_PLUS_
+#define WAN_INTERFACE_NAME         "erouter1"
+#else
 #define WAN_INTERFACE_NAME         "erouter0"
+#endif
 /*TODO: The hardcoded names will be removed from ethagent once the
 wanmanager could able to handle vlan interface creation and management */
 #define PPPoE_VLAN_INTERFACE_NAME  "vlan101"
