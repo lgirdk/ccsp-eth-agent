@@ -726,39 +726,6 @@ COSA_DML_LINK_TYPE CosaUtilGetLinkTypeFromPath(char*pLinkTypePath)
     return COSA_DML_LINK_TYPE_LAST;
 }
 
-
-ANSC_STATUS
-CosaUtilConstructLowerLayers
-    (
-        COSA_DML_LINK_TYPE          LinkType,
-        ULONG                       InstNumber,
-        char*                       pLowerLayersBuf,
-        PULONG                      pBufLen        
-    )
-{
-    char*                           linkTypePath;
-
-    linkTypePath = CosaUtilGetLinkTypePath(LinkType);
-
-    /* TBD - Need to check the pBufLen */
-
-    if ( LinkType == COSA_DML_LINK_TYPE_Bridge )
-    {
-        /* Special processing for Bridge type LowerLayers */
-        /*Coverity Fix CID: 73664 DC.STRING_BUFFER */
-        snprintf(pLowerLayersBuf, *pBufLen ,"%s%d.Port.1", linkTypePath, (int)InstNumber);
-    }
-    else
-    {
-	/* CID 154726 Wrong sizeof argument */
-        snprintf(pLowerLayersBuf, LINK_SYS_PATH_SIZE,"%s%d", linkTypePath, (int)InstNumber);
-    }
-
-    AnscTraceFlow(("%s, size %zu, buf len %lu\n", pLowerLayersBuf, _ansc_strlen(pLowerLayersBuf), *pBufLen));
-    return  ANSC_STATUS_SUCCESS;
-}
-
-
 /*
  *  Retrieve the parameter Name of the LowerLayer
  */
@@ -772,42 +739,33 @@ CosaUtilGetLowerLayerName
     )
 {
     ANSC_STATUS                     returnStatus;
-    char                            pParamPath[256] = {0};
-    ULONG                           ParamPathLen    = sizeof(pParamPath);
-    errno_t        rc = -1;
+    char                            pParamPath[256];
+    char                           *linkTypePath;
 
-    returnStatus = CosaUtilConstructLowerLayers(LinkType, InstNumber, pParamPath, &ParamPathLen);
+    linkTypePath = CosaUtilGetLinkTypePath(LinkType);
 
-    if ( returnStatus != ANSC_STATUS_SUCCESS )
+    if (LinkType == COSA_DML_LINK_TYPE_Bridge)
     {
-        return  returnStatus;
+        /* Special processing for Bridge type LowerLayers */
+        snprintf(pParamPath, sizeof(pParamPath), "%s%d.Port.1.Name", linkTypePath, (int) InstNumber);
     }
     else
     {
-         rc = strcat_s(pParamPath,ParamPathLen, ".Name");
-         if(rc != EOK)
-         {
-           ERR_CHK(rc);
-           return ANSC_STATUS_FAILURE;
-       }   
+        snprintf(pParamPath, sizeof(pParamPath), "%s%d.Name", linkTypePath, (int) InstNumber);
     }
 
     returnStatus = CosaGetParamValueString(pParamPath, pParamValueBuf, pBufLen);
 
-    if ( returnStatus == ANSC_STATUS_SUCCESS )
-    {
-        AnscTraceFlow(("CosaUtilGetLowerLayerName -- value %s\n", pParamValueBuf));
-
-        return  returnStatus;
-    }
-    else
+    if (returnStatus != ANSC_STATUS_SUCCESS)
     {
         AnscTraceWarning(("CosaUtilGetLowerLayerName -- failure %lu, to retrieve %s\n", returnStatus, pParamPath));
-
-        return  returnStatus;
+        return returnStatus;
     }
-}
 
+    AnscTraceFlow(("CosaUtilGetLowerLayerName -- value %s\n", pParamValueBuf));
+
+    return ANSC_STATUS_SUCCESS;
+}
 
 /*
  * Find the management port in Bridge and return name from that port
