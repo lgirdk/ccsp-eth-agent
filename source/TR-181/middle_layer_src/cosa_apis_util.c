@@ -724,38 +724,26 @@ COSA_DML_LINK_TYPE CosaUtilGetLinkTypeFromPath(char*pLinkTypePath)
     return COSA_DML_LINK_TYPE_LAST;
 }
 
-
-ANSC_STATUS
-CosaUtilConstructLowerLayers
-    (
-        COSA_DML_LINK_TYPE          LinkType,
-        ULONG                       InstNumber,
-        char*                       pLowerLayersBuf,
-        PULONG                      pBufLen        
-    )
+static ANSC_STATUS CosaUtilConstructLowerLayers (COSA_DML_LINK_TYPE LinkType, ULONG InstNumber, char* pLowerLayersBuf, size_t len)
 {
     char*                           linkTypePath;
 
     linkTypePath = CosaUtilGetLinkTypePath(LinkType);
 
-    /* TBD - Need to check the pBufLen */
-
     if ( LinkType == COSA_DML_LINK_TYPE_Bridge )
     {
         /* Special processing for Bridge type LowerLayers */
         /*Coverity Fix CID: 73664 DC.STRING_BUFFER */
-        snprintf(pLowerLayersBuf, *pBufLen ,"%s%d.Port.1", linkTypePath, (int)InstNumber);
+        snprintf(pLowerLayersBuf, len, "%s%d.Port.1", linkTypePath, (int)InstNumber);
     }
     else
     {
         /*Coverity Fix CID: 73664 DC.STRING_BUFFER */
-        snprintf(pLowerLayersBuf,sizeof((PUCHAR)pLowerLayersBuf),"%s%d", linkTypePath, (int)InstNumber);
+        snprintf(pLowerLayersBuf, len, "%s%d", linkTypePath, (int)InstNumber);
     }
 
-    AnscTraceFlow(("%s, size %zu, buf len %lu\n", pLowerLayersBuf, _ansc_strlen(pLowerLayersBuf), *pBufLen));
     return  ANSC_STATUS_SUCCESS;
 }
-
 
 /*
  *  Retrieve the parameter Name of the LowerLayer
@@ -770,11 +758,10 @@ CosaUtilGetLowerLayerName
     )
 {
     ANSC_STATUS                     returnStatus;
-    char                            pParamPath[256] = {0};
-    ULONG                           ParamPathLen    = sizeof(pParamPath);
+    char                            pParamPath[256];
     errno_t        rc = -1;
 
-    returnStatus = CosaUtilConstructLowerLayers(LinkType, InstNumber, pParamPath, &ParamPathLen);
+    returnStatus = CosaUtilConstructLowerLayers(LinkType, InstNumber, pParamPath, sizeof(pParamPath));
 
     if ( returnStatus != ANSC_STATUS_SUCCESS )
     {
@@ -782,7 +769,7 @@ CosaUtilGetLowerLayerName
     }
     else
     {
-         rc = strcat_s(pParamPath,ParamPathLen, ".Name");
+         rc = strcat_s(pParamPath, sizeof(pParamPath), ".Name");
          if(rc != EOK)
          {
            ERR_CHK(rc);
