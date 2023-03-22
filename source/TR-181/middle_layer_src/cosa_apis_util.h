@@ -190,18 +190,6 @@ COSA_DML_LINK_TYPE  CosaUtilGetLinkTypeFromStr(char* pLinkTypeStr);
 COSA_DML_LINK_TYPE  CosaUtilGetLinkTypeFromPath(char*pLinkTypePath);
 
 /*
- *  construct the full path of LowerLayers based on LinkType and Instance Number
- */
-ANSC_STATUS
-CosaUtilConstructLowerLayers
-    (
-        COSA_DML_LINK_TYPE          LinkType,
-        ULONG                       InstNumber,
-        char*                       pLowerLayersBuf,
-        PULONG                      pBufLen        
-    );
-
-/*
  *  Retrieve the parameter Name of the LowerLayer
  */
 ANSC_STATUS
