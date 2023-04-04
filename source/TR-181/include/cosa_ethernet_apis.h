@@ -90,15 +90,6 @@
 #define VLAN_ETH_LINK_PARAM_LOWERLAYERS   "Device.X_RDKCENTRAL-COM_Ethernet.Link.%d.LowerLayers"
 #define VLAN_ETH_LINK_PARAM_ENABLE        "Device.X_RDKCENTRAL-COM_Ethernet.Link.%d.Enable"
 
-//WAN Agent
-#define WAN_DBUS_PATH                     "/com/cisco/spvtg/ccsp/wanagent"
-#define WAN_COMPONENT_NAME                "eRT.com.cisco.spvtg.ccsp.wanagent"
-#define WAN_NOE_PARAM_NAME                "Device.X_RDK-Central_COM_WanAgent.InterfaceNumberOfEntries"
-#define WAN_PHY_STATUS_PARAM_NAME         "Device.X_RDK-Central_COM_WanAgent.Interface.%d.Phy.Status"
-#define WAN_PHY_PATH_PARAM_NAME           "Device.X_RDK-Central_COM_WanAgent.Interface.%d.Phy.Path"
-#define WAN_STATUS_PARAM_NAME             "Device.X_RDK-Central_COM_WanAgent.Interface.%d.Wan.Status"
-#define WAN_IF_NAME_PARAM_NAME            "Device.X_RDK-Central_COM_WanAgent.Interface.%d.Name"
-
 #define ETH_IF_PHY_PATH                   "Device.Ethernet.X_RDKCENTRAL-COM_Interface.%d"
 
 #elif defined (FEATURE_RDKB_WAN_MANAGER)
@@ -129,6 +120,26 @@ wanmanager could able to handle vlan interface creation and management */
 #define WAN_DBUS_PATH                     "/com/cisco/spvtg/ccsp/wanmanager"
 #define WAN_COMPONENT_NAME                "eRT.com.cisco.spvtg.ccsp.wanmanager"
 #define WAN_COMP_NAME_WITHOUT_SUBSYSTEM   "com.cisco.spvtg.ccsp.wanmanager"
+
+#if defined(WAN_MANAGER_UNIFICATION_ENABLED)
+#define WAN_NOE_PARAM_NAME                "Device.X_RDK_WanManager.InterfaceNumberOfEntries"
+#define WAN_PHY_STATUS_PARAM_NAME         "Device.X_RDK_WanManager.Interface.%d.BaseInterfaceStatus"
+#define WAN_PHY_PATH_PARAM_NAME           "Device.X_RDK_WanManager.Interface.%d.BaseInterface"
+#define WAN_LINK_STATUS_PARAM_NAME        "Device.X_RDK_WanManager.Interface.%d.VirtualInterface.1.VlanStatus"
+#define WAN_INTERFACE_PARAM_NAME          "Device.X_RDK_WanManager.Interface.%d.VirtualInterface.1.Name"
+#define WAN_STATUS_PARAM_NAME             "Device.X_RDK_WanManager.Interface.%d.Selection.Status"
+#define WAN_IF_NAME_PARAM_NAME            "Device.X_RDK_WanManager.Interface.%d.Name"
+
+#define WAN_IF_PPP_ENABLE_PARAM           "Device.X_RDK_WanManager.Interface.%d.PPP.Enable"
+#define WAN_IF_PPP_LINKTYPE_PARAM         "Device.X_RDK_WanManager.Interface.%d.PPP.LinkType"
+
+#define WAN_BOOTINFORM_CUSTOMCONFIG_PARAM_NAME         "Device.X_RDK_WanManager.Interface.%d.EnableCustomConfig"
+#define WAN_BOOTINFORM_CUSTOMCONFIGPATH_PARAM_NAME     "Device.X_RDK_WanManager.Interface.%d.CustomConfigPath"
+#define WAN_BOOTINFORM_CONFIGWANENABLE_PARAM_NAME      "Device.X_RDK_WanManager.Interface.%d.ConfigureWanEnable"
+#define WAN_BOOTINFORM_OPERSTATUSENABLE_PARAM_NAME     "Device.X_RDK_WanManager.Interface.%d.EnableOperStatusMonitor"
+#define WAN_BOOTINFORM_PHYPATH_PARAM_NAME              "Device.X_RDK_WanManager.Interface.%d.BaseInterface"
+#define WAN_BOOTINFORM_INTERFACE_PARAM_NAME            "Device.X_RDK_WanManager.Interface.%d.VirtualInterface.1.Name"
+#else
 #define WAN_NOE_PARAM_NAME                "Device.X_RDK_WanManager.CPEInterfaceNumberOfEntries"
 #define WAN_PHY_STATUS_PARAM_NAME         "Device.X_RDK_WanManager.CPEInterface.%d.Phy.Status"
 #define WAN_PHY_PATH_PARAM_NAME           "Device.X_RDK_WanManager.CPEInterface.%d.Phy.Path"
@@ -137,22 +148,24 @@ wanmanager could able to handle vlan interface creation and management */
 #define WAN_STATUS_PARAM_NAME             "Device.X_RDK_WanManager.CPEInterface.%d.Wan.Status"
 #define WAN_IF_NAME_PARAM_NAME            "Device.X_RDK_WanManager.CPEInterface.%d.Name"
 
-#define ETH_IF_PHY_PATH                   "Device.Ethernet.X_RDK_Interface.%d"
-
 #define WAN_IF_PPP_ENABLE_PARAM           "Device.X_RDK_WanManager.CPEInterface.%d.PPP.Enable"
 #define WAN_IF_PPP_LINKTYPE_PARAM         "Device.X_RDK_WanManager.CPEInterface.%d.PPP.LinkType"
 
-#define WAN_BOOTINFORM_CUSTOMCONFIG_PARAM_NAME "Device.X_RDK_WanManager.CPEInterface.%d.EnableCustomConfig"
-#define WAN_BOOTINFORM_CUSTOMCONFIGPATH_PARAM_NAME "Device.X_RDK_WanManager.CPEInterface.%d.CustomConfigPath"
+#define WAN_BOOTINFORM_CUSTOMCONFIG_PARAM_NAME           "Device.X_RDK_WanManager.CPEInterface.%d.EnableCustomConfig"
+#define WAN_BOOTINFORM_CUSTOMCONFIGPATH_PARAM_NAME       "Device.X_RDK_WanManager.CPEInterface.%d.CustomConfigPath"
+#define WAN_BOOTINFORM_CONFIGWANENABLE_PARAM_NAME        "Device.X_RDK_WanManager.CPEInterface.%d.ConfigureWanEnable"
+#define WAN_BOOTINFORM_OPERSTATUSENABLE_PARAM_NAME       "Device.X_RDK_WanManager.CPEInterface.%d.EnableOperStatusMonitor"
+#define WAN_BOOTINFORM_PHYPATH_PARAM_NAME                "Device.X_RDK_WanManager.CPEInterface.%d.Phy.Path"
+#define WAN_BOOTINFORM_INTERFACE_PARAM_NAME              "Device.X_RDK_WanManager.CPEInterface.%d.Wan.Name"
+#endif /** WAN_MANAGER_UNIFICATION_ENABLED */
+
 #define WAN_BOOTINFORM_CUSTOMCONFIGPATH_PARAM_VALUE "Device.X_CISCO_COM_CableModem."
-#define WAN_BOOTINFORM_CONFIGWANENABLE_PARAM_NAME "Device.X_RDK_WanManager.CPEInterface.%d.ConfigureWanEnable"
-#define WAN_BOOTINFORM_OPERSTATUSENABLE_PARAM_NAME "Device.X_RDK_WanManager.CPEInterface.%d.EnableOperStatusMonitor"
-#define WAN_BOOTINFORM_PHYPATH_PARAM_NAME "Device.X_RDK_WanManager.CPEInterface.%d.Phy.Path"
-#define WAN_BOOTINFORM_INTERFACE_PARAM_NAME "Device.X_RDK_WanManager.CPEInterface.%d.Wan.Name"
 #define WAN_ENABLE_PARAM "Device.X_RDK_WanManager.Enable"
 #define WAN_IF_NAME_PRIMARY "erouter0"
 #define WAN_PHYPATH_VALUE "Device.X_RDKCENTRAL-COM_EthernetWAN."
 #define WAN_ETH_INTERFACE_INSTANCE_NUM     2
+
+#define ETH_IF_PHY_PATH                   "Device.Ethernet.X_RDK_Interface.%d"
 
 #ifdef _COSA_BCM_ARM_
 #define ETHWAN_DOCSIS_INF_NAME "cm0"
