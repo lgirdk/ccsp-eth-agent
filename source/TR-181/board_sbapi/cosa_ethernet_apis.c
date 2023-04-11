@@ -656,7 +656,6 @@ ANSC_STATUS UpdateInformMsgToWanMgr();
 static ANSC_STATUS CosaDmlEthSetParamValues(char *pComponent, char *pBus, char *pParamName, char *pParamVal, enum dataType_e type, unsigned int bCommitFlag);
 #elif defined (FEATURE_RDKB_WAN_MANAGER)
 static ANSC_STATUS CosaDmlEthSetParamValues(const char *pComponent, const char *pBus, const char *pParamName, const char *pParamVal, enum dataType_e type, unsigned int bCommitFlag);
-static ANSC_STATUS DmlEthCheckIfaceConfiguredAsPPPoE( char *ifname, BOOL *isPppoeIface);
 static ANSC_STATUS  GetWan_InterfaceName (char* wanoe_ifacename, int length);
 static INT gTotal = TOTAL_NUMBER_OF_INTERNAL_INTERFACES;
 #endif //FEATURE_RDKB_WAN_MANAGER
@@ -4303,95 +4302,28 @@ static ANSC_STATUS CosaDmlEthGetLowerLayersInstanceInOtherAgent(COSA_ETH_NOTIFY_
 /* Create and Enbale Ethernet.Link. */
 ANSC_STATUS CosaDmlEthCreateEthLink(char *l2ifName, char *Path)
 {
-    //COSA_DML_ETH_PORT_GLOBAL_CONFIG stGlobalInfo   = { 0 };
     char acSetParamName[256];
-    INT LineIndex = -1,
-        iVLANInstance = -1;
-#if defined (FEATURE_RDKB_WAN_MANAGER)
-    BOOL isPppoeIface = FALSE;
-#endif //FEATURE_RDKB_WAN_MANAGER
-    //Validate buffer
+    INT iVLANInstance = -1;
+
     if (NULL == l2ifName || NULL == Path)
     {
         CcspTraceError(("%s Invalid Memory\n", __FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
 
-    //Get line index from name
-    if (ANSC_STATUS_SUCCESS != CosaDmlEthPortGetIndexFromIfName(l2ifName, &LineIndex))
-    {
-        CcspTraceError(("%s Failed to get index for this %s interface\n", __FUNCTION__, l2ifName));
-        return ANSC_STATUS_FAILURE;
-    }
+    /*TODO:
+     *Need to be Reviewed,For More Info Refer US: RDKB-48040
+    */
+    iVLANInstance = 2;
 
-    //Get Instance for corresponding lower layer
-    CosaDmlEthGetLowerLayersInstanceInOtherAgent(NOTIFY_TO_VLAN_AGENT,Path, &iVLANInstance);
-#if defined (FEATURE_RDKB_WAN_MANAGER)
-    if (ANSC_STATUS_SUCCESS != DmlEthCheckIfaceConfiguredAsPPPoE(l2ifName, &isPppoeIface))
-    {
-        CcspTraceError(("%s - DmlEthCheckIfaceConfiguredAsPPPoE() failed \n", __FUNCTION__));
-        return ANSC_STATUS_FAILURE;
-    }
-#endif //FEATURE_RDKB_WAN_MANAGER
-    //Create VLAN Link.
-    //Index is not present. so needs to create a PTM instance
-    if (-1 == iVLANInstance)
-    {
-        char acTableName[128] = {0};
-        INT iNewTableInstance = -1;
-
-        snprintf(acTableName, sizeof(acTableName), "%s", VLAN_ETH_LINK_TABLE_NAME);
-        if (CCSP_SUCCESS != CcspBaseIf_AddTblRow(
-                                bus_handle,
-                                VLAN_COMPONENT_NAME,
-                                VLAN_DBUS_PATH,
-                                0, /* session id */
-                                acTableName,
-                                &iNewTableInstance))
-        {
-            CcspTraceError(("%s Failed to add table %s\n", __FUNCTION__, acTableName));
-            return ANSC_STATUS_FAILURE;
-        }
-
-        //Assign new instance
-        iVLANInstance = iNewTableInstance;
-    }
-
-    CcspTraceInfo(("%s %d VLANAgent -> Device.Ethernet.Link Instance:%d\n", __FUNCTION__, __LINE__, iVLANInstance));
-
-    //Set Alias
-    memset(acSetParamName, 0, sizeof(acSetParamName));
-    snprintf(acSetParamName, sizeof(acSetParamName), VLAN_ETH_LINK_PARAM_ALIAS, iVLANInstance);
-    CosaDmlEthSetParamValues(VLAN_COMPONENT_NAME, VLAN_DBUS_PATH, acSetParamName, l2ifName, ccsp_string,FALSE);
-
-    //Set Name
-    memset(acSetParamName, 0, sizeof(acSetParamName));
-    snprintf(acSetParamName, sizeof(acSetParamName), VLAN_ETH_LINK_PARAM_NAME, iVLANInstance);
-#if defined (FEATURE_RDKB_WAN_MANAGER)
-    if (isPppoeIface)
-        CosaDmlEthSetParamValues(VLAN_COMPONENT_NAME, VLAN_DBUS_PATH, acSetParamName, PPPoE_VLAN_INTERFACE_NAME, ccsp_string, FALSE);
-    else
-        CosaDmlEthSetParamValues(VLAN_COMPONENT_NAME, VLAN_DBUS_PATH, acSetParamName, WAN_INTERFACE_NAME, ccsp_string, FALSE);
-#else //FEATURE_RDKB_WAN_AGENT
-    CosaDmlEthSetParamValues(VLAN_COMPONENT_NAME, VLAN_DBUS_PATH, acSetParamName, l2ifName, ccsp_string,FALSE);
-#endif //FEATURE_RDKB_WAN_MANAGER
-#if defined (FEATURE_RDKB_WAN_MANAGER)
-    //Set Base interface
-    memset(acSetParamName, 0, sizeof(acSetParamName));
-    snprintf(acSetParamName, sizeof(acSetParamName), VLAN_ETH_LINK_PARAM_BASEINTERFACE, iVLANInstance);
-    CosaDmlEthSetParamValues(VLAN_COMPONENT_NAME, VLAN_DBUS_PATH, acSetParamName, l2ifName, ccsp_string,FALSE);
-#endif //FEATURE_RDKB_WAN_MANAGER
-    //Set Lowerlayers
-    memset(acSetParamName, 0, sizeof(acSetParamName));
-    snprintf(acSetParamName, sizeof(acSetParamName), VLAN_ETH_LINK_PARAM_LOWERLAYERS, iVLANInstance);
-    CosaDmlEthSetParamValues(VLAN_COMPONENT_NAME, VLAN_DBUS_PATH, acSetParamName, Path, ccsp_string,FALSE);
+    CcspTraceInfo(("%s %d VLAN Instance:%d\n", __FUNCTION__, __LINE__, iVLANInstance));
 
     //Set Enable
     memset(acSetParamName, 0, sizeof(acSetParamName));
-    snprintf(acSetParamName, sizeof(acSetParamName), VLAN_ETH_LINK_PARAM_ENABLE, iVLANInstance);
+    snprintf(acSetParamName, sizeof(acSetParamName), VLAN_TERM_PARAM_ENABLE, iVLANInstance);
     CosaDmlEthSetParamValues(VLAN_COMPONENT_NAME, VLAN_DBUS_PATH, acSetParamName, "true", ccsp_boolean, TRUE);
 
-    CcspTraceInfo(("%s %d Enabled Device.Ethernet.Link.%d.Enable for %s interface\n", __FUNCTION__, __LINE__,iVLANInstance, l2ifName));
+    CcspTraceInfo(("%s %d Enabled Vlan Instace(%d) Term for %s interface\n", __FUNCTION__, __LINE__,iVLANInstance, l2ifName));
 
     return ANSC_STATUS_SUCCESS;
 }
@@ -4399,62 +4331,28 @@ ANSC_STATUS CosaDmlEthCreateEthLink(char *l2ifName, char *Path)
 /* Disable and delete Eth link. (Ethernet.Link.) */
 ANSC_STATUS CosaDmlEthDeleteEthLink(char *ifName, char *Path)
 {
-    char acSetParamName[256],
-        acTableName[128] = {0};
-    INT LineIndex = -1,
-        iVLANInstance = -1;
+    char acSetParamName[256];
+    INT iVLANInstance = -1;
 
-    //Validate buffer
     if ((NULL == ifName ) || ( NULL == Path ))
     {
         CcspTraceError(("%s Invalid Memory\n", __FUNCTION__));
         return ANSC_STATUS_FAILURE;
     }
 
-    //Get line index from name
-    if (ANSC_STATUS_SUCCESS != CosaDmlEthPortGetIndexFromIfName(ifName, &LineIndex))
-    {
-        CcspTraceError(("%s Failed to get index for this %s interface\n", __FUNCTION__, ifName));
-        return ANSC_STATUS_FAILURE;
-    }
+    /*TODO:
+    * Need to be Reviewed,For More Info Refer US: RDKB-48040
+    */
+    iVLANInstance = 2;
+    
+    CcspTraceInfo(("%s %d VLANManager -> Device.Ethernet.Link Instance:%d\n", __FUNCTION__, __LINE__, iVLANInstance));
 
-    //Get Instance for corresponding lower layer
-    CosaDmlEthGetLowerLayersInstanceInOtherAgent(NOTIFY_TO_VLAN_AGENT,Path, &iVLANInstance);
-
-    //Index is not present. so no need to do anything any ETH Link instance
-    if (-1 == iVLANInstance)
-    {
-        CcspTraceError(("%s %d Device.Ethernet.Link Table instance not present\n", __FUNCTION__, __LINE__));
-        return ANSC_STATUS_FAILURE;
-    }
-
-    CcspTraceInfo(("%s %d VLANAgent -> Device.Ethernet.Link Instance:%d\n", __FUNCTION__, __LINE__, iVLANInstance));
-
-    //Disable link.
+    //Disable Vlan Term.
     memset(acSetParamName, 0, sizeof(acSetParamName));
-    snprintf(acSetParamName, sizeof(acSetParamName), VLAN_ETH_LINK_PARAM_ENABLE, iVLANInstance);
+    snprintf(acSetParamName, sizeof(acSetParamName), VLAN_TERM_PARAM_ENABLE, iVLANInstance);
     CosaDmlEthSetParamValues(VLAN_COMPONENT_NAME, VLAN_DBUS_PATH, acSetParamName, "false", ccsp_boolean, TRUE);
 
-    //Delay - to set param.
-    sleep(2);
-
-    /*
-     * Delete Device.Ethernet.Link. Instance.
-     * VLANAgent will delete the vlan interface as part table deletion process.
-     */
-    snprintf(acTableName, sizeof(acTableName), "%s%d.", VLAN_ETH_LINK_TABLE_NAME, iVLANInstance);
-    if (CCSP_SUCCESS != CcspBaseIf_DeleteTblRow(
-                            bus_handle,
-                            VLAN_COMPONENT_NAME,
-                            VLAN_DBUS_PATH,
-                            0, /* session id */
-                            acTableName))
-    {
-        CcspTraceError(("%s Failed to delete table %s\n", __FUNCTION__, acTableName));
-        return ANSC_STATUS_FAILURE;
-    }
-    CcspTraceInfo(("%s %d Deleted the Device.Ethernet.Link.%d. Table Instance for %s interface\n", __FUNCTION__, __LINE__, iVLANInstance, ifName));
-
+    CcspTraceInfo(("%s %d Disabled Vlan Instance(%d) Term for %s interface\n", __FUNCTION__, __LINE__, iVLANInstance, ifName));
     return ANSC_STATUS_SUCCESS;
 }
 #ifdef FEATURE_RDKB_WAN_MANAGER
@@ -4630,80 +4528,6 @@ ANSC_STATUS CosaDmlEthGetPhyStatusForWanManager(char *ifname, char *PhyStatus)
     return ANSC_STATUS_SUCCESS;
 }
 #if defined (FEATURE_RDKB_WAN_MANAGER)
-/**
- * @note API to check the given interface is configured to use as a PPPoE interface
-*/
-static ANSC_STATUS DmlEthCheckIfaceConfiguredAsPPPoE( char *ifname, BOOL *isPppoeIface)
-{
-    char acTmpReturnValue[DATAMODEL_PARAM_LENGTH] = {0};
-    char acTmpQueryParam[DATAMODEL_PARAM_LENGTH] = {0};
-    INT iLoopCount, iTotalNoofEntries;
-    char *endPtr = NULL;
-
-    *isPppoeIface = FALSE;
-
-    if (ANSC_STATUS_FAILURE == CosaDmlEthGetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH, WAN_NOE_PARAM_NAME, acTmpReturnValue))
-    {
-        CcspTraceError(("[%s][%d]Failed to get param value\n", __FUNCTION__, __LINE__));
-        return ANSC_STATUS_FAILURE;
-    }
-    //Total interface count
-    iTotalNoofEntries = strtol(acTmpReturnValue, &endPtr, 10);
-    if(*endPtr)
-    {
-        CcspTraceError(("Unable to convert '%s' to base 10", acTmpReturnValue ));
-        return ANSC_STATUS_FAILURE;
-    }
-
-    if (0 >= iTotalNoofEntries)
-    {
-        return ANSC_STATUS_SUCCESS;
-    }
-
-    //Traverse table
-    for (iLoopCount = 0; iLoopCount < iTotalNoofEntries; iLoopCount++)
-    {
-        //Query for WAN interface name
-        snprintf(acTmpQueryParam, sizeof(acTmpQueryParam), WAN_IF_NAME_PARAM_NAME, iLoopCount + 1);
-        memset(acTmpReturnValue, 0, sizeof(acTmpReturnValue));
-        if (ANSC_STATUS_FAILURE == CosaDmlEthGetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH, acTmpQueryParam, acTmpReturnValue))
-        {
-            CcspTraceError(("[%s][%d] Failed to get param value\n", __FUNCTION__, __LINE__));
-            continue;
-        }
-
-        //Compare WAN interface name
-        if (0 == strcmp(acTmpReturnValue, ifname))
-        {
-            //Query for PPP Enable data model
-            snprintf(acTmpQueryParam, sizeof(acTmpQueryParam), WAN_IF_PPP_ENABLE_PARAM, iLoopCount + 1);
-            memset(acTmpReturnValue, 0, sizeof(acTmpReturnValue));
-            if (ANSC_STATUS_FAILURE == CosaDmlEthGetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH,
-                                                            acTmpQueryParam, acTmpReturnValue))
-            {
-                CcspTraceError(("[%s][%d] Failed to get param value\n", __FUNCTION__, __LINE__));
-            }
-            if (0 == strcmp(acTmpReturnValue, "true"))
-            {
-                //Query for PPP LinkType data model
-                snprintf(acTmpQueryParam, sizeof(acTmpQueryParam), WAN_IF_PPP_LINKTYPE_PARAM, iLoopCount + 1);
-                memset(acTmpReturnValue, 0, sizeof(acTmpReturnValue));
-                if (ANSC_STATUS_FAILURE == CosaDmlEthGetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH,
-                                                                acTmpQueryParam, acTmpReturnValue))
-                {
-                    CcspTraceError(("[%s][%d] Failed to get param value\n", __FUNCTION__, __LINE__));
-                }
-                if (0 == strcmp(acTmpReturnValue, "PPPoE"))
-                {
-                    *isPppoeIface = TRUE;
-                }
-            }
-            break;
-        }
-    }
-    return ANSC_STATUS_SUCCESS;
-}
-
 /**
  * @Note Utility API to get WANOE interface from HAL layer.
  */

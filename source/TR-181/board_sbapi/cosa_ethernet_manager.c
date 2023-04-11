@@ -436,6 +436,10 @@ static ethSmState_t Transition_EthPhyInterfaceDown(PETH_SM_PRIVATE_INFO pstInfo)
         return STATE_ETH_VALIDATING_LINK;
     }
 
+#if defined (FEATURE_RDKB_WAN_MANAGER)
+    CosaDmlEthPortSetWanStatus(pstInfo->Name,ETH_WAN_DOWN);
+#endif //FEATURE_RDKB_WAN_MANAGER
+
     /**
      * Notify VLANAgent to delete Ethernet.Link.
      */
