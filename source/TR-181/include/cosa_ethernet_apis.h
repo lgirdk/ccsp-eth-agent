@@ -385,6 +385,7 @@ _COSA_DML_ETH_PORT_CFG
     char                            Alias[COSA_DML_IF_NAME_LENGTH];
 
     BOOLEAN                         bEnabled;
+    BOOLEAN                         bEnabledChanged;
     LONG                            MaxBitRate;
     COSA_DML_ETH_DUPLEX_MODE        DuplexMode;
 }
