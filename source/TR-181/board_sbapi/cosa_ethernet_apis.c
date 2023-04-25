@@ -92,7 +92,7 @@
 #include <errno.h>
 #include <mqueue.h>
 #include <ctype.h>
-
+#include <stdbool.h>
 #include "utctx/utctx_api.h"
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -108,7 +108,6 @@
 #include "cosa_ethernet_apis.h"
 #include "safec_lib_common.h"
 #include "cosa_ethernet_internal.h"
-#include <stdbool.h>
 #include "ccsp_hal_ethsw.h"
 #include "secure_wrapper.h"
 #include "ccsp_psm_helper.h"
@@ -196,7 +195,53 @@ token_t sysevent_token;
 #define ONEWIFI_ENABLED "/etc/onewifi_enabled"
 #define OPENVSWITCH_LOADED "/sys/module/openvswitch"
 #define WFO_ENABLED     "/etc/WFO_enabled"
+#define BUF_SIZE 100
 
+int Get_CommandOutput(char Command[],char *OutputValue)
+{
+    char buf[BUF_SIZE] = {0};
+    FILE *fp;
+	CcspTraceInfo(("%s:Command:%s\n", __FUNCTION__,Command));
+    fp = popen(Command,"r");
+    if ( fp == NULL )
+    {
+        CcspTraceError(("%s: Not able to read cmd\n", __FUNCTION__));
+        return -1;
+    }
+    else
+    {
+        copy_command_output(fp, buf, sizeof(buf));
+    }
+    pclose(fp);
+    strcpy(OutputValue,buf);
+    CcspTraceInfo(("ethwan_initialized:%s \n",OutputValue));
+    return 0;
+}
+
+void copy_command_output(FILE *fp, char * buf, int len)
+{
+    char * p;
+    if (fp)
+    {
+        fgets(buf, len, fp);
+        buf[len-1] = '\0';
+        /*we need to remove the \n char in buf*/
+        if ((p = strchr(buf, '\n'))) {
+                *p = 0;
+        }
+    }
+}
+bool isEthwan_initialized()
+{
+	char OutputValue[120];
+	Get_CommandOutput("sysevent get ethwan-initialized",OutputValue);
+	if(atoi(OutputValue)==1)
+	{
+		CcspTraceInfo(("ethwan-initialized\n"));
+		return true;
+	}
+	return false;
+}
 #if defined (FEATURE_RDKB_WAN_AGENT) || defined (FEATURE_RDKB_WAN_MANAGER)
 static int DmlEthGetPSMRecordValue(char *pPSMEntry, char *pOutputString)
 {
@@ -1874,6 +1919,7 @@ void* ThreadConfigEthWan(void *arg)
         {
             v_secure_system("sysevent set ethwan-initialized 0");
         }
+
     }
     // Request wan manager to enable wan.
     ret = CosaDmlEthSetParamValues(WAN_COMPONENT_NAME,
@@ -2557,8 +2603,10 @@ CosaDmlEthInit(
     if(CosaDmlMapWanCPEtoEthInterfaces(WanOEInterface, sizeof(WanOEInterface)) == ANSC_STATUS_SUCCESS) {
 #if defined (INTEL_PUMA7) && !defined (AUTOWAN_ENABLE)
         if(FALSE) 
+#elif defined (AUTOWAN_ENABLE)
+        if((GWP_GetEthWanLinkStatus() == 1)&&(isEthwan_initialized()==true))
 #else
-        if(GWP_GetEthWanLinkStatus() == 1) 
+        if(GWP_GetEthWanLinkStatus() == 1)
 #endif
         {
             if(CosaDmlEthGetPhyStatusForWanManager(WanOEInterface, PhyStatus) == ANSC_STATUS_SUCCESS) {

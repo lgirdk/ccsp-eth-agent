@@ -63,7 +63,7 @@
 
 #ifndef  _COSA_ETHERNET_API_H
 #define  _COSA_ETHERNET_API_H
-
+#include <stdbool.h>
 #include "../middle_layer_src/cosa_apis.h"
 #include "../middle_layer_src/plugin_main_apis.h"
 #include "ccsp_hal_ethsw.h"
@@ -522,5 +522,7 @@ int ethGetPHYRate
     (
         CCSP_HAL_ETHSW_PORT PortId
     );
-
+int get_sysevent_parameter(char *output);
+void copy_command_output(FILE *fp, char * buf, int len);
+bool isEthwan_initialized();
 #endif
