@@ -582,7 +582,11 @@ Interface_SetParamBoolValue
     if (strcmp(ParamName, "Enable") == 0)
     {
         /* save update to backup */
-        pEthernetPortFull->Cfg.bEnabled = bValue;
+        if (pEthernetPortFull->Cfg.bEnabled != bValue)
+        {
+            pEthernetPortFull->Cfg.bEnabledChanged = TRUE;
+            pEthernetPortFull->Cfg.bEnabled = bValue;
+        }
         return TRUE;
     }
 
