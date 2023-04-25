@@ -505,7 +505,6 @@ CosaDmlEthPortSetCfg
         PCOSA_DML_ETH_PORT_CFG      pCfg
     )
 {
-    COSA_DML_ETH_PORT_CFG origCfg;
     PCosaEthInterfaceInfo pEthIf = (PCosaEthInterfaceInfo  )NULL;
 
     UNREFERENCED_PARAMETER(hContext);
@@ -523,16 +522,11 @@ CosaDmlEthPortSetCfg
         return ANSC_STATUS_FAILURE;
     }
 
-
-    pEthIf->control->getCfg(pEthIf, &origCfg);
-
-    pEthIf->control->setCfg(pEthIf, pCfg);
-
-    if ( origCfg.bEnabled != pCfg->bEnabled )
+    if (pCfg->bEnabledChanged)
     {
-        //pEthIf->control->getStats(pEthIf, &pEthIf->LastStats);
-
+        pEthIf->control->setCfg(pEthIf, pCfg);
         pEthIf->LastChange = AnscGetTickInSeconds();
+        pCfg->bEnabledChanged = FALSE;
     }
 
     if (strcmp(pCfg->Alias, pEthIf->Alias) != 0)
