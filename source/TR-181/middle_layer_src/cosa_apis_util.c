@@ -88,6 +88,7 @@
 #include "safec_lib_common.h"
 
 #define MAX_VALUE 3
+#define LINK_SYS_PATH_SIZE 256
 
 ANSC_STATUS
 COSAGetParamValueByPathName
@@ -242,7 +243,8 @@ CosaUtilGetLowerLayers
 
     while ((pTableStringToken = AnscTcUnlinkToken(pTableListTokenChain)))
     {
-        if ( pTableStringToken->Name )
+	/* CID 56300 Array compared against 0 */
+        if ( pTableStringToken->Name[0] != '\0' )
         {
             rc = strcmp_s("Device.Ethernet.Interface.",strlen("Device.Ethernet.Interface."),pTableStringToken->Name,&ind);
             ERR_CHK(rc);
@@ -748,8 +750,8 @@ CosaUtilConstructLowerLayers
     }
     else
     {
-        /*Coverity Fix CID: 73664 DC.STRING_BUFFER */
-        snprintf(pLowerLayersBuf,sizeof((PUCHAR)pLowerLayersBuf),"%s%d", linkTypePath, (int)InstNumber);
+	/* CID 154726 Wrong sizeof argument */
+        snprintf(pLowerLayersBuf, LINK_SYS_PATH_SIZE,"%s%d", linkTypePath, (int)InstNumber);
     }
 
     AnscTraceFlow(("%s, size %zu, buf len %lu\n", pLowerLayersBuf, _ansc_strlen(pLowerLayersBuf), *pBufLen));
@@ -980,7 +982,8 @@ CosaUtilGetFullPathNameByKeyword
 
     while ((pTableStringToken = AnscTcUnlinkToken(pTableListTokenChain)))
     {
-        if ( pTableStringToken->Name )
+	/* CID 62085 Array compared against 0 */
+        if ( pTableStringToken->Name[0] != '\0' )
         {
             /* Get the string XXXNumberOfEntries */
             pString2 = &pTableStringToken->Name[0];

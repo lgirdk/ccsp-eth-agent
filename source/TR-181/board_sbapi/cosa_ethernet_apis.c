@@ -113,6 +113,8 @@
 #include "ccsp_psm_helper.h"
 #include <platform_hal.h>
 
+#define MAX_STR_LEN 256
+
 extern char g_Subsystem[32];
 extern ANSC_HANDLE bus_handle;
 
@@ -411,7 +413,8 @@ int _getMac(char* ifName, char* mac){
     
     AnscTraceFlow(("%s...\n", __FUNCTION__));
 
-    AnscCopyString(ifr.ifr_name, ifName);
+    /* CID 281903 Copy into fixed size buffer fix */
+    strncpy (ifr.ifr_name, ifName , sizeof(ifr.ifr_name)-1);
     
     skfd = socket(AF_INET, SOCK_DGRAM, 0);
     /* CID: 54085 Argument cannot be negative*/
@@ -458,18 +461,29 @@ BOOLEAN getIfAvailability( const PUCHAR name )
     AnscTraceFlow(("%s... name %s\n", __FUNCTION__,name));
 
     skfd = socket(AF_INET, SOCK_DGRAM, 0);
-    
-    if (!isValid((char*)name)) {
-        return -1;
+
+    if(skfd < 0)
+    {
+	return FALSE;
     }
-    skfd = socket(AF_INET, SOCK_DGRAM, 0);
+    
+    if (!isValid((char*)name)) 
+    {
+	/* CID 162578 Resource leak */
+	close(skfd);
+	/* CID 62903 Argument cannot be negative */
+        return FALSE;
+    }
+    
     AnscTraceFlow(("%s... name %s\n", __FUNCTION__,name));
-    AnscCopyString(ifr.ifr_name, (char *)name);
+    /* CID 281850 copy into fixed size buffer fix */
+    strncpy (ifr.ifr_name, (char *)name , sizeof(ifr.ifr_name)-1);
     
     if (ioctl(skfd, SIOCGIFFLAGS, &ifr) < 0) {
         if (errno == ENODEV) {
             close(skfd);
-            return -1;
+	    /* CID 62903 Argument cannot be negative */
+            return FALSE;
         }
     }
 		
@@ -498,9 +512,12 @@ COSA_DML_IF_STATUS getIfStatus(const PUCHAR name, struct ifreq *pIfr)
     if(skfd == -1)
        return COSA_DML_IF_STATUS_Error;
 
-    AnscCopyString(ifr.ifr_name, (char*)name);
+    /* CID 281944 Copy into fixed size buffer fix */
+    strncpy (ifr.ifr_name, (char*)name, sizeof(ifr.ifr_name)-1);
 
     if (!isValid((char*)name)) {
+	/* CID 162574 Resource leak */
+	close(skfd);
         return COSA_DML_IF_STATUS_Error;
     }
     AnscTraceFlow(("%s...\n", __FUNCTION__));
@@ -786,8 +803,16 @@ CosaDmlEthWanGetCfg
      ERR_CHK(rc);
 
 #if defined (ENABLE_ETH_WAN)
-	CcspHalExtSw_getEthWanEnable( &pMyObject->Enable );	
-	CcspHalExtSw_getEthWanPort((UINT *) &pMyObject->Port );
+	/* CID 133789 Unchecked return value */
+        if( RETURN_OK != CcspHalExtSw_getEthWanEnable( &pMyObject->Enable ))
+	{
+	    AnscTraceInfo(("Current EthernetWAN enable failed to store \n"));
+	}
+
+	if(0 != CcspHalExtSw_getEthWanPort((UINT *) &pMyObject->Port ))
+	{
+	    AnscTraceInfo(("Failed to get Port[%lu] in CPE \n",pMyObject->Port));
+	}
 #endif /*  ENABLE_ETH_WAN */
 
 
@@ -1387,13 +1412,14 @@ ANSC_STATUS CosaDmlIfaceFinalize(char *pValue, BOOL isAutoWanMode)
     memset(buf,0,sizeof(buf));
     if (!syscfg_get(NULL, "wan_physical_ifname", buf, sizeof(buf)))
     {
-        strcpy(wanPhyName, buf);
+	/* CID 190051 Calling risky function fix */
+	strncpy(wanPhyName, buf, sizeof(wanPhyName)-1);
         printf("wanPhyName = %s\n", wanPhyName);
     }
     else
     {
-        strcpy(wanPhyName, "erouter0");
-
+	/* CID 190051 Calling risky function fix */
+	strncpy(wanPhyName, "erouter0", sizeof(wanPhyName)-1);
     }
 
     // Do wan interface bridge creation/deletion only if last detected wan and current detected wan interface are different.
@@ -1455,7 +1481,8 @@ ANSC_STATUS CosaDmlIfaceFinalize(char *pValue, BOOL isAutoWanMode)
     {
         //Fallback case needs to set it default
         memset( ethwan_ifname , 0, sizeof( ethwan_ifname ) );
-        sprintf( ethwan_ifname , "%s", ETHWAN_DEF_INTF_NAME );
+	/* CID 190051 Calling risky function fix*/
+	snprintf( ethwan_ifname ,sizeof(ethwan_ifname), "%s", ETHWAN_DEF_INTF_NAME );
     }
     wanModeCfg.bridgemode = bridgemode;
     wanModeCfg.ovsEnabled = ovsEnabled;
@@ -1566,11 +1593,12 @@ static void checkComponentHealthStatus(char * compName, char * dbusPath, char *s
     int ret = 0, val_size = 0;
     parameterValStruct_t **parameterval = NULL;
     char *parameterNames[1] = {};
-    char tmp[256];
-    char str[256];
+    char tmp[MAX_STR_LEN];
+    char str[MAX_STR_LEN];
     char l_Subsystem[128] = { 0 };
 
-    sprintf(tmp,"%s.%s",compName, "Health");
+    /* CID 54621 Calling risky function */
+    snprintf(tmp, MAX_STR_LEN,"%s.%s",compName, "Health");
     parameterNames[0] = tmp;
 
     strncpy(l_Subsystem, "eRT.",sizeof(l_Subsystem));
@@ -1779,7 +1807,8 @@ void* ThreadMonitorPhyAndNotify(void *arg)
             char acSetParamName[256];
             char acTmpPhyStatus[32] = {0};
 
-            if (pEthWanCfg->wanInstanceNumber)
+            /* CID 187110  Array compared against 0  fix */
+	    if (pEthWanCfg->wanInstanceNumber[0] != '\0')
             {
                 EthWanInstanceNumber = atoi(pEthWanCfg->wanInstanceNumber);
             }
@@ -1868,6 +1897,13 @@ void* ThreadConfigEthWan(void *arg)
     {
         pEthWanCfgObj = (PCOSA_DATAMODEL_ETH_WAN_AGENT)&pMyObject->EthWanCfg;
     }
+
+    /* CID 259112 Dereference after null check fix */
+     if (pEthWanCfgObj == NULL)
+     {
+	CcspTraceError(("pEthWanCfgObj is NULL \n"));
+	return NULL;
+     }
 
     pthread_detach(pthread_self());
 
@@ -2199,7 +2235,10 @@ CosaDmlEthWanSetEnable
     return ANSC_STATUS_SUCCESS;
 #elif defined (ENABLE_ETH_WAN)
     BOOL bGetStatus = FALSE;
-    CcspHalExtSw_getEthWanEnable(&bGetStatus);
+    if(RETURN_OK != CcspHalExtSw_getEthWanEnable(&bGetStatus))
+    {
+	 AnscTraceInfo(("Current EthernetWAN enable failed to store \n"));
+    }
     char command[50] = {0};
     errno_t rc = -1;
     if (bEnable != bGetStatus)
@@ -2266,7 +2305,8 @@ CosaDmlEthGetLogStatus
 
     if (syscfg_get(NULL, "eth_log_enabled", buf, sizeof(buf)) == 0)
     {
-        if (buf != NULL)
+	/* CID 71445  Array compared against 0 */
+        if (buf[0] != '\0')
         {
             rc = strcmp_s("true",strlen("true"),buf,&ind);
             ERR_CHK(rc);
@@ -2279,7 +2319,8 @@ CosaDmlEthGetLogStatus
      ERR_CHK(rc);
     if (syscfg_get( NULL, "eth_log_period", buf, sizeof(buf)) == 0)
     {
-        if (buf != NULL)
+	/* CID 71445  Array compared against 0 */
+        if (buf[0] != '\0')
         {
             pMyObject->Log_Period =  atoi(buf);
         }
@@ -2482,6 +2523,14 @@ CosaDmlEthInit(
     char WanOEInterface[16] = {0};
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)phContext;
     int ifIndex;
+
+    /* CID 192542 Dereference before null check */
+    if(pMyObject == NULL)
+    {
+	CcspTraceError(("%s:%d  Eth Object is NULL \n", __FUNCTION__, __LINE__));
+	return ANSC_STATUS_FAILURE;
+    }
+
     //ETH Port Init.
     CosaDmlEthPortInit((PANSC_HANDLE)pMyObject);
 
@@ -2659,7 +2708,8 @@ ANSC_STATUS GetEthPhyInterfaceName(INT index, CHAR *ifname, INT ifnameLength)
     memset(typeInterface,0,sizeof(typeInterface));
     while (fgets(data,sizeof(data), fp) != NULL)
     {
-        sscanf(data,"%s %s %s",logicalPort,logicalName,typeInterface);
+	/* CID 257729 Calling risky function */
+        sscanf(data,"%63s %63s %63s",logicalPort,logicalName,typeInterface);
         pTmpData=strstr(logicalPort,"=");
         if (pTmpData != NULL)
         {
@@ -2792,6 +2842,12 @@ CosaDmlEthPortInit(
         if ( !pEthCxtLink )
         {
             CcspTraceError(("pEthCxtLink Failed to allocate memory \n"));
+	    /* CID 187417 Resource leak */
+	    if(pETHTemp != NULL)
+	    {
+		free(pETHTemp);
+		pETHTemp = NULL;
+	    }
             return ANSC_STATUS_FAILURE;
         }
         //Fill line static information and initialize default values
@@ -3837,15 +3893,15 @@ static ANSC_STATUS CosaDmlEthGetParamValues(char *pComponent, char *pBus, char *
     //Copy the value
     if (CCSP_SUCCESS == ret)
     {
-        CcspTraceWarning(("%s parameterValue[%s]\n", __FUNCTION__, retVal[0]->parameterValue));
-
-        if (NULL != retVal[0]->parameterValue)
-        {
-            memcpy(pReturnVal, retVal[0]->parameterValue, strlen(retVal[0]->parameterValue) + 1);
-        }
-
         if (retVal)
         {
+	    /* CID 183549 Dereference before null */
+	    if (NULL != retVal[0]->parameterValue)
+	    {
+		CcspTraceWarning(("%s parameterValue[%s]\n", __FUNCTION__, retVal[0]->parameterValue));
+		memcpy(pReturnVal, retVal[0]->parameterValue, strlen(retVal[0]->parameterValue) + 1);
+	    }
+
             free_parameterValStruct_t(bus_handle, nval, retVal);
         }
 

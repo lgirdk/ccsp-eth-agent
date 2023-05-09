@@ -484,7 +484,8 @@ EthernetWAN_GetParamStringValue
     {
 	    if (syscfg_get(NULL, "selected_wan_mode", buf, sizeof(buf)) == 0)
 	    {
-		if (buf != NULL)
+		/*  CID 162007 CID 162005 Array compared against 0  fix */
+		if (buf[0] != '\0')
 		{
 			if ( _ansc_strlen(buf) >= *pUlSize )
 			{
@@ -533,7 +534,8 @@ EthernetWAN_GetParamStringValue
     {
 	    if (syscfg_get(NULL, "last_wan_mode", buf, sizeof(buf)) == 0)
 	    {
-		if (buf != NULL)
+		/*  CID 162007 CID 162005 Array compared against 0  fix */
+		if (buf[0] != '\0')
 		{
 			if ( _ansc_strlen(buf) >= *pUlSize )
 			{
@@ -1645,8 +1647,16 @@ EthRdkInterface_SetParamStringValue
        /* collect value */
        if ( ANSC_STATUS_SUCCESS == CosaDmlEthPortSetLowerLayers(pEthLink->Name, pString))
        {
-           AnscCopyString( pEthLink->LowerLayers, pString);
-           return TRUE;
+	   /* CID 281826 Copy into fixed size buffer */
+	   if(strlen(pString) < (sizeof(pEthLink->LowerLayers) -1))
+	   {
+		AnscCopyString( pEthLink->LowerLayers, pString);
+		return TRUE;
+	   }
+	   else
+	   {
+		return FALSE;
+	   }
        }
        else
        {
@@ -1875,7 +1885,11 @@ EthRdkInterface_SetParamBoolValue
 #ifdef FEATURE_RDKB_AUTO_PORT_SWITCH
         // check if port is WAN capable, before removing/adding into bridge
         UINT WanPort = 0;
-        CcspHalExtSw_getEthWanPort(&WanPort);
+	/* CID 133789 Unchecked return value */
+	if(0 != CcspHalExtSw_getEthWanPort(&WanPort))
+	{
+	    AnscTraceInfo(("Failed to get WanPort[%u] in CPE \n",WanPort));
+	}
         if(WanPort != pEthLink->ulInstanceNumber)
         {
             CcspTraceError(("%s %d: Cannot set AddToLanBridge for non-WAN capable port\n", __FUNCTION__, __LINE__));

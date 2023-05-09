@@ -47,6 +47,8 @@
 #include "ccsp_dm_api.h"
 
 #define DEBUG_INI_NAME  "/etc/debug.ini"
+#define MAX_CNAME_LENGTH  256
+
 #include <syscfg/syscfg.h>
 #include "cap.h"
 #include "safec_lib_common.h"
@@ -105,7 +107,7 @@ static void waitUntilSystemReady()
 
 int GetLogInfo(ANSC_HANDLE bus_handle, char *Subsytem, char *pParameterName);
 extern char*                                pComponentName;
-char                                        g_Subsystem[32]         = {0};
+char                                        g_Subsystem[32]         = {'\0'};
 extern ANSC_HANDLE bus_handle;
 
 int  cmd_dispatch(int  command)
@@ -117,15 +119,16 @@ int  cmd_dispatch(int  command)
             CcspTraceInfo(("Connect to bus daemon...\n"));
 
             {
-                char                            CName[256];
+                char                            CName[MAX_CNAME_LENGTH];
 
-                if ( g_Subsystem[0] != 0 )
+		/* CID 62739  Calling risky function */
+                if ( g_Subsystem[0] != '\0' )
                 {
-                    _ansc_sprintf(CName, "%s%s", g_Subsystem, CCSP_COMPONENT_ID_ETHAGENT);
+                    _ansc_snprintf(CName, MAX_CNAME_LENGTH, "%s%s", g_Subsystem, CCSP_COMPONENT_ID_ETHAGENT);
                 }
                 else
                 {
-                    _ansc_sprintf(CName, "%s", CCSP_COMPONENT_ID_ETHAGENT);
+                    _ansc_snprintf(CName, MAX_CNAME_LENGTH, "%s", CCSP_COMPONENT_ID_ETHAGENT);
                 }
 
                 ssp_Mbi_MessageBusEngage

@@ -88,9 +88,17 @@ ssp_Mbi_MessageBusEngage
     CCSP_Base_Func_CB           cb                 = {0};
     errno_t        rc = -1;
 
-    if ( ! component_id || ! path )
+    /* CID 53104 Dereference after null check */
+    if ( ! component_id )
     {
-        CcspTraceError((" !!! ssp_Mbi_MessageBusEngage: component_id or path is NULL !!!\n"));
+        CcspTraceError((" !!! ssp_Mbi_MessageBusEngage: component_id is NULL !!!\n"));
+	return ANSC_STATUS_FAILURE;
+    }
+
+    if ( ! path )
+    {
+	CcspTraceError((" !!! ssp_Mbi_MessageBusEngage: path is NULL !!!\n"));
+	return ANSC_STATUS_FAILURE;
     }
 
     /* Connect to message bus */

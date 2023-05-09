@@ -720,8 +720,12 @@ Interface_SetParamStringValue
     if (strcmp(ParamName, "Alias") == 0)
     {
         /* save update to backup */
-        AnscCopyString(pEthernetPortFull->Cfg.Alias, pString);
-        return TRUE;
+	/* CID 281791 Copy into fixed size buffer fix */
+	if(strlen(pString) < (sizeof(pEthernetPortFull->Cfg.Alias)-1))
+	{
+	    AnscCopyString(pEthernetPortFull->Cfg.Alias, pString);
+	    return TRUE;
+	}
     }
 
     if (strcmp(ParamName, "LowerLayers") == 0)

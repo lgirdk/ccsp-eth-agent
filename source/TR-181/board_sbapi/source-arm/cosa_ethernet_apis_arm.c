@@ -451,7 +451,8 @@ CosaDmlEthPortSetValues
 {
     UNREFERENCED_PARAMETER(hContext);
     g_EthEntries[ulIndex].instanceNumber=ulInstanceNumber;
-    AnscCopyString(g_EthEntries[ulIndex].Alias, pAlias);
+    /* CID 281976 Copy into fixed size buffer fix */
+    strncpy (g_EthEntries[ulIndex].Alias, pAlias, sizeof(g_EthEntries[ulIndex].Alias)-1);
     saveID(g_EthIntSInfo[ulIndex].Name, pAlias, ulInstanceNumber);
 
     return ANSC_STATUS_SUCCESS;

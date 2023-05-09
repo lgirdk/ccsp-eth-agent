@@ -184,7 +184,7 @@ ssp_engage
     pDslhCpeController->SetDbusHandle((ANSC_HANDLE)pDslhCpeController, (ANSC_HANDLE)bus_handle);
     pDslhCpeController->Engage((ANSC_HANDLE)pDslhCpeController);
 
-    if ( g_Subsystem[0] != 0 )
+    if( g_Subsystem[0] != '\0' )
     {
         snprintf(CrName, sizeof(CrName), "%s%s", g_Subsystem, CCSP_DBUS_INTERFACE_CR);
     }
@@ -229,7 +229,7 @@ ssp_cancel
         return ANSC_STATUS_SUCCESS;
     }
 
-    if ( g_Subsystem[0] != 0 )
+    if ( g_Subsystem[0] != '\0' )
     {
         snprintf(CrName, sizeof(CrName), "%s%s", g_Subsystem, CCSP_DBUS_INTERFACE_CR);
         snprintf(CpName, sizeof(CpName), "%s%s", g_Subsystem, CCSP_COMPONENT_NAME_ETHAGENT);
