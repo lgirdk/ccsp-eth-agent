@@ -247,7 +247,7 @@
          <name>MaxBitRate</name>
          <type>int[-1:]</type>
          <syntax>int</syntax>
-         <writable>false</writable>
+         <writable>true</writable>
        </parameter>
        <parameter>
          <name>CurrentBitRate</name>
