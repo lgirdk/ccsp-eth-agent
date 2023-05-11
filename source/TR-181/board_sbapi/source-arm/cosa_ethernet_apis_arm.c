@@ -487,22 +487,86 @@ ANSC_STATUS CosaDmlEEEPortGetCfg (ULONG ulInstanceNumber, PCOSA_DML_ETH_PORT_CFG
 
 ANSC_STATUS CosaDmlEEEPortSetCfg (ULONG ulInstanceNumber, PCOSA_DML_ETH_PORT_CFG pCfg)
 {
-    ANSC_STATUS returnStatus = ANSC_STATUS_FAILURE;
+    ANSC_STATUS returnStatus = ANSC_STATUS_SUCCESS;
+    CCSP_HAL_ETHSW_LINK_RATE    LinkRate;
+    CCSP_HAL_ETHSW_DUPLEX_MODE  DuplexMode;
     int portIdx;
 
     portIdx = getPortID(ulInstanceNumber);
+
 
     if ((portIdx == CCSP_HAL_ETHSW_EthPort1) ||
         (portIdx == CCSP_HAL_ETHSW_EthPort2) ||
         (portIdx == CCSP_HAL_ETHSW_EthPort3) ||
         (portIdx == CCSP_HAL_ETHSW_EthPort4))
     {
-        if (CcspHalEthSwSetEEEPortEnable(portIdx, pCfg->bEEEEnabled) == RETURN_OK)
+        if (CcspHalEthSwSetEEEPortEnable(portIdx, pCfg->bEEEEnabled) != RETURN_OK)
         {
-            returnStatus = ANSC_STATUS_SUCCESS;
+            return ANSC_STATUS_FAILURE;
+        }
+
+        switch ( pCfg->MaxBitRate )
+        {
+            case 10:
+            {
+                LinkRate = CCSP_HAL_ETHSW_LINK_10Mbps;
+                break;
+            }
+            case 100:
+            {
+                LinkRate = CCSP_HAL_ETHSW_LINK_100Mbps;
+                break;
+            }
+            case 1000:
+            {
+                LinkRate = CCSP_HAL_ETHSW_LINK_1Gbps;
+                break;
+            }
+            case 10000:
+            {
+                LinkRate = CCSP_HAL_ETHSW_LINK_10Gbps;
+                break;
+            }
+            case -1:
+            {
+                LinkRate = CCSP_HAL_ETHSW_LINK_Auto;
+                break;
+            }
+            default:
+            {
+                LinkRate = CCSP_HAL_ETHSW_LINK_Auto;
+                break;
+            }
+        }
+
+        switch ( pCfg->DuplexMode )
+        {
+            case COSA_DML_ETH_DUPLEX_Half:
+            {
+                DuplexMode = CCSP_HAL_ETHSW_DUPLEX_Half;
+                break;
+            }
+            case COSA_DML_ETH_DUPLEX_Full:
+            {
+                DuplexMode = CCSP_HAL_ETHSW_DUPLEX_Full;
+                break;
+            }
+            case COSA_DML_ETH_DUPLEX_Auto: // Note: driver doesn't handle/would ignore "Auto"
+            {
+                DuplexMode = CCSP_HAL_ETHSW_DUPLEX_Auto;
+                break;
+            }
+            default:
+            {
+                DuplexMode = CCSP_HAL_ETHSW_DUPLEX_Full;
+                break;
+            }
+        }
+        if (CcspHalEthSwSetPortCfg(portIdx,LinkRate,DuplexMode) != RETURN_OK)
+        {
+            returnStatus =  ANSC_STATUS_FAILURE;
         }
     }
-
     return returnStatus;
 }
 
@@ -912,12 +976,12 @@ int puma6_getSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg, i
             }
             case CCSP_HAL_ETHSW_LINK_Auto:
             {
-                pcfg->MaxBitRate = 0;
+                pcfg->MaxBitRate = -1;
                 break;
             }
             default:
             {
-                pcfg->MaxBitRate = 0;
+                pcfg->MaxBitRate = -1;
                 break;
             }
         }
