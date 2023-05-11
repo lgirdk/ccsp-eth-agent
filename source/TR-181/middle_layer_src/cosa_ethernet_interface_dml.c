@@ -836,6 +836,14 @@ Interface_Validate
 
             return FALSE;
         }
+        if(pEthernetPortFull->Cfg.MaxBitRate != 10 && pEthernetPortFull->Cfg.MaxBitRate != 100 && pEthernetPortFull->Cfg.MaxBitRate != 1000 && pEthernetPortFull->Cfg.MaxBitRate != -1)
+        {
+            return FALSE;
+        }
+        if(pEthernetPortFull->Cfg.MaxBitRate == 1000 && pEthernetPortFull->Cfg.DuplexMode == COSA_DML_ETH_DUPLEX_Half)
+        {
+            return FALSE;
+        }
     }
 
     return TRUE;
