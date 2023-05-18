@@ -524,10 +524,11 @@ void* CcspHalExtSw_AssociatedDeviceMonitorThread( void *arg )
     	sleep( ETH_POLLING_PERIOD );
     }
 }
-
+#ifndef _SR213_PRODUCT_REQ_
 void CcspHalExtSw_ethAssociatedDevice_callback_register(CcspHalExtSw_ethAssociatedDevice_callback callback_proc)
 {
     AssociatedDevice_callback = callback_proc;
     pthread_t GetAssociatedDeviceThread;
     pthread_create(&GetAssociatedDeviceThread, NULL, &CcspHalExtSw_AssociatedDeviceMonitorThread, NULL);  
 }
+#endif // _SR213_PRODUCT_REQ_
