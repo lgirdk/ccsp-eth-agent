@@ -4722,9 +4722,6 @@ BOOL EthInterfaceSetUpstream( PCOSA_DML_ETH_PORT_FULL pEthernetPortFull )
 
     AnscTraceInfo(("[%s][%d] EthName[%s] Upstream[%s]\n",__FUNCTION__, __LINE__, pEthernetPortFull->StaticInfo.Name, ((pEthernetPortFull->StaticInfo.bUpstream) ? "Enable" : "Disable")));
 
-#ifndef FEATURE_RDKB_AUTO_PORT_SWITCH
-    if (strncmp(pEthernetPortFull->StaticInfo.Name, WAN_ETHERNET_IFNAME, strlen(WAN_ETHERNET_IFNAME)) == 0)
-#endif
     {
         ret = CosaDmlSetWanOEMode(pEthernetPortFull,  NULL);
     }
