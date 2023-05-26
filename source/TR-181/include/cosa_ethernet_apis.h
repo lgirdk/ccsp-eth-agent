@@ -124,9 +124,6 @@
 #define WAN_STATUS_PARAM_NAME             "Device.X_RDK_WanManager.Interface.%d.Selection.Status"
 #define WAN_IF_NAME_PARAM_NAME            "Device.X_RDK_WanManager.Interface.%d.Name"
 
-#define WAN_IF_PPP_ENABLE_PARAM           "Device.X_RDK_WanManager.Interface.%d.PPP.Enable"
-#define WAN_IF_PPP_LINKTYPE_PARAM         "Device.X_RDK_WanManager.Interface.%d.PPP.LinkType"
-
 #define WAN_BOOTINFORM_CUSTOMCONFIG_PARAM_NAME         "Device.X_RDK_WanManager.Interface.%d.EnableCustomConfig"
 #define WAN_BOOTINFORM_CUSTOMCONFIGPATH_PARAM_NAME     "Device.X_RDK_WanManager.Interface.%d.CustomConfigPath"
 #define WAN_BOOTINFORM_CONFIGWANENABLE_PARAM_NAME      "Device.X_RDK_WanManager.Interface.%d.ConfigureWanEnable"
@@ -141,9 +138,6 @@
 #define WAN_INTERFACE_PARAM_NAME          "Device.X_RDK_WanManager.CPEInterface.%d.Wan.Name"
 #define WAN_STATUS_PARAM_NAME             "Device.X_RDK_WanManager.CPEInterface.%d.Wan.Status"
 #define WAN_IF_NAME_PARAM_NAME            "Device.X_RDK_WanManager.CPEInterface.%d.Name"
-
-#define WAN_IF_PPP_ENABLE_PARAM           "Device.X_RDK_WanManager.CPEInterface.%d.PPP.Enable"
-#define WAN_IF_PPP_LINKTYPE_PARAM         "Device.X_RDK_WanManager.CPEInterface.%d.PPP.LinkType"
 
 #define WAN_BOOTINFORM_CUSTOMCONFIG_PARAM_NAME           "Device.X_RDK_WanManager.CPEInterface.%d.EnableCustomConfig"
 #define WAN_BOOTINFORM_CUSTOMCONFIGPATH_PARAM_NAME       "Device.X_RDK_WanManager.CPEInterface.%d.CustomConfigPath"

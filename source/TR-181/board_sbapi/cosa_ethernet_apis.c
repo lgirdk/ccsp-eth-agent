@@ -125,7 +125,9 @@ extern ANSC_HANDLE bus_handle;
 #define BRLAN0_BRIDGE_INSTANCE    1
 
 #if defined (FEATURE_RDKB_WAN_MANAGER)
+#if !defined(WAN_MANAGER_UNIFICATION_ENABLED)
 #include "cosa_ethernet_manager.h"
+#endif
 #ifdef FEATURE_RDKB_AUTO_PORT_SWITCH
 #include "ccsp_psm_helper.h"
 extern  char g_Subsystem[BUFLEN_32];
@@ -147,7 +149,9 @@ extern  char g_Subsystem[BUFLEN_32];
 #endif
 
 #if defined (FEATURE_RDKB_WAN_AGENT) || defined(FEATURE_RDKB_WAN_MANAGER)
+#if !defined(WAN_MANAGER_UNIFICATION_ENABLED)
 #include "cosa_ethernet_manager.h"
+#endif
 #if defined (FEATURE_RDKB_WAN_MANAGER)
 #if defined (_CBR2_PRODUCT_REQ_)
 #define TOTAL_NUMBER_OF_INTERNAL_INTERFACES 6
@@ -2542,7 +2546,7 @@ CosaDmlEthInit(
     {
         ANSC_STATUS ret = ANSC_STATUS_FAILURE;
         ret = CosaDmlEthSetPhyPathForWanManager(wanoe_ifname);
-        CcspTraceError(("%s:%d Initialize %s PhyPath for Manager[%s]\n", __FUNCTION__, __LINE__, wanoe_ifname, (ret == ANSC_STATUS_SUCCESS)?"Success":"Failed"));
+        CcspTraceInfo(("%s:%d Initialize %s PhyPath for Manager[%s]\n", __FUNCTION__, __LINE__, wanoe_ifname, (ret == ANSC_STATUS_SUCCESS)?"Success":"Failed"));
     }
     else
     {
@@ -2631,14 +2635,14 @@ CosaDmlEthInit(
             if(CosaDmlEthGetPhyStatusForWanAgent(WanOEInterface, PhyStatus) == ANSC_STATUS_SUCCESS) {
                 if(strcmp(PhyStatus, "Up") != 0) {
                     CosaDmlEthSetPhyStatusForWanAgent(WanOEInterface, "Up");
-                    CcspTraceError(("Successfully updated PhyStatus to UP for %s interface \n", WanOEInterface));
+                    CcspTraceInfo(("Successfully updated PhyStatus to UP for %s interface \n", WanOEInterface));
                     /** We need also update `linkStatus` in global data to inform linkstatus is up
                      * for the EthAgent state machine. This is required for SM, when its being started
                      * by setting `upstream` from WanAgent.
                      */
                     if (ANSC_STATUS_SUCCESS == CosaDmlEthPortGetIndexFromIfName(WanOEInterface, &ifIndex))
                     {
-                        CcspTraceError(("%s Successfully get index for this %s interface\n", __FUNCTION__, WanOEInterface));
+                        CcspTraceInfo(("%s Successfully get index for this %s interface\n", __FUNCTION__, WanOEInterface));
                         pthread_mutex_lock(&gmEthGInfo_mutex);
                         gpstEthGInfo[ifIndex].LinkStatus = ETH_LINK_STATUS_UP;
                         pthread_mutex_unlock(&gmEthGInfo_mutex);
@@ -2660,14 +2664,14 @@ CosaDmlEthInit(
             if(CosaDmlEthGetPhyStatusForWanManager(WanOEInterface, PhyStatus) == ANSC_STATUS_SUCCESS) {
                 if(strcmp(PhyStatus, "Up") != 0) {
                     CosaDmlEthSetPhyStatusForWanManager(WanOEInterface, WANOE_IFACE_UP);
-                    CcspTraceError(("Successfully updated PhyStatus to UP for %s interface \n", WanOEInterface));
+                    CcspTraceInfo(("Successfully updated PhyStatus to UP for %s interface \n", WanOEInterface));
                     /** We need also update `linkStatus` in global data to inform linkstatus is up
                      * for the EthAgent state machine. This is required for SM, when its being started
                      * by setting `upstream` from WanManager.
                      */
                     if (ANSC_STATUS_SUCCESS == CosaDmlEthPortGetIndexFromIfName(WanOEInterface, &ifIndex))
                     {
-                        CcspTraceError(("%s Successfully get index for this %s interface\n", __FUNCTION__, WanOEInterface));
+                        CcspTraceInfo(("%s Successfully get index for this %s interface\n", __FUNCTION__, WanOEInterface));
                         pthread_mutex_lock(&gmEthGInfo_mutex);
                         gpstEthGInfo[ifIndex].LinkStatus = ETH_LINK_STATUS_UP;
                         pthread_mutex_unlock(&gmEthGInfo_mutex);
@@ -3142,6 +3146,7 @@ ANSC_STATUS CosaDmlEthPortGetWanStatus(INT IfIndex, COSA_DML_ETH_WAN_STATUS *wan
     return ANSC_STATUS_SUCCESS;
 }
 
+
 ANSC_STATUS CosaDmlEthPortSetWanStatus(INT IfIndex, COSA_DML_ETH_WAN_STATUS wan_status)
 {
 #ifdef FEATURE_RDKB_WAN_AGENT	
@@ -3162,6 +3167,7 @@ ANSC_STATUS CosaDmlEthPortSetWanStatus(INT IfIndex, COSA_DML_ETH_WAN_STATUS wan_
 #endif //#if defined (FEATURE_RDKB_WAN_AGENT)
     return ANSC_STATUS_SUCCESS;
 }
+
 
 ANSC_STATUS CosaDmlEthPortGetLinkStatus(INT IfIndex, COSA_DML_ETH_LINK_STATUS *LinkStatus)
 {
@@ -3208,6 +3214,7 @@ ANSC_STATUS CosaDmlEthPortGetWanStatus(char *ifname, COSA_DML_ETH_WAN_STATUS *wa
     pthread_mutex_unlock(&gmEthGInfo_mutex);
     return ANSC_STATUS_SUCCESS;
 }
+
 ANSC_STATUS CosaDmlEthPortSetWanStatus(char *ifname, COSA_DML_ETH_WAN_STATUS wan_status)
 {
     ANSC_STATUS   retStatus;
@@ -3234,6 +3241,8 @@ ANSC_STATUS CosaDmlEthPortSetWanStatus(char *ifname, COSA_DML_ETH_WAN_STATUS wan
     pthread_mutex_unlock(&gmEthGInfo_mutex);
     return ANSC_STATUS_SUCCESS;
 }
+
+
 ANSC_STATUS CosaDmlEthPortSetLowerLayers(char *ifname, char *newLowerLayers)
 {
     ANSC_STATUS   retStatus;
@@ -3332,6 +3341,8 @@ static INT CosaDmlEthGetTotalNoOfInterfaces(VOID)
     return 0;
 #endif
 }
+
+#if !defined(WAN_MANAGER_UNIFICATION_ENABLED)
 #if defined (FEATURE_RDKB_WAN_AGENT)
 ANSC_STATUS CosaDmlEthPortSetUpstream(INT IfIndex, BOOL Upstream)
 #else
@@ -3425,6 +3436,8 @@ ANSC_STATUS CosaDmlEthPortSetUpstream( CHAR *ifname, BOOL Upstream )
 #endif //#if defined (FEATURE_RDKB_WAN_MANAGER)     
     return ANSC_STATUS_SUCCESS;
 }
+#endif //WAN_MANAGER_UNIFICATION_ENABLED
+
 
 #if defined(FEATURE_RDKB_WAN_MANAGER) || defined(FEATURE_RDKB_WAN_AGENT)
 
@@ -3987,6 +4000,7 @@ static ANSC_STATUS CosaDmlEthSetParamValues(const char *pComponent, const char *
 }
 #endif //FEATURE_RDKB_WAN_AGENT
 
+#if !defined(WAN_MANAGER_UNIFICATION_ENABLED)
 #ifdef FEATURE_RDKB_WAN_AGENT
 /* Set wan status event to Wanagent. */
 ANSC_STATUS CosaDmlEthSetWanStatusForWanAgent(char *ifname, char *WanStatus)
@@ -4122,6 +4136,9 @@ ANSC_STATUS CosaDmlEthSetWanInterfaceNameForWanManager(char *ifname, char *WanIf
     return ANSC_STATUS_SUCCESS;
 }
 #endif //FEATURE_RDKB_WAN_AGENT
+#endif //WAN_MANAGER_UNIFICATION_ENABLED
+
+
 #if defined (FEATURE_RDKB_AUTO_PORT_SWITCH) || defined (FEATURE_RDKB_WAN_AGENT)
 static ANSC_STATUS CosaDmlGetWanOEInterfaceName(char *pInterface, unsigned int length)
 {
@@ -4298,7 +4315,7 @@ static ANSC_STATUS CosaDmlEthGetLowerLayersInstanceInOtherAgent(COSA_ETH_NOTIFY_
 
     return ANSC_STATUS_SUCCESS;
 }
-
+#if !defined(WAN_MANAGER_UNIFICATION_ENABLED)
 /* Create and Enbale Ethernet.Link. */
 ANSC_STATUS CosaDmlEthCreateEthLink(char *l2ifName, char *Path)
 {
@@ -4355,6 +4372,8 @@ ANSC_STATUS CosaDmlEthDeleteEthLink(char *ifName, char *Path)
     CcspTraceInfo(("%s %d Disabled Vlan Instance(%d) Term for %s interface\n", __FUNCTION__, __LINE__, iVLANInstance, ifName));
     return ANSC_STATUS_SUCCESS;
 }
+#endif //WAN_MANAGER_UNIFICATION_ENABLED
+
 #ifdef FEATURE_RDKB_WAN_MANAGER
 ANSC_STATUS CosaDmlEthSetPhyPathForWanManager(char *ifname)
 {

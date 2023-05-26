@@ -78,7 +78,9 @@
 #include <syscfg/syscfg.h>
 #include "secure_wrapper.h"
 #if defined (FEATURE_RDKB_WAN_MANAGER) || defined (FEATURE_RDKB_WAN_AGENT)
+#if !defined(WAN_MANAGER_UNIFICATION_ENABLED)
 #include "cosa_ethernet_manager.h"
+#endif
 #endif //#if defined (FEATURE_RDKB_WAN_MANAGER)
 
 #if defined (WAN_FAILOVER_SUPPORTED)  ||  defined(RBUS_BUILD_FLAG_ENABLE) || defined (_HUB4_PRODUCT_REQ_) || defined(_PLATFORM_RASPBERRYPI_)

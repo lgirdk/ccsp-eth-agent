@@ -1457,6 +1457,10 @@ EthRdkInterface_GetParamBoolValue
     PCOSA_CONTEXT_LINK_OBJECT   pCxtLink      = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_ETH_PORT_CONFIG   pEthLink      = (PCOSA_DML_ETH_PORT_CONFIG)pCxtLink->hContext;
     /* check the parameter name and return the corresponding value */
+    /*TODO:
+     * The Upstream And WanValidated should not be used if WAN_MANAGER_UNIFICATION_ENABLED is Enabled.
+     * Need to be Removed the upstream and WanValidated once whomever is using it, will be moved to WAN_MANAGER_UNIFICATION_ENABLED.
+     */
     if (strcmp(ParamName, "Enable") == 0)
     {
         *pBool = pEthLink->Enable;
@@ -1718,6 +1722,10 @@ EthRdkInterface_GetParamUlongValue
         *puLong = pEthLink->LinkStatus;
         return TRUE;
     }
+    /*TODO:
+     * The WanStatus should not be used if WAN_MANAGER_UNIFICATION_ENABLED is Enabled.
+     * Need to be Removed the WanStatus once whomever is using it, will be moved to WAN_MANAGER_UNIFICATION_ENABLED.
+     */
     if (strcmp(ParamName, "WanStatus") == 0)
     {
         COSA_DML_ETH_WAN_STATUS wan_status;
@@ -1778,6 +1786,10 @@ EthRdkInterface_SetParamUlongValue
 {
     PCOSA_CONTEXT_LINK_OBJECT   pCxtLink      = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_ETH_PORT_CONFIG   pEthLink      = (PCOSA_DML_ETH_PORT_CONFIG)pCxtLink->hContext;
+    /*TODO:
+     * The WanStatus should not be used if WAN_MANAGER_UNIFICATION_ENABLED is Enabled.
+     * Need to be Removed the WanStatus once whomever is using it, will be moved to WAN_MANAGER_UNIFICATION_ENABLED.
+     */
     if (strcmp(ParamName, "WanStatus") == 0)
     {
         if (uValue == pEthLink->WanStatus)
@@ -1850,6 +1862,10 @@ EthRdkInterface_SetParamBoolValue
     PCOSA_CONTEXT_LINK_OBJECT   pCxtLink      = (PCOSA_CONTEXT_LINK_OBJECT)hInsContext;
     PCOSA_DML_ETH_PORT_CONFIG   pEthLink      = (PCOSA_DML_ETH_PORT_CONFIG)pCxtLink->hContext;
     /* check the parameter name and set the corresponding value */
+    /*TODO:
+     * The Upstream And WanValidated should not be used if WAN_MANAGER_UNIFICATION_ENABLED is Enabled.
+     * Need to be Removed the upstream and WanValidated once whomever is using it, will be moved to WAN_MANAGER_UNIFICATION_ENABLED.
+     */
     if (strcmp(ParamName, "Upstream") == 0)
     {
         if( bValue == pEthLink->Upstream )
@@ -1857,7 +1873,9 @@ EthRdkInterface_SetParamBoolValue
             return TRUE;	//No need to proceed when same value comes
         }
         pEthLink->Upstream = bValue;
+#if !defined(WAN_MANAGER_UNIFICATION_ENABLED)
         CosaDmlEthPortSetUpstream( pEthLink->Name , pEthLink->Upstream );
+#endif
         return TRUE;
     }
     if (strcmp(ParamName, "Enable") == 0)
@@ -1898,7 +1916,7 @@ EthRdkInterface_SetParamBoolValue
 
         if (ANSC_STATUS_SUCCESS == EthMgr_AddPortToLanBridge (pEthLink, bValue))
         {
-            CcspTraceError(("%s %d: successfully set AddtoBridge = %d for interface %s \n", __FUNCTION__, __LINE__, bValue, pEthLink->Name));
+            CcspTraceInfo(("%s %d: successfully set AddtoBridge = %d for interface %s \n", __FUNCTION__, __LINE__, bValue, pEthLink->Name));
             pEthLink->AddToLanBridge = bValue;
             return TRUE;
         }
@@ -2434,7 +2452,9 @@ EthInterface_SetParamBoolValue
         }
 
         pEthLink->Upstream = bValue;
-	    CosaDmlEthPortSetUpstream(( pEthLink->ulInstanceNumber - 1 ), pEthLink->Upstream );
+#if !defined(WAN_MANAGER_UNIFICATION_ENABLED)
+	CosaDmlEthPortSetUpstream(( pEthLink->ulInstanceNumber - 1 ), pEthLink->Upstream );
+#endif
         return TRUE;
     }
 

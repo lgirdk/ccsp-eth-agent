@@ -17,6 +17,7 @@
  * limitations under the License.
 */
 
+#if !defined(WAN_MANAGER_UNIFICATION_ENABLED)
 #if defined (FEATURE_RDKB_WAN_MANAGER) || defined (FEATURE_RDKB_WAN_AGENT)
 /* ---- Include Files ---------------------------------------- */
 #include "cosa_ethernet_manager.h"
@@ -513,3 +514,4 @@ static char *PrintEnumToString(const ethSmState_t state)
     }
 }
 #endif //#if defined (FEATURE_RDKB_WAN_MANAGER) || defined (FEATURE_RDKB_WAN_AGENT)
+#endif //WAN_MANAGER_UNIFICATION_ENABLED
