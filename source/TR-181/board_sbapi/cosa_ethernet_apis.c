@@ -111,7 +111,14 @@
 #include <stdbool.h>
 #include "ccsp_hal_ethsw.h"
 #include "secure_wrapper.h"
+#include "ccsp_psm_helper.h"
 #include <platform_hal.h>
+
+extern char g_Subsystem[32];
+extern ANSC_HANDLE bus_handle;
+
+#define PSM_ETHMANAGER_CFG_COUNT  "dmsb.ethagent.ethifcount"
+#define PSM_ETHMANAGER_CFG_NAME   "dmsb.ethagent.if.%d.Name"
 
 #if defined (FEATURE_RDKB_WAN_MANAGER)
 #include "cosa_ethernet_manager.h"
@@ -371,7 +378,11 @@ static ANSC_STATUS CosaDmlEthGetParamValues(char *pComponent, char *pBus, char *
 static ANSC_STATUS CosaDmlEthGetParamNames(char *pComponent, char *pBus, char *pParamName, char a2cReturnVal[][256], int *pReturnSize);
 static ANSC_STATUS CosaDmlEthPortSendLinkStatusToEventQueue(CosaETHMSGQWanData *MSGQWanData);
 static ANSC_STATUS CosaDmlEthGetLowerLayersInstanceInOtherAgent(COSA_ETH_NOTIFY_ENUM enNotifyAgent, char *pLowerLayers, INT *piInstanceNumber);
+#if defined (FEATURE_RDKB_WAN_AGENT)
 static ANSC_STATUS CosaDmlGetWanOEInterfaceName(char *pInterface, unsigned int length);
+#endif
+static ANSC_STATUS CosaDmlMapWanCPEtoEthInterfaces(char *pInterface, unsigned int length);
+static int DmlEthGetPSMRecordValue(char *pPSMEntry, char *pOutputString);
 static void CosaDmlEthTriggerEventHandlerThread(void);
 static void *CosaDmlEthEventHandlerThread(void *arg);
 static ANSC_STATUS CosaDmlEthPortGetIndexFromIfName( char *ifname, INT *IfIndex );
@@ -1378,7 +1389,7 @@ CosaDmlEthInit(
         }
     }
 #elif defined (FEATURE_RDKB_WAN_MANAGER)
-    if(CosaDmlGetWanOEInterfaceName(WanOEInterface, sizeof(WanOEInterface)) == ANSC_STATUS_SUCCESS) {
+    if(CosaDmlMapWanCPEtoEthInterfaces(WanOEInterface, sizeof(WanOEInterface)) == ANSC_STATUS_SUCCESS) {
         if(GWP_GetEthWanLinkStatus() == 1) {
             if(CosaDmlEthGetPhyStatusForWanManager(WanOEInterface, PhyStatus) == ANSC_STATUS_SUCCESS) {
                 if(strcmp(PhyStatus, "Up") != 0) {
@@ -1456,7 +1467,22 @@ CosaDmlEthPortInit(
     PCOSA_CONTEXT_LINK_OBJECT pEthCxtLink    = NULL;
     INT iTotalInterfaces = 0;
     INT iLoopCount = 0;
-    iTotalInterfaces = CosaDmlEthGetTotalNoOfInterfaces();
+
+    char acPSMQuery[128] = {0};
+    char acPSMValue[64]  = {0};
+
+    snprintf(acPSMQuery, sizeof(acPSMQuery), PSM_ETHMANAGER_CFG_COUNT);
+    int ret = DmlEthGetPSMRecordValue(acPSMQuery, acPSMValue);
+    if ( ret != CCSP_SUCCESS )
+    {
+        CcspTraceError(("No %s record in psmdb, using hardcoded values instead\n", acPSMQuery));
+        iTotalInterfaces = CosaDmlEthGetTotalNoOfInterfaces();
+    } else
+    {
+        iTotalInterfaces = atoi(acPSMValue);
+        if(iTotalInterfaces > 0) gTotal = iTotalInterfaces;
+    }
+
     pMyObject->ulTotalNoofEthInterfaces = iTotalInterfaces;
     for (iLoopCount = 0; iLoopCount < iTotalInterfaces; iLoopCount++)
     {
@@ -1477,8 +1503,25 @@ CosaDmlEthPortInit(
         DML_ETHIF_INIT(pETHTemp);
         pETHTemp->ulInstanceNumber = iLoopCount + 1;
         pMyObject->ulPtNextInstanceNumber=  pETHTemp->ulInstanceNumber + 1;
-        // Get  Name.
-        snprintf(pETHTemp->Name, sizeof(pETHTemp->Name), "eth%d", iLoopCount);
+
+        // Get Name from the psmdb.
+        memset(acPSMQuery, 0, sizeof(acPSMQuery));
+        memset(acPSMValue, 0, sizeof(acPSMValue));
+        snprintf(acPSMQuery, sizeof(acPSMQuery), PSM_ETHMANAGER_CFG_NAME, iLoopCount + 1 );
+
+        ret = DmlEthGetPSMRecordValue(acPSMQuery, acPSMValue);
+        if ( ret == CCSP_SUCCESS )
+        {
+            CcspTraceError(("Found %s record in psmdb, using Dynamic Ehernet names\n", acPSMQuery));
+            snprintf(pETHTemp->Name, sizeof(pETHTemp->Name), "%s", acPSMValue);
+        } else
+        {
+            CcspTraceWarning(("No %s record in psmdb, using hardcoded names instead\n", acPSMQuery));
+
+            // Generate Name.
+            snprintf(pETHTemp->Name, sizeof(pETHTemp->Name), "eth%d", iLoopCount);
+        }
+
         snprintf(pETHTemp->LowerLayers, sizeof(pETHTemp->LowerLayers), "%s%d", ETHERNET_IF_LOWERLAYERS, iLoopCount + 1);
         pEthCxtLink->hContext = (ANSC_HANDLE)pETHTemp;
         pEthCxtLink->bNew     = TRUE;
@@ -1966,7 +2009,6 @@ ANSC_STATUS CosaDmlEthPortSetUpstream( CHAR *ifname, BOOL Upstream )
     gpstEthGInfo[IfIndex].Upstream = Upstream;
     snprintf(stSMPrivateInfo.Name, sizeof(stSMPrivateInfo.Name), "%s", gpstEthGInfo[IfIndex].Name);
     pthread_mutex_unlock(&gmEthGInfo_mutex);
-
     //Start the State machine thread.
     if (TRUE == Upstream)
     {
@@ -2100,7 +2142,24 @@ static ANSC_STATUS CosDmlEthPortPrepareGlobalInfo()
         gpstEthGInfo[iLoopCount].WanStatus = ETH_WAN_DOWN;
         gpstEthGInfo[iLoopCount].LinkStatus = ETH_LINK_STATUS_DOWN;
         gpstEthGInfo[iLoopCount].WanValidated = TRUE; //Make default as True.
-        snprintf(gpstEthGInfo[iLoopCount].Name, sizeof(gpstEthGInfo[iLoopCount].Name), "eth%d", iLoopCount);
+
+        //Get names from psmdb
+        char acPSMQuery[128] = {0};
+        char acPSMValue[64]  = {0};
+
+        snprintf(acPSMQuery, sizeof(acPSMQuery), PSM_ETHMANAGER_CFG_NAME, iLoopCount + 1);
+
+        int ret = DmlEthGetPSMRecordValue(acPSMQuery, acPSMValue);
+        if ( ret == CCSP_SUCCESS )
+        {
+            CcspTraceError(("Found %s record in psmdb, using Dynamic Ehernet names\n", acPSMQuery));
+           snprintf(gpstEthGInfo[iLoopCount].Name, sizeof(gpstEthGInfo[iLoopCount].Name), acPSMValue);
+        } else
+        {
+            CcspTraceWarning(("No %s record in psmdb, using hardcoded names instead\n", acPSMQuery));
+            snprintf(gpstEthGInfo[iLoopCount].Name, sizeof(gpstEthGInfo[iLoopCount].Name), "eth%d", iLoopCount);
+        }
+
         snprintf(gpstEthGInfo[iLoopCount].Path, sizeof(gpstEthGInfo[iLoopCount].Path), "%s%d", ETHERNET_IF_PATH, iLoopCount + 1);
 #if defined(FEATURE_RDKB_WAN_MANAGER)
         gpstEthGInfo[iLoopCount].Enable = FALSE; //Make default as False.
@@ -2542,6 +2601,7 @@ ANSC_STATUS CosaDmlEthSetWanInterfaceNameForWanManager(char *ifname, char *WanIf
 }
 #endif //FEATURE_RDKB_WAN_AGENT
 
+#if defined (FEATURE_RDKB_WAN_AGENT)
 static ANSC_STATUS CosaDmlGetWanOEInterfaceName(char *pInterface, unsigned int length)
 {
     char acTmpReturnValue[256] = {0};
@@ -2582,6 +2642,121 @@ static ANSC_STATUS CosaDmlGetWanOEInterfaceName(char *pInterface, unsigned int l
     }
 	
     return ANSC_STATUS_SUCCESS;
+}
+#endif /* FEATURE_RDKB_WAN_AGENT */
+
+/* * CosaDmlMapWanCPEtoEthInterfaces() */
+static ANSC_STATUS CosaDmlMapWanCPEtoEthInterfaces(char* pInterface, unsigned int length)
+{
+    INT iTotalEthEntries, iTotalWanEntries;
+    char acParamName[256] = {0};
+    char acParamValue[256] = {0};
+    char HalWanName[IFNAMSIZ] = {0};
+
+    //Get Total WAN entries count
+    ANSC_STATUS ret = CosaDmlEthGetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH, WAN_NOE_PARAM_NAME, acParamValue);
+    if(ret == ANSC_STATUS_FAILURE)
+    {
+        CcspTraceError(("%s %d Failed to get param value\n", __FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    iTotalWanEntries = atoi(acParamValue);
+    CcspTraceInfo(("%s %d - iTotalWanEntries:%d\n", __FUNCTION__, __LINE__, iTotalWanEntries));
+
+    if (iTotalWanEntries < 0)
+    {
+        CcspTraceError(("%s %d - iTotalWanEntries is incorrect. Exiting.\n", __FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    //Get Total ETH entries count
+    iTotalEthEntries = CosaDmlEthGetTotalNoOfInterfaces();
+    CcspTraceInfo(("%s %d - iTotalEthEntries:%d\n", __FUNCTION__, __LINE__, iTotalEthEntries));
+
+    if (iTotalEthEntries < 0)
+    {
+       CcspTraceError(("%s %d - iTotalEthEntries is incorrect. Exiting.\n", __FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+    //Traversing through all WAN Entries seeking for matching Eth Interface entry
+    for (INT iWanLoopCount = 0; iWanLoopCount < iTotalWanEntries; iWanLoopCount++) {
+        memset(acParamValue, 0, sizeof(acParamValue));
+        memset(acParamName, 0, sizeof(acParamName));
+        //Query WAN Interface Name
+        snprintf(acParamName, sizeof(acParamName), WAN_IF_NAME_PARAM_NAME, iWanLoopCount + 1);
+
+        ret = CosaDmlEthGetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH, acParamName, acParamValue);
+        if(ret == ANSC_STATUS_FAILURE)
+        {
+            CcspTraceError(("%s %d Failed to get param value\n", __FUNCTION__, __LINE__));
+            continue;
+        }
+
+        for (INT iEthLoopCount = 0; iEthLoopCount < iTotalEthEntries; iEthLoopCount++) {
+            //Compare name
+            if ( strcmp(acParamValue, gpstEthGInfo[iEthLoopCount].Name) == 0 )
+            {
+#ifndef AUTOWAN_ENABLE
+                //Set PHY path
+                memset(acParamValue, 0, sizeof(acParamValue));
+                memset(acParamName, 0, sizeof(acParamName));
+                snprintf(acParamName, sizeof(acParamName), WAN_PHY_PATH_PARAM_NAME, iWanLoopCount + 1);
+                snprintf(acParamValue, sizeof(acParamValue), ETH_IF_PHY_PATH, iEthLoopCount + 1);
+
+                ret = CosaDmlEthSetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH, acParamName, acParamValue, ccsp_string, TRUE);
+                if (ret == ANSC_STATUS_FAILURE)
+                {
+                    CcspTraceError(("%s %d: Unable to set param name %s with value %s\n", __FUNCTION__, __LINE__, acParamName, acParamValue));
+                    return ANSC_STATUS_FAILURE;
+                }
+#endif
+                //Check HAL configuration file
+               ret = GetWan_InterfaceName(HalWanName, sizeof(HalWanName));
+                if (ret == ANSC_STATUS_FAILURE)
+                {
+                    CcspTraceError(("%s %d Failed to get WANOE interface name from ETH HAL!\n", __FUNCTION__, __LINE__));
+                    break;
+                }
+
+                if ( strcmp(HalWanName, gpstEthGInfo[iEthLoopCount].Name) == 0 )
+                {
+                    //total match over ethagent/wanmanager dmsb and HAL configuration
+                    //WanOE name found!
+                    strncpy(pInterface, gpstEthGInfo[iEthLoopCount].Name, length);
+                    CcspTraceInfo(("%s %d - WanOE found!\n", __FUNCTION__, __LINE__));
+                }
+                break;
+            }
+        }
+    }
+    CcspTraceInfo(("%s %d - WanOE Name:%s\n", __FUNCTION__, __LINE__, pInterface));
+    return ANSC_STATUS_SUCCESS;
+}
+
+/* * DmlEthGetPSMRecordValue() */
+static int DmlEthGetPSMRecordValue(char *pPSMEntry, char *pOutputString)
+{
+    int   retPsmGet = CCSP_FAILURE;
+    char *strValue  = NULL;
+
+    //Validate buffer
+    if( ( NULL == pPSMEntry ) && ( NULL == pOutputString ) )
+    {
+        CcspTraceError(("%s %d Invalid buffer\n",__FUNCTION__,__LINE__));
+        return retPsmGet;
+    }
+
+    retPsmGet = PSM_Get_Record_Value2(bus_handle, g_Subsystem, pPSMEntry, NULL, &strValue);
+    if ( retPsmGet == CCSP_SUCCESS )
+    {
+        //Copy till end of the string
+        snprintf( pOutputString, strlen( strValue ) + 1, "%s", strValue );
+
+        if(bus_handle) ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+    }
+
+    return retPsmGet;
 }
 
 /* * CosaDmlEthGetLowerLayersInstanceInOtherAgent() */
@@ -2983,7 +3158,9 @@ ANSC_STATUS CosaDmlEthGetPhyStatusForWanManager(char *ifname, char *PhyStatus)
 
     //Get PHY Status
     memset(acGetParamName, 0, sizeof(acGetParamName));
-    snprintf(acGetParamName, sizeof(acGetParamName), WAN_PHY_STATUS_PARAM_NAME, iWANInstance);
+    //snprintf(acGetParamName, sizeof(acGetParamName), WAN_PHY_STATUS_PARAM_NAME, iWANInstance);
+    //https://code.rdkcentral.com/r/c/rdkb/components/opensource/ccsp/CcspEthAgent/+/79386
+    snprintf(acGetParamName, sizeof(acGetParamName), WAN_CPE_LINK_STATUS_PARAM_NAME, iWANInstance);
     if (CosaDmlEthGetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH, acGetParamName, PhyStatus) != ANSC_STATUS_SUCCESS)
     {
         CcspTraceError(("%s %d: CosaDmlEthGetParamValues() returned FAILURE\n", __FUNCTION__, __LINE__));
