@@ -92,7 +92,7 @@ typedef struct _CosaEthInt
 } CosaEthInterfaceInfo, *PCosaEthInterfaceInfo;
 
 typedef struct _EthCtlFn {
-    int (*getCfg)(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pCfg);
+    int (*getCfg)(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pCfg, int fromDML);
     int (*setCfg)(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pCfg);
     int (*getStats)(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_STATS pStats);
     int (*getDInfo)(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_DINFO pDinfo);
