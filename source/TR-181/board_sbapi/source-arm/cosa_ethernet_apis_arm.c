@@ -119,13 +119,13 @@ int getPortID(const ULONG instanceNumber);
 
 #if defined(_COSA_INTEL_USG_ARM_) || defined(_COSA_BCM_ARM_) || defined(_COSA_BCM_MIPS_)
 
-static int getIfCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg);
+static int getIfCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg, int fromDML);
 static int setIfCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg);
 static int getIfStats(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_STATS pStats);
 static int getIfStats2(const PUCHAR pName, PCOSA_DML_ETH_STATS pStats);
 static int getIfDInfo(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_DINFO pDinfo);
 
-static int puma6_getSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg);
+static int puma6_getSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg, int fromDML);
 static int puma6_setSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg);
 static int puma6_getSwitchDInfo(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_DINFO pDinfo);
 static int puma6_getSwitchStats(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_STATS pStats);
@@ -457,7 +457,7 @@ CosaDmlEthPortGetEntry
 #if defined(_COSA_INTEL_USG_ARM_) || defined(_COSA_BCM_ARM_) || defined(_COSA_BCM_MIPS_)
     if (ulIndex < g_EthernetIntNum)
     {
-        g_EthEntries[ulIndex].control->getCfg(g_EthEntries + ulIndex, &pEntry->Cfg);
+        g_EthEntries[ulIndex].control->getCfg(g_EthEntries + ulIndex, &pEntry->Cfg, 0);
         AnscCopyMemory(&pEntry->StaticInfo, &g_EthIntSInfo[ulIndex], sizeof(COSA_DML_ETH_PORT_SINFO));
         g_EthEntries[ulIndex].control->getDInfo(g_EthEntries + ulIndex, &pEntry->DynamicInfo);
     }
@@ -599,7 +599,7 @@ CosaDmlEthPortGetCfg
     }
 
 
-    pEthIf->control->getCfg(pEthIf, pCfg);
+    pEthIf->control->getCfg(pEthIf, pCfg, 1);
 
     AnscCopyString(pCfg->Alias, pEthIf->Alias);
 
@@ -862,7 +862,7 @@ CosaDmlEthPortGetStats
 
 
 #if defined(_COSA_INTEL_USG_ARM_) || defined(_COSA_BCM_ARM_) || defined(_COSA_BCM_MIPS_)
-static int puma6_getSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg)
+static int puma6_getSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg, int fromDML)
 {
     CCSP_HAL_ETHSW_PORT         port        = *((PCCSP_HAL_ETHSW_PORT)eth->hwid);
     INT                         status;
@@ -971,7 +971,7 @@ static int puma6_getSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG 
             }
         }
         //Get value from PSM and set in HAL
-        if (CosaDmlEEEPortGetPsmCfg(port,pcfg) == CCSP_SUCCESS)
+        if ((fromDML == 0) && CosaDmlEEEPortGetPsmCfg(port,pcfg) == CCSP_SUCCESS)
         {
             CosaDmlEEEPortSetCfg(port,pcfg);
         }
@@ -1121,7 +1121,7 @@ static int puma6_getSwitchStats(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_STATS p
     return ANSC_STATUS_SUCCESS;
 }
 
-static int getIfCfg(PCosaEthInterfaceInfo pEthIf, PCOSA_DML_ETH_PORT_CFG pCfg)
+static int getIfCfg(PCosaEthInterfaceInfo pEthIf, PCOSA_DML_ETH_PORT_CFG pCfg, int fromDML)
 {
     if ( getIfStatus( (PUCHAR)pEthIf->sInfo->Name, NULL ) == COSA_DML_IF_STATUS_Up )
     {
