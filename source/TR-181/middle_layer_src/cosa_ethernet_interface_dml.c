@@ -222,7 +222,7 @@ Interface_GetParamBoolValue
 
     if (strcmp(ParamName, "EEEEnable") == 0)
     {
-        if (CosaDmlEEEPortGetPsmCfg(pEthernetPortFull->Cfg.InstanceNumber, &pEthernetPortFull->Cfg) == CCSP_SUCCESS)
+        if (CosaDmlEEEPortGetPsmCfg(pEthernetPortFull->Cfg.InstanceNumber, &pEthernetPortFull->Cfg) == ANSC_STATUS_SUCCESS)
         {
             *pBool = pEthernetPortFull->Cfg.bEEEEnabled;
         }

@@ -121,7 +121,7 @@ void rdkb_api_platform_hal_GetLanMacAddr(char* mac);
 
 #include <syscfg/syscfg.h>
 
-int puma6_getSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg);
+int puma6_getSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg, int fromDML);
 int puma6_setSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg);
 int puma6_getSwitchDInfo(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_DINFO pDinfo);
 int puma6_getSwitchStats(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_STATS pStats);
@@ -415,7 +415,7 @@ CosaDmlEthPortGetEntry
 #if defined _COSA_INTEL_USG_ARM_ || _COSA_BCM_MIPS_
     if (ulIndex < g_EthernetIntNum)
     {
-        g_EthEntries[ulIndex].control->getCfg(g_EthEntries + ulIndex, &pEntry->Cfg);
+        g_EthEntries[ulIndex].control->getCfg(g_EthEntries + ulIndex, &pEntry->Cfg, 0);
         AnscCopyMemory(&pEntry->StaticInfo, &g_EthIntSInfo[ulIndex], sizeof(COSA_DML_ETH_PORT_SINFO));
         g_EthEntries[ulIndex].control->getDInfo(g_EthEntries + ulIndex, &pEntry->DynamicInfo);
     }
@@ -620,7 +620,7 @@ CosaDmlEthPortGetCfg
     }
 
 
-    pEthIf->control->getCfg(pEthIf, pCfg);
+    pEthIf->control->getCfg(pEthIf, pCfg, 1);
 
     AnscCopyString(pCfg->Alias, pEthIf->Alias);
 
@@ -649,9 +649,10 @@ ANSC_STATUS CosaDmlEEEPortGetPsmCfg (ULONG ulInstanceNumber, PCOSA_DML_ETH_PORT_
     {
         pCfg->bEEEEnabled = (strcasecmp(strValue, "true") == 0) ? TRUE : FALSE;
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
+        return ANSC_STATUS_SUCCESS;
     }
 
-    return retPsmGet;
+    return ANSC_STATUS_FAILURE;
 }
 
 ANSC_STATUS CosaDmlEEEPortSetPsmCfg (ULONG ulInstanceNumber, PCOSA_DML_ETH_PORT_CFG pCfg)
@@ -672,9 +673,10 @@ ANSC_STATUS CosaDmlEEEPortSetPsmCfg (ULONG ulInstanceNumber, PCOSA_DML_ETH_PORT_
     if (retPsmSet != CCSP_SUCCESS)
     {
         CcspTraceWarning(("%s - PSM_Set_Record_Value2 error %d setting %s\n", __FUNCTION__, retPsmSet, recName));
+        return ANSC_STATUS_FAILURE;
     }
 
-    return retPsmSet;
+    return ANSC_STATUS_SUCCESS;
 }
 
 ANSC_STATUS
@@ -883,7 +885,7 @@ CosaDmlEthPortGetStats
 
 
 #if defined _COSA_INTEL_USG_ARM_ || _COSA_BCM_MIPS_
-int puma6_getSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg)
+int puma6_getSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg, int fromDML)
 {
     CCSP_HAL_ETHSW_PORT         port        = *((PCCSP_HAL_ETHSW_PORT)eth->hwid);
     INT                         status;
@@ -992,7 +994,7 @@ int puma6_getSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg)
             }
         }
         //Get value from PSM and set in HAL
-        if (CosaDmlEEEPortGetPsmCfg(port,pcfg) == CCSP_SUCCESS)
+        if ((fromDML == 0) && (CosaDmlEEEPortGetPsmCfg(port,pcfg) == ANSC_STATUS_SUCCESS))
         {
             CosaDmlEEEPortSetCfg(port,pcfg);
         }
