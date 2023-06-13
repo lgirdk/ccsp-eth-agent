@@ -120,8 +120,7 @@ void rdkb_api_platform_hal_GetLanMacAddr(char* mac);
 #if defined _COSA_INTEL_USG_ARM_ || _COSA_BCM_MIPS_
 
 #include <syscfg/syscfg.h>
-
-int puma6_getSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg);
+int puma6_getSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg, int fromDML);
 int puma6_setSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg);
 int puma6_getSwitchDInfo(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_DINFO pDinfo);
 int puma6_getSwitchStats(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_STATS pStats);
@@ -430,7 +429,7 @@ CosaDmlEthPortGetEntry
 #if defined _COSA_INTEL_USG_ARM_ || _COSA_BCM_MIPS_
     if (ulIndex < g_EthernetIntNum)
     {
-        g_EthEntries[ulIndex].control->getCfg(g_EthEntries + ulIndex, &pEntry->Cfg);
+        g_EthEntries[ulIndex].control->getCfg(g_EthEntries + ulIndex, &pEntry->Cfg, 0);
         AnscCopyMemory(&pEntry->StaticInfo, &g_EthIntSInfo[ulIndex], sizeof(COSA_DML_ETH_PORT_SINFO));
         g_EthEntries[ulIndex].control->getDInfo(g_EthEntries + ulIndex, &pEntry->DynamicInfo);
     }
@@ -572,7 +571,7 @@ CosaDmlEthPortGetCfg
     }
 
 
-    pEthIf->control->getCfg(pEthIf, pCfg);
+    pEthIf->control->getCfg(pEthIf, pCfg, 1);
 
     AnscCopyString(pCfg->Alias, pEthIf->Alias);
 
@@ -835,7 +834,7 @@ CosaDmlEthPortGetStats
 
 
 #if defined _COSA_INTEL_USG_ARM_ || _COSA_BCM_MIPS_
-int puma6_getSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg)
+int puma6_getSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg, int fromDML)
 {
     CCSP_HAL_ETHSW_PORT         port        = *((PCCSP_HAL_ETHSW_PORT)eth->hwid);
     INT                         status;
@@ -944,7 +943,7 @@ int puma6_getSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg)
             }
         }
         //Get value from PSM and set in HAL
-        if (CosaDmlEEEPortGetPsmCfg(port,pcfg) == CCSP_SUCCESS)
+        if ((fromDML == 0) && CosaDmlEEEPortGetPsmCfg(port,pcfg) == CCSP_SUCCESS)
         {
             CosaDmlEEEPortSetCfg(port,pcfg);
         }
