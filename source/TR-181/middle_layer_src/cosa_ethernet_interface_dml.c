@@ -222,7 +222,7 @@ Interface_GetParamBoolValue
 
     if (strcmp(ParamName, "EEEEnable") == 0)
     {
-        if (CosaDmlEEEPortGetPsmCfg(pEthernetPortFull->Cfg.InstanceNumber, &pEthernetPortFull->Cfg) == ANSC_STATUS_SUCCESS)
+        if (CosaDmlEEEPortGetPsmCfg(pEthernetPortFull->Cfg.InstanceNumber, &pEthernetPortFull->Cfg) == CCSP_SUCCESS)
         {
             *pBool = pEthernetPortFull->Cfg.bEEEEnabled;
         }
@@ -838,14 +838,6 @@ Interface_Validate
 
             *puLength = AnscSizeOfString("Alias");
 
-            return FALSE;
-        }
-        if(pEthernetPortFull->Cfg.MaxBitRate != 10 && pEthernetPortFull->Cfg.MaxBitRate != 100 && pEthernetPortFull->Cfg.MaxBitRate != 1000 && pEthernetPortFull->Cfg.MaxBitRate != -1)
-        {
-            return FALSE;
-        }
-        if(pEthernetPortFull->Cfg.MaxBitRate == 1000 && pEthernetPortFull->Cfg.DuplexMode == COSA_DML_ETH_DUPLEX_Half)
-        {
             return FALSE;
         }
     }
