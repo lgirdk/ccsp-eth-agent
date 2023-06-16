@@ -151,6 +151,7 @@
 #define WAN_ENABLE_PARAM "Device.X_RDK_WanManager.Enable"
 #define WAN_IF_NAME_PRIMARY "erouter0"
 #define WAN_PHYPATH_VALUE "Device.X_RDKCENTRAL-COM_EthernetWAN."
+#define WAN_CM_INTERFACE_INSTANCE_NUM      1
 #define WAN_ETH_INTERFACE_INSTANCE_NUM     2
 
 #define ETH_IF_PHY_PATH                   "Device.Ethernet.X_RDK_Interface.%d"

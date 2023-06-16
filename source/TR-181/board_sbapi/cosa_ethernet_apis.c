@@ -1534,8 +1534,33 @@ ANSC_STATUS CosaDmlIfaceFinalize(char *pValue, BOOL isAutoWanMode)
             v_secure_system("touch /tmp/autowan_iface_finalized");
         }
         UpdateInformMsgToWanMgr();
-    
     }
+#if !defined(WAN_MANAGER_UNIFICATION_ENABLED)
+    else
+    {
+        char acSetParamName[256];
+        char acTmpCableValue[32] = {0};
+        char acTmpEthValue[32] = {0};
+        if (ethwanEnabled == TRUE)
+        {
+            snprintf(acTmpCableValue, sizeof(acTmpCableValue), "%s", ETHWAN_DOCSIS_INF_NAME);
+            snprintf(acTmpEthValue, sizeof(acTmpEthValue), "%s", wanPhyName);
+        }
+        else
+        {
+            snprintf(acTmpCableValue, sizeof(acTmpCableValue), "%s", wanPhyName);
+            snprintf(acTmpEthValue, sizeof(acTmpEthValue), "%s", ethwan_ifname);
+        }
+
+        memset(acSetParamName, 0, sizeof(acSetParamName));
+        snprintf(acSetParamName, sizeof(acSetParamName), "Device.X_RDK_WanManager.CPEInterface.%d.Wan.Name", WAN_CM_INTERFACE_INSTANCE_NUM);
+        CosaDmlEthSetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH, acSetParamName, acTmpCableValue, ccsp_string, TRUE);
+
+        memset(acSetParamName, 0, sizeof(acSetParamName));
+        snprintf(acSetParamName, sizeof(acSetParamName), "Device.X_RDK_WanManager.CPEInterface.%d.Wan.Name", WAN_ETH_INTERFACE_INSTANCE_NUM);
+        CosaDmlEthSetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH, acSetParamName, acTmpEthValue, ccsp_string, TRUE);
+    }
+#endif //WAN_MANAGER_UNIFICATION_ENABLED
     return ANSC_STATUS_SUCCESS;
 }
 
