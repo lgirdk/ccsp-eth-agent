@@ -120,7 +120,6 @@ void rdkb_api_platform_hal_GetLanMacAddr(char* mac);
 #if defined _COSA_INTEL_USG_ARM_ || _COSA_BCM_MIPS_
 
 #include <syscfg/syscfg.h>
-
 int puma6_getSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg, int fromDML);
 int puma6_setSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg);
 int puma6_getSwitchDInfo(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_DINFO pDinfo);
@@ -487,86 +486,22 @@ ANSC_STATUS CosaDmlEEEPortGetCfg (ULONG ulInstanceNumber, PCOSA_DML_ETH_PORT_CFG
 
 ANSC_STATUS CosaDmlEEEPortSetCfg (ULONG ulInstanceNumber, PCOSA_DML_ETH_PORT_CFG pCfg)
 {
-    ANSC_STATUS returnStatus = ANSC_STATUS_SUCCESS;
-    CCSP_HAL_ETHSW_LINK_RATE    LinkRate;
-    CCSP_HAL_ETHSW_DUPLEX_MODE  DuplexMode;
+    ANSC_STATUS returnStatus = ANSC_STATUS_FAILURE;
     int portIdx;
 
     portIdx = getPortID(ulInstanceNumber);
-
 
     if ((portIdx == CCSP_HAL_ETHSW_EthPort1) ||
         (portIdx == CCSP_HAL_ETHSW_EthPort2) ||
         (portIdx == CCSP_HAL_ETHSW_EthPort3) ||
         (portIdx == CCSP_HAL_ETHSW_EthPort4))
     {
-        if (CcspHalEthSwSetEEEPortEnable(portIdx, pCfg->bEEEEnabled) != RETURN_OK)
+        if (CcspHalEthSwSetEEEPortEnable(portIdx, pCfg->bEEEEnabled) == RETURN_OK)
         {
-            return ANSC_STATUS_FAILURE;
-        }
-
-        switch ( pCfg->MaxBitRate )
-        {
-            case 10:
-            {
-                LinkRate = CCSP_HAL_ETHSW_LINK_10Mbps;
-                break;
-            }
-            case 100:
-            {
-                LinkRate = CCSP_HAL_ETHSW_LINK_100Mbps;
-                break;
-            }
-            case 1000:
-            {
-                LinkRate = CCSP_HAL_ETHSW_LINK_1Gbps;
-                break;
-            }
-            case 10000:
-            {
-                LinkRate = CCSP_HAL_ETHSW_LINK_10Gbps;
-                break;
-            }
-            case -1:
-            {
-                LinkRate = CCSP_HAL_ETHSW_LINK_Auto;
-                break;
-            }
-            default:
-            {
-                LinkRate = CCSP_HAL_ETHSW_LINK_Auto;
-                break;
-            }
-        }
-
-        switch ( pCfg->DuplexMode )
-        {
-            case COSA_DML_ETH_DUPLEX_Half:
-            {
-                DuplexMode = CCSP_HAL_ETHSW_DUPLEX_Half;
-                break;
-            }
-            case COSA_DML_ETH_DUPLEX_Full:
-            {
-                DuplexMode = CCSP_HAL_ETHSW_DUPLEX_Full;
-                break;
-            }
-            case COSA_DML_ETH_DUPLEX_Auto: // Note: driver doesn't handle/would ignore "Auto"
-            {
-                DuplexMode = CCSP_HAL_ETHSW_DUPLEX_Auto;
-                break;
-            }
-            default:
-            {
-                DuplexMode = CCSP_HAL_ETHSW_DUPLEX_Full;
-                break;
-            }
-        }
-        if (CcspHalEthSwSetPortCfg(portIdx,LinkRate,DuplexMode) != RETURN_OK)
-        {
-            returnStatus =  ANSC_STATUS_FAILURE;
+            returnStatus = ANSC_STATUS_SUCCESS;
         }
     }
+
     return returnStatus;
 }
 
@@ -665,10 +600,9 @@ ANSC_STATUS CosaDmlEEEPortGetPsmCfg (ULONG ulInstanceNumber, PCOSA_DML_ETH_PORT_
     {
         pCfg->bEEEEnabled = (strcasecmp(strValue, "true") == 0) ? TRUE : FALSE;
         ((CCSP_MESSAGE_BUS_INFO *)bus_handle)->freefunc(strValue);
-        return ANSC_STATUS_SUCCESS;
     }
 
-    return ANSC_STATUS_FAILURE;
+    return retPsmGet;
 }
 
 ANSC_STATUS CosaDmlEEEPortSetPsmCfg (ULONG ulInstanceNumber, PCOSA_DML_ETH_PORT_CFG pCfg)
@@ -689,10 +623,9 @@ ANSC_STATUS CosaDmlEEEPortSetPsmCfg (ULONG ulInstanceNumber, PCOSA_DML_ETH_PORT_
     if (retPsmSet != CCSP_SUCCESS)
     {
         CcspTraceWarning(("%s - PSM_Set_Record_Value2 error %d setting %s\n", __FUNCTION__, retPsmSet, recName));
-        return ANSC_STATUS_FAILURE;
     }
 
-    return ANSC_STATUS_SUCCESS;
+    return retPsmSet;
 }
 
 ANSC_STATUS
@@ -976,12 +909,12 @@ int puma6_getSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg, i
             }
             case CCSP_HAL_ETHSW_LINK_Auto:
             {
-                pcfg->MaxBitRate = -1;
+                pcfg->MaxBitRate = 0;
                 break;
             }
             default:
             {
-                pcfg->MaxBitRate = -1;
+                pcfg->MaxBitRate = 0;
                 break;
             }
         }
@@ -1010,7 +943,7 @@ int puma6_getSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg, i
             }
         }
         //Get value from PSM and set in HAL
-        if ((fromDML == 0) && (CosaDmlEEEPortGetPsmCfg(port,pcfg) == ANSC_STATUS_SUCCESS))
+        if ((fromDML == 0) && CosaDmlEEEPortGetPsmCfg(port,pcfg) == CCSP_SUCCESS)
         {
             CosaDmlEEEPortSetCfg(port,pcfg);
         }
