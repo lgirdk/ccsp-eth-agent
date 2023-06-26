@@ -473,7 +473,6 @@ BOOL CosaDmlEthWanLinkStatus();
 ANSC_STATUS CosaDmlConfigureEthWan(BOOL bEnable);
 ANSC_STATUS CosaDmlEthWanPhyStatusMonitor(void *arg);
 ANSC_STATUS CosaDmlIfaceFinalize(char *pValue, BOOL isAutoWanMode);
-BOOL isEthWanEnabled();
 #endif
 #if defined (FEATURE_RDKB_WAN_AGENT)
 ANSC_STATUS CosaDmlEthGetPortCfg( INT nIndex, PCOSA_DML_ETH_PORT_CONFIG pEthLink);
