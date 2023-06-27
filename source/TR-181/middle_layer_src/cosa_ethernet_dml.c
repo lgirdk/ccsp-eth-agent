@@ -282,17 +282,26 @@ EthWan_GetParamBoolValue
     )
 {
     UNREFERENCED_PARAMETER(hInsContext);
-    PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
+   
     errno_t rc       = -1;
     int     ind      = -1;
     rc = strcmp_s("Enabled",strlen("Enabled"),ParamName,&ind);
     ERR_CHK(rc);
+    //cmxb7-5072
+    #if defined (FEATURE_RDKB_WAN_MANAGER)
+    if((!ind) && (rc == EOK))
+    {
+        *pBool = isEthWanEnabled();
+        return TRUE;
+    }
+    #else
+    PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
     if ((!ind) && (rc == EOK))
     {
         *pBool =  pMyObject->EthWanCfg.Enable;
-	CcspTraceWarning(("EthWan_GetParamBoolValue Ethernet WAN is '%d'\n", *pBool));
         return TRUE;
     }
+    #endif
     return FALSE;
 }
 
