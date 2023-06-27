@@ -1266,6 +1266,9 @@ INT WanBridgeConfigurationBcm(WAN_MODE_BRIDGECFG *pCfg)
                 v_secure_system("ip link set %s up",ETHWAN_DOCSIS_INF_NAME);
                 v_secure_system("brctl addif %s %s", pCfg->wanPhyName,ETHWAN_DOCSIS_INF_NAME);
                 v_secure_system("sysctl -w net.ipv6.conf.%s.disable_ipv6=1",ETHWAN_DOCSIS_INF_NAME);            
+
+                //RDKB-50037: set 0 to /sys/class/net/cm0/netdev_group
+                v_secure_system("ip link set dev %s group 0", ETHWAN_DOCSIS_INF_NAME);
             }
             else
             {
