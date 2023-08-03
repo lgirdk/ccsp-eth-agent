@@ -58,53 +58,6 @@
 #endif
 cap_user appcaps;
 
-#if defined(FEATURE_RDKB_WAN_MANAGER) || defined (FEATURE_RDKB_WAN_AGENT)
-#if !defined(AUTOWAN_ENABLE) // This is not needed when auto wan is enabled for TCXBX platforms
-
-extern ANSC_HANDLE bus_handle;
-#if defined(_HUB4_PRODUCT_REQ_) || defined(_PLATFORM_RASPBERRYPI_)
-
-#define  ARRAY_SZ(x) (sizeof(x) / sizeof((x)[0]))
-
-typedef struct
-{
-    char binaryLocation[64];
-    char rbusName[64];
-}Rbus_Module;
-
-static void waitUntilSystemReady()
-{
-    int wait_time = 0;
-    char pModule[1024] = {0};
-    Rbus_Module pModuleNames[] = {{"/usr/bin/PsmSsp",      "rbusPsmSsp"},
-                                  {"/usr/bin/wanmanager",  "WANMANAGER"},
-                                  {"/usr/bin/CcspPandMSsp","CcspPandMSsp"}};
-
-    int elementCnt = ARRAY_SZ(pModuleNames);
-    for(int i=0; i<elementCnt;i++)
-    {
-        if (IsFileExists(pModuleNames[i].binaryLocation) == 0)
-        {
-            strcat(pModule,pModuleNames[i].rbusName);
-            strcat(pModule," ");
-        }
-    }
-
-    /* Check RBUS is ready. This needs to be continued upto 3 mins (180s) */
-    while(wait_time <= 90)
-    {
-        if(EthAgent_Rbus_discover_components(pModule)){
-            break;
-        }
-
-        wait_time++;
-        sleep(2);
-    }
-}
-#endif //#if defined(_HUB4_PRODUCT_REQ_) || defined(_PLATFORM_RASPBERRYPI_)
-#endif
-#endif
-
 int GetLogInfo(ANSC_HANDLE bus_handle, char *Subsytem, char *pParameterName);
 extern char*                                pComponentName;
 char                                        g_Subsystem[32]         = {'\0'};
@@ -442,14 +395,6 @@ CcspTraceWarning(("\nAfter Cdm_Init\n"));
         read_capability(&appcaps);
     }
 #endif
-
-#if defined (FEATURE_RDKB_WAN_MANAGER) || defined(FEATURE_RDKB_WAN_AGENT)
-#if !defined(AUTOWAN_ENABLE) // This is not needed when auto wan is enabled for TCXBX platforms
-#if defined(_HUB4_PRODUCT_REQ_) || defined(_PLATFORM_RASPBERRYPI_)
-    waitUntilSystemReady();
-#endif //if defined(_HUB4_PRODUCT_REQ_) || defined(_PLATFORM_RASPBERRYPI_)
-#endif
-#endif //#if defined (FEATURE_RDKB_WAN_MANAGER) || defined(FEATURE_RDKB_WAN_AGENT)
 
     system("touch /tmp/ethagent_initialized");
 
