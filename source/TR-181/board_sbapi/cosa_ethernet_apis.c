@@ -631,7 +631,9 @@ typedef struct _CosaETHMSGQWanData
 } CosaETHMSGQWanData;
 
 #ifdef AUTOWAN_ENABLE
+#if !defined(WAN_MANAGER_UNIFICATION_ENABLED)
 static pthread_t bootInformThreadId;
+#endif
 #endif
 static PCOSA_DML_ETH_PORT_GLOBAL_CONFIG gpstEthGInfo = NULL;
 static pthread_mutex_t gmEthGInfo_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -1445,7 +1447,7 @@ ANSC_STATUS CosaDmlIfaceFinalize(char *pValue, BOOL isAutoWanMode)
     {
         lastKnownWanMode = atoi(buf);
     }
-
+#if !defined(WAN_MANAGER_UNIFICATION_ENABLED)
     // last  known mode will be updated by wan manager after 
     // this finalize api operation done. Till that lastknownmode will be previous detected wan.
     switch (lastKnownWanMode)
@@ -1478,7 +1480,11 @@ ANSC_STATUS CosaDmlIfaceFinalize(char *pValue, BOOL isAutoWanMode)
             }
             break;
     }
-
+#else /*WAN_MANAGER_UNIFICATION_ENABLED*/
+        //Always configure bridge in case of WAN_MANAGER_UNIFICATION_ENABLED. 
+        configureBridge = TRUE;
+        CcspTraceInfo(("%s Always configure bridge \n",__FUNCTION__));
+#endif
     CcspTraceInfo((" %s isAutoWanMode: %d lastknownmode: %d ethwanEnabled: %d ConfigureBridge: %d bridgemode: %d\n",
                 __FUNCTION__,
                 isAutoWanMode,
@@ -1534,8 +1540,17 @@ ANSC_STATUS CosaDmlIfaceFinalize(char *pValue, BOOL isAutoWanMode)
 }
 
 
-ANSC_STATUS EthwanEnableWithoutReboot(BOOL bEnable,INT bridge_mode)
+ANSC_STATUS EthwanEnableWithoutReboot(BOOL bEnable)
 {
+    char buf[64] = {0};
+    int bridge_mode = 0;
+
+    memset(buf,0,sizeof(buf));
+    if (syscfg_get(NULL, "bridge_mode", buf, sizeof(buf)) == 0)
+    {
+        bridge_mode = atoi(buf);
+    }
+
     CcspTraceInfo(("Func %s Entered arg %d bridge mode %d\n",__FUNCTION__,bEnable,bridge_mode));
     
     if(bEnable == FALSE && (bridge_mode == 0))
@@ -1634,7 +1649,7 @@ static void checkComponentHealthStatus(char * compName, char * dbusPath, char *s
 }
 
 
-static void waitForWanMgrComponentReady()
+static int waitForWanMgrComponentReady()
 {
     char status[STATUS_BUFF_SIZE] = {'\0'};
     int count = 0;
@@ -1645,7 +1660,7 @@ static void waitForWanMgrComponentReady()
         if(ret == CCSP_SUCCESS && (strcmp(status, "Green") == 0))
         {
             CcspTraceInfo(("%s component health is %s, continue\n", WAN_COMPONENT_NAME, status));
-            break;
+            return 0;
         }
         else
         {
@@ -1657,6 +1672,7 @@ static void waitForWanMgrComponentReady()
             sleep(5);
         }
     }
+    return -1;
 }
 
 INT InitBootInformInfo(WAN_BOOTINFORM_MSG *pMsg)
@@ -1905,7 +1921,6 @@ ANSC_STATUS UpdateInformMsgToWanMgr()
 void* ThreadConfigEthWan(void *arg)
 {
     BOOL *pValue = NULL;
-    ANSC_STATUS ret = ANSC_STATUS_SUCCESS;
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
     PCOSA_DATAMODEL_ETH_WAN_AGENT pEthWanCfgObj = NULL;
     if (pMyObject)
@@ -1920,8 +1935,6 @@ void* ThreadConfigEthWan(void *arg)
 	return NULL;
      }
 
-    pthread_detach(pthread_self());
-
     pValue = (BOOL*)arg;
 
     if(pValue == NULL)
@@ -1931,6 +1944,7 @@ void* ThreadConfigEthWan(void *arg)
     {
         pEthWanCfgObj->wanOperState = WAN_OPER_STATE_RESET_INPROGRESS;
     }
+    ANSC_STATUS ret = ANSC_STATUS_SUCCESS;
     // Request wan manager to disable wan.
     ret = CosaDmlEthSetParamValues(WAN_COMPONENT_NAME,
             WAN_DBUS_PATH,
@@ -1998,6 +2012,70 @@ void* ThreadConfigEthWan(void *arg)
 
 ANSC_STATUS ConfigEthWan(BOOL bValue)
 {
+#if defined(WAN_MANAGER_UNIFICATION_ENABLED)
+
+    ANSC_STATUS ret = ANSC_STATUS_FAILURE;
+    PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
+    PCOSA_DATAMODEL_ETH_WAN_AGENT pEthWanCfgObj = NULL;
+    if (pMyObject)
+    {
+        pEthWanCfgObj = (PCOSA_DATAMODEL_ETH_WAN_AGENT)&pMyObject->EthWanCfg;
+    }
+
+    /* CID 259112 Dereference after null check fix */
+    if (pEthWanCfgObj == NULL)
+    {
+        CcspTraceError(("pEthWanCfgObj is NULL \n"));
+        return ANSC_STATUS_FAILURE;
+    }
+
+    BOOL bGetStatus = FALSE;
+    if(RETURN_OK != CcspHalExtSw_getEthWanEnable(&bGetStatus))
+    {
+        CcspTraceError((" CcspHalExtSw_getEthWanEnable failed \n"));
+    }else if(bGetStatus == bValue)
+    {
+        CcspTraceInfo(("%s %d hal Already set to %s mode!!. Calling CosaDmlIfaceFinalize \n", __FUNCTION__, __LINE__,bValue?"Ethernet":"DOCSIS"));
+        CosaDmlIfaceFinalize("2",FALSE); // passing wan instance number for ethwan interface
+        return ANSC_STATUS_SUCCESS;
+    }
+
+    pEthWanCfgObj->wanOperState = WAN_OPER_STATE_RESET_INPROGRESS;
+
+    CcspTraceInfo(("%s %d Setting hal to %s mode!! \n", __FUNCTION__, __LINE__,bValue?"Ethernet":"DOCSIS"));
+    if ( ANSC_STATUS_SUCCESS != CosaDmlConfigureEthWan(bValue))
+    {
+        CcspTraceError(("CosaDmlConfigureEthWan failed set %s.\n",bValue?"Ethernet":"DOCSIS"));
+
+        // rollback configure to previous mode in case of failure.
+        if (syscfg_set_u_commit(NULL, "selected_wan_mode", pEthWanCfgObj->PrevSelMode) != 0)
+        {
+            CcspTraceError(("syscfg_set failed\n"));
+        }
+
+        ret = ANSC_STATUS_FAILURE;
+    }
+    else
+    {
+        CosaDmlIfaceFinalize("2",FALSE); // passing wan instance number for ethwan interface
+        v_secure_system("sysevent set phylink_wan_state up");
+        if (bValue == TRUE)
+        {
+            v_secure_system("sysevent set ethwan-initialized 1");
+            v_secure_system("syscfg set ntp_enabled 1"); // Enable NTP in case of ETHWAN
+            v_secure_system("syscfg commit"); 
+        }
+        else
+        {
+            v_secure_system("sysevent set ethwan-initialized 0");
+        }
+        ret = ANSC_STATUS_SUCCESS;
+        CcspTraceInfo(("%s %d CosaDmlConfigureEthWan Successful!! \n", __FUNCTION__, __LINE__));
+    }
+
+    pEthWanCfgObj->wanOperState = WAN_OPER_STATE_RESET_COMPLETED;
+    return ret;
+#else /* WAN_MANAGER_UNIFICATION_ENABLED */
     pthread_t tidEthWanCfg;
     BOOL *pValue = malloc(sizeof(BOOL));
     if (pValue != NULL)
@@ -2006,6 +2084,7 @@ ANSC_STATUS ConfigEthWan(BOOL bValue)
         pthread_create ( &tidEthWanCfg, NULL, &ThreadConfigEthWan, pValue);
     }
     return ANSC_STATUS_SUCCESS;
+#endif /* WAN_MANAGER_UNIFICATION_ENABLED */
 }
 
 ANSC_STATUS CosaDmlConfigureEthWan(BOOL bEnable)
@@ -2019,7 +2098,6 @@ ANSC_STATUS CosaDmlConfigureEthWan(BOOL bEnable)
     PCOSA_DATAMODEL_ETHERNET    pEthernet = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
     COSA_DATAMODEL_ETH_WAN_AGENT ethWanCfg = {0};
     int bridgemode = 0;
-    int retvalue = -1;
 #if defined (_BRIDGE_UTILS_BIN_)
     int ovsEnable = 0;
     if( 0 == syscfg_get( NULL, "mesh_ovs_enable", buf, sizeof( buf ) ) )
@@ -2072,7 +2150,6 @@ ANSC_STATUS CosaDmlConfigureEthWan(BOOL bEnable)
 
     if (bEnable == TRUE)
     {
-
         if ( (0 != GWP_GetEthWanInterfaceName((unsigned char*)ethwan_ifname, sizeof(ethwan_ifname)))
                 || (0 == strnlen(ethwan_ifname,sizeof(ethwan_ifname)))
                 || (0 == strncmp(ethwan_ifname,"disable",sizeof(ethwan_ifname)))
@@ -2134,12 +2211,10 @@ ANSC_STATUS CosaDmlConfigureEthWan(BOOL bEnable)
         }
 #endif
 
-        retvalue = EthwanEnableWithoutReboot(TRUE,bridgemode);
-        if (retvalue != ANSC_STATUS_SUCCESS)
+        if (EthwanEnableWithoutReboot(TRUE) != ANSC_STATUS_SUCCESS)
         {
-            return retvalue;
+            return ANSC_STATUS_FAILURE;
         }
-
         /* ETH WAN Interface must be retrieved a second time in case MACsec
            modified the interfaces. */
         memset(ethwan_ifname,0,sizeof(ethwan_ifname));
@@ -2179,11 +2254,11 @@ ANSC_STATUS CosaDmlConfigureEthWan(BOOL bEnable)
     }
     else
     {
-        retvalue = EthwanEnableWithoutReboot(FALSE,bridgemode);
-        if (retvalue != ANSC_STATUS_SUCCESS)
+        if (EthwanEnableWithoutReboot(FALSE) != ANSC_STATUS_SUCCESS)
         {
-            return retvalue;
+            return ANSC_STATUS_FAILURE;
         }
+
 #if defined(INTEL_PUMA7)
        v_secure_system("cmctl up");
 #endif
@@ -2246,8 +2321,7 @@ CosaDmlEthWanSetEnable
 {
 
 #if defined (ENABLE_WANMODECHANGE_NOREBOOT)
-    ConfigEthWan(bEnable);
-    return ANSC_STATUS_SUCCESS;
+    return ConfigEthWan(bEnable);
 #elif defined (ENABLE_ETH_WAN)
     BOOL bGetStatus = FALSE;
     if(RETURN_OK != CcspHalExtSw_getEthWanEnable(&bGetStatus))
@@ -2546,11 +2620,21 @@ CosaDmlEthInit(
 	return ANSC_STATUS_FAILURE;
     }
 
+    /*TODO:
+     *The Wan Manager Ready Will be Improved in Ticket RDKB-44484.
+     */
+#if defined(AUTOWAN_ENABLE) && defined(WAN_MANAGER_UNIFICATION_ENABLED)
+    if (waitForWanMgrComponentReady() == -1)
+    {
+        CcspTraceError(("%s:%d: Failed to Wait for WanManager\n", __FUNCTION__, __LINE__));
+        return ANSC_STATUS_FAILURE;
+    }
+#endif
     //ETH Port Init.
     CosaDmlEthPortInit((PANSC_HANDLE)pMyObject);
 
 #ifdef FEATURE_RDKB_WAN_MANAGER
-#ifndef AUTOWAN_ENABLE
+#if !defined(AUTOWAN_ENABLE) || defined(WAN_MANAGER_UNIFICATION_ENABLED)
     char wanoe_ifname[WANOE_IFACENAME_LENGTH] = {0};
 
     /* To initialize PhyStatus for Manager we set Down */
@@ -2565,7 +2649,7 @@ CosaDmlEthInit(
         CcspTraceError(("%s:%d  GetWan_InterfaceName Failed\n", __FUNCTION__, __LINE__));
     }
 #endif //AUTOWAN_ENABLE
-#endif
+#endif //FEATURE_RDKB_WAN_MANAGER
 
     #ifdef WAN_FAILOVER_SUPPORTED
       TriggerSysEventMonitorThread();
@@ -2578,43 +2662,42 @@ CosaDmlEthInit(
      * Monitor for the link status event and notify the other agents,
      */
     CosaDmlEthTriggerEventHandlerThread();
+#if defined(AUTOWAN_ENABLE)
+#if !defined(WAN_MANAGER_UNIFICATION_ENABLED)
 
-#ifdef AUTOWAN_ENABLE 
+    PCOSA_DATAMODEL_ETH_WAN_AGENT pEthWanCfg = NULL;
+
+    if (pMyObject)
     {
-        PCOSA_DATAMODEL_ETH_WAN_AGENT pEthWanCfg = NULL;
-
-        if (pMyObject)
+        pEthWanCfg = (PCOSA_DATAMODEL_ETH_WAN_AGENT)&pMyObject->EthWanCfg;
+        if (pEthWanCfg)
         {
-            pEthWanCfg = (PCOSA_DATAMODEL_ETH_WAN_AGENT)&pMyObject->EthWanCfg;
-            if (pEthWanCfg)
-            {
-                pEthWanCfg->MonitorPhyStatusAndNotify = FALSE;
-            }
+            pEthWanCfg->MonitorPhyStatusAndNotify = FALSE;
         }
-        CcspTraceInfo(("pthread create boot inform \n"));
-        pthread_create(&bootInformThreadId, NULL, &ThreadBootInformMsg, NULL);
+    }
+    CcspTraceInfo(("pthread create boot inform \n"));
+    pthread_create(&bootInformThreadId, NULL, &ThreadBootInformMsg, NULL);
 
-        if (TRUE == isEthWanEnabled())
-        {
-            EthWanBridgeInit(pMyObject);
-        }
+#endif //WAN_MANAGER_UNIFICATION_ENABLED
+    if (TRUE == isEthWanEnabled())
+    {
+        EthWanBridgeInit(pMyObject);
+    }
 
-        //Initialise ethsw-hal to get event notification from lower layer.
-        if (CcspHalEthSwInit() != RETURN_OK)
-        {
-            CcspTraceError(("Hal initialization failed \n"));
-            return ANSC_STATUS_FAILURE;
-        }
+    //Initialise ethsw-hal to get event notification from lower layer.
+    if (CcspHalEthSwInit() != RETURN_OK)
+    {
+        CcspTraceError(("Hal initialization failed \n"));
+        return ANSC_STATUS_FAILURE;
+    }
 
-        if (TRUE == isEthWanEnabled())
+    if (TRUE == isEthWanEnabled())
+    {
+        CcspHalExtSw_setEthWanPort ( ETHWAN_DEF_INTF_NUM );
+        if (ANSC_STATUS_SUCCESS != CcspHalExtSw_setEthWanEnable( TRUE))
         {
-            CcspHalExtSw_setEthWanPort ( ETHWAN_DEF_INTF_NUM );
-            if (ANSC_STATUS_SUCCESS != CcspHalExtSw_setEthWanEnable( TRUE))
-            {
-                CcspTraceError(("CcspHalExtSw_setEthWanEnable failed in bootup \n"));
-            }
+            CcspTraceError(("CcspHalExtSw_setEthWanEnable failed in bootup \n"));
         }
- 
     }
 #else
     #if defined(_PLATFORM_RASPBERRYPI_) || defined(_PLATFORM_TURRIS_)
@@ -3650,7 +3733,7 @@ static ANSC_STATUS CosaDmlMapWanCPEtoEthInterfaces(char* pInterface, unsigned in
             //Compare name
             if (0 == strcmp(acParamValue, gpstEthGInfo[iEthLoopCount].Name))
             {
-#ifndef AUTOWAN_ENABLE
+#if !defined(AUTOWAN_ENABLE) || defined(WAN_MANAGER_UNIFICATION_ENABLED)
                 //Set PHY path
                memset(acParamValue, 0, sizeof(acParamValue));
                memset(acParamName, 0, sizeof(acParamName));
@@ -4447,7 +4530,7 @@ ANSC_STATUS CosaDmlEthSetPhyStatusForWanManager(char *ifname, char *PhyStatus)
 {
     COSA_DML_ETH_PORT_GLOBAL_CONFIG stGlobalInfo = {0};
     char acSetParamName[256];
-#ifndef AUTOWAN_ENABLE
+#if !defined(AUTOWAN_ENABLE) || defined(WAN_MANAGER_UNIFICATION_ENABLED)
     char acSetParamVal[256];
     INT iLinkInstance = -1;
 #endif
@@ -4477,7 +4560,7 @@ ANSC_STATUS CosaDmlEthSetPhyStatusForWanManager(char *ifname, char *PhyStatus)
 
 // Phy path not needed to set in case of auto wan policy mode.
 // it will be set in part of boot inform msg.
-#ifndef AUTOWAN_ENABLE
+#if !defined(AUTOWAN_ENABLE) || defined(WAN_MANAGER_UNIFICATION_ENABLED)
     //Set PHY path
     memset(acSetParamName, 0, sizeof(acSetParamName));
     snprintf(acSetParamName, sizeof(acSetParamName), WAN_PHY_PATH_PARAM_NAME, iWANInstance);
@@ -4583,15 +4666,18 @@ static ANSC_STATUS  GetWan_InterfaceName (char* wanoe_ifacename, int length) {
  */
 void EthWanLinkUp_callback() {
     char wanoe_ifname[WANOE_IFACENAME_LENGTH] = {0};
+
 #ifdef AUTOWAN_ENABLE
         char redirFlag[10]={0};
         char captivePortalEnable[10]={0};
         unsigned int ethWanPort = 0xffffffff;
 
+#if !defined(WAN_MANAGER_UNIFICATION_ENABLED)
         if (FALSE == isEthWanEnabled())
         {
             return;
         }
+#endif
         if (!syscfg_get(NULL, "redirection_flag", redirFlag, sizeof(redirFlag)) && !syscfg_get(NULL, "CaptivePortal_Enable", captivePortalEnable, sizeof(captivePortalEnable))){
           if (!strcmp(redirFlag,"true") && !strcmp(captivePortalEnable,"true"))
         EthWanSetLED(WHITE, BLINK, 1);
@@ -4617,7 +4703,7 @@ void EthWanLinkUp_callback() {
     {
         CcspTraceInfo(("WAN_MODE: Ethernet WAN Port Couldn't Be Retrieved\n"));
     }
-	
+
 #if defined (WAN_FAILOVER_SUPPORTED)
 	publishEWanLinkStatus(true);
 #endif
@@ -4645,11 +4731,12 @@ void EthWanLinkDown_callback() {
     char wanoe_ifname[WANOE_IFACENAME_LENGTH] = {0};
 
 #ifdef AUTOWAN_ENABLE
+#if !defined(WAN_MANAGER_UNIFICATION_ENABLED)
     if (FALSE == isEthWanEnabled())
     {
         return;
     }
-
+#endif
     v_secure_system("sysevent set phylink_wan_state down");
 	
 #if defined (WAN_FAILOVER_SUPPORTED)

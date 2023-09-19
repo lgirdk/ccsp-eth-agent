@@ -763,29 +763,32 @@ EthernetWAN_SetParamStringValue
         }
         else
         {
-                char buf[8];
-            	int cur_wan_mode= 0;
+#if !defined(WAN_MANAGER_UNIFICATION_ENABLED)
+            /*SelectedOperationalMode is set from WanManager policy. Configure ethWan without checking the previous mode.  */
+            char buf[8];
+            int cur_wan_mode= 0;
 
-		    if (syscfg_get(NULL, "curr_wan_mode", buf, sizeof(buf)) == 0)
-		    {
-				cur_wan_mode = atoi(buf);
-				if(cur_wan_mode == wan_mode)
-				{
-					CcspTraceWarning(("SelectedOperationalMode - %s is same as CurrentWanMode\n", pString));
-					return TRUE;
-				}
-		    }
-                rc = strcmp_s("Auto",strlen("Auto"),pString,&ind);
-                ERR_CHK(rc);
-                if ((ind) && (rc == EOK))
-		{
-		    if( ANSC_STATUS_SUCCESS == CosaDmlEthWanSetEnable( bValue ) )
-		    {
-			//pMyObject->EthWanCfg.Enable = bValue;
-			CcspTraceWarning(("SelectedOperationalMode is %s\n", pString));
-			
-		    }
-		}
+            if (syscfg_get(NULL, "curr_wan_mode", buf, sizeof(buf)) == 0)
+            {
+                cur_wan_mode = atoi(buf);
+                if(cur_wan_mode == wan_mode)
+                {
+                    CcspTraceWarning(("SelectedOperationalMode - %s is same as CurrentWanMode\n", pString));
+                    return TRUE;
+                }
+            }
+#endif /* WAN_MANAGER_UNIFICATION_ENABLED */
+            rc = strcmp_s("Auto",strlen("Auto"),pString,&ind);
+            ERR_CHK(rc);
+            if ((ind) && (rc == EOK))
+            {
+                if( ANSC_STATUS_SUCCESS != CosaDmlEthWanSetEnable( bValue ) )
+                {
+                    return FALSE;
+                }
+                //pMyObject->EthWanCfg.Enable = bValue;
+                CcspTraceWarning(("SelectedOperationalMode is %s\n", pString));
+            }
 		return TRUE;
         }
     }
@@ -808,11 +811,13 @@ EthernetWAN_SetParamStringValue
                     return FALSE;
                 }
 
+#if !defined(WAN_MANAGER_UNIFICATION_ENABLED)
                 if (pEthWanCfg->MonitorPhyStatusAndNotify != TRUE)
                 {
                     pEthWanCfg->MonitorPhyStatusAndNotify = TRUE;
                     CosaDmlEthWanPhyStatusMonitor(pMyObject);
                 }
+#endif
             }
         }
 

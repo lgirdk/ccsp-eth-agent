@@ -559,15 +559,18 @@ Interface_SetParamBoolValue
         return TRUE;
     }
 
-#ifdef FEATURE_RDKB_WAN_UPSTREAM
+
     if (strcmp(ParamName, "Upstream") == 0)
     {
+#ifdef FEATURE_RDKB_WAN_UPSTREAM
         pEthernetPortFull->StaticInfo.bUpstream = bValue;
         EthInterfaceSetUpstream( pEthernetPortFull );
         return TRUE;
-    }
+#elif defined(AUTOWAN_ENABLE) && defined(WAN_MANAGER_UNIFICATION_ENABLED)
+        if (ANSC_STATUS_SUCCESS == EthwanEnableWithoutReboot(bValue))
+            return TRUE;
 #endif  // FEATURE_RDKB_WAN_UPSTREAM
-
+    }
     /* CcspTraceWarning(("Unsupported parameter '%s'\n", ParamName)); */
     return FALSE;
 }

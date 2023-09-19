@@ -462,7 +462,7 @@ CosaDmlEthPortInit
         PANSC_HANDLE                phContext
     );
 #if defined (FEATURE_RDKB_WAN_MANAGER)
-ANSC_STATUS EthwanEnableWithoutReboot(BOOL bEnable,INT bridgeMode);
+ANSC_STATUS EthwanEnableWithoutReboot(BOOL bEnable);
 BOOL CosaDmlEthWanLinkStatus();
 ANSC_STATUS CosaDmlConfigureEthWan(BOOL bEnable);
 ANSC_STATUS CosaDmlEthWanPhyStatusMonitor(void *arg);
