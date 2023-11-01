@@ -1912,11 +1912,14 @@ EthRdkInterface_SetParamBoolValue
 #ifdef FEATURE_RDKB_AUTO_PORT_SWITCH
         // check if port is WAN capable, before removing/adding into bridge
         UINT WanPort = 0;
-	/* CID 133789 Unchecked return value */
-	if(0 != CcspHalExtSw_getEthWanPort(&WanPort))
-	{
-	    AnscTraceInfo(("Failed to get WanPort[%u] in CPE \n",WanPort));
-	}
+        /* CID 133789 Unchecked return value */
+        if (0 != CcspHalExtSw_getEthWanPort(&WanPort))
+        {
+            AnscTraceInfo(("Failed to get WanPort[%u] in CPE \n", WanPort));
+        }
+
+        WanPort += CCSP_HAL_ETHSW_EthPort1;
+
         if(WanPort != pEthLink->ulInstanceNumber)
         {
             CcspTraceError(("%s %d: Cannot set AddToLanBridge for non-WAN capable port\n", __FUNCTION__, __LINE__));

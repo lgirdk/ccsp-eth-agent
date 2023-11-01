@@ -4824,17 +4824,16 @@ ANSC_STATUS CosaDmlEthPortSetPortCapability( PCOSA_DML_ETH_PORT_CONFIG pEthLink 
             {
                 if (pEthLink->PortCapability != PORT_CAP_LAN)
                 {
-                    if (0 == CosaDmlSetWanOEMode(NULL, pEthLink))
-                    {
-                        snprintf(acGetParamName, sizeof(acGetParamName), PSM_ETHAGENT_IF_PORTCAPABILITY, (ifIndex + 1));
-                        Ethagent_SetParamValuesToPSM(acGetParamName,(pEthLink->PortCapability == PORT_CAP_WAN)?"WAN":"WAN_LAN");
-                        CcspTraceInfo(("%s %d - [%s] PSM set \n", __FUNCTION__, __LINE__,acGetParamName));
-                    }
-                    else
+#ifdef FEATURE_RDKB_WAN_UPSTREAM
+                    if (CosaDmlSetWanOEMode(NULL, pEthLink) != 0)
                     {
                         CcspTraceError(("%s %d  CosaDmlSetWanOEMode failed \n",__FUNCTION__, __LINE__));
                         return ANSC_STATUS_FAILURE;
                     }
+#endif
+                    snprintf(acGetParamName, sizeof(acGetParamName), PSM_ETHAGENT_IF_PORTCAPABILITY, (ifIndex + 1));
+                    Ethagent_SetParamValuesToPSM(acGetParamName, (pEthLink->PortCapability == PORT_CAP_WAN) ? "WAN" : "WAN_LAN");
+                    CcspTraceInfo(("%s %d - [%s] PSM set \n", __FUNCTION__, __LINE__, acGetParamName));
                 }
                 else
                 {
