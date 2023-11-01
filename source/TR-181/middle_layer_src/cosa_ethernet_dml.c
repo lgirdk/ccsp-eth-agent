@@ -1933,6 +1933,9 @@ EthRdkInterface_SetParamBoolValue
 	{
 	    AnscTraceInfo(("Failed to get WanPort[%u] in CPE \n",WanPort));
 	}
+
+        WanPort += CCSP_HAL_ETHSW_EthPort1;
+
         if(WanPort != pEthLink->ulInstanceNumber)
         {
             CcspTraceError(("%s %d: Cannot set AddToLanBridge for non-WAN capable port\n", __FUNCTION__, __LINE__));
