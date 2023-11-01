@@ -1885,9 +1885,6 @@ EthRdkInterface_SetParamBoolValue
 #if !defined(WAN_MANAGER_UNIFICATION_ENABLED)
         CosaDmlEthPortSetUpstream( pEthLink->Name , pEthLink->Upstream );
 #endif
-#ifdef FEATURE_RDKB_WAN_UPSTREAM
-        EthRdkInterfaceSetUpstream(pEthLink);
-#endif
         return TRUE;
     }
     if (strcmp(ParamName, "Enable") == 0)
