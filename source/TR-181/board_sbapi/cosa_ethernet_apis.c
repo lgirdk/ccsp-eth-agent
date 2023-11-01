@@ -2553,8 +2553,6 @@ CosaDmlEthInit(
 #ifndef AUTOWAN_ENABLE
     char wanoe_ifname[WANOE_IFACENAME_LENGTH] = {0};
 
-    waitForWanMgrComponentReady();
-
     /* To initialize PhyStatus for Manager we set Down */
     if (ANSC_STATUS_SUCCESS == GetWan_InterfaceName (wanoe_ifname, sizeof(wanoe_ifname))) 
     {
@@ -4166,20 +4164,6 @@ ANSC_STATUS CosaDmlEthSetWanInterfaceNameForWanManager(char *ifname, char *WanIf
 #if defined (FEATURE_RDKB_AUTO_PORT_SWITCH) || defined (FEATURE_RDKB_WAN_AGENT)
 static ANSC_STATUS CosaDmlGetWanOEInterfaceName(char *pInterface, unsigned int length)
 {
-#if defined (_LG_MV2_PLUS_)
-
-    syscfg_get(NULL, "eth_wan_iface_name", pInterface, length);
-
-    if (*pInterface == 0)
-    {
-        CcspTraceError(("%s %d Failed to get param value eth_wan_iface_name\n", __FUNCTION__, __LINE__));
-        return ANSC_STATUS_FAILURE;
-    }
-
-    return ANSC_STATUS_SUCCESS;
-
-#endif
-
     char acTmpReturnValue[256] = {0};
     INT iLoopCount;
     INT iTotalNoofEntries;
@@ -4595,18 +4579,10 @@ static ANSC_STATUS  GetWan_InterfaceName (char* wanoe_ifacename, int length) {
     }
 
     char wanoe_ifname[WANOE_IFACENAME_LENGTH] = {0};
-
-#if defined (_LG_MV2_PLUS_) && defined (FEATURE_RDKB_AUTO_PORT_SWITCH)
-    if (CosaDmlGetWanOEInterfaceName(wanoe_ifname, sizeof(wanoe_ifname)) != ANSC_STATUS_SUCCESS) {
-        CcspTraceError(("[%s][%d] Failed to get wanoe interface name \n", __FUNCTION__, __LINE__));
-        return ANSC_STATUS_FAILURE;
-    }
-#else
     if (RETURN_OK != GWP_GetEthWanInterfaceName((unsigned char*)wanoe_ifname, sizeof(wanoe_ifname))) {
         CcspTraceError(("[%s][%d] Failed to get wanoe interface name \n", __FUNCTION__, __LINE__));
         return ANSC_STATUS_FAILURE;
     }
-#endif
 
     strncpy (wanoe_ifacename,wanoe_ifname,length);
     return ANSC_STATUS_SUCCESS;
