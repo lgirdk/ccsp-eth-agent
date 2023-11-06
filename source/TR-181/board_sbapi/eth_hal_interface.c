@@ -508,13 +508,12 @@ void* CcspHalExtSw_AssociatedDeviceMonitorThread( void *arg )
 				CcspHalExtSw_DeleteAllHosts( eth_device_hashArrayTempList, FALSE );
 
 //				CcspTraceInfo(("<EthMonThrd> - Host(-) Loop End\n") );
-				
-				//Free if memory is valid case
-				if( NULL != pstRecvEthDevice )
-				{
-					free( pstRecvEthDevice );
-					pstRecvEthDevice = NULL;
-				}
+			}
+			//Free if memory is valid case
+			if( NULL != pstRecvEthDevice )
+			{
+				free( pstRecvEthDevice );
+				pstRecvEthDevice = NULL;
 			}
 		}
 

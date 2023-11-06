@@ -721,13 +721,13 @@ CosaDmlEthPortGetClientMac
                                    (char*)pEthernetPortFull->AssocClient[i - 1].MacAddress);
                }
            }
+        }
 
-           //Release the allocated memory by HAL
-           if( NULL != output_struct )
-           {
-              free(output_struct);
-              output_struct = NULL;
-           }
+        //Release the allocated memory by HAL
+        if( NULL != output_struct )
+        {
+           free(output_struct);
+           output_struct = NULL;
         }
 
    return ANSC_STATUS_SUCCESS;
