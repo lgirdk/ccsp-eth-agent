@@ -2549,7 +2549,7 @@ CosaDmlEthInit(
     //ETH Port Init.
     CosaDmlEthPortInit((PANSC_HANDLE)pMyObject);
 
-#ifdef FEATURE_RDKB_WAN_MANAGER
+#if defined (FEATURE_RDKB_WAN_MANAGER) && !defined (WAN_MANAGER_UNIFICATION_ENABLED)
 #ifndef AUTOWAN_ENABLE
     char wanoe_ifname[WANOE_IFACENAME_LENGTH] = {0};
 
@@ -2673,7 +2673,7 @@ CosaDmlEthInit(
             CcspTraceError(("CcspHalExtSw_setEthWanEnable failed during bootup\n"));
         }
     }
-
+#ifndef WAN_MANAGER_UNIFICATION_ENABLED
     if(CosaDmlMapWanCPEtoEthInterfaces(WanOEInterface, sizeof(WanOEInterface)) == ANSC_STATUS_SUCCESS) {
 #if defined (INTEL_PUMA7) && !defined (AUTOWAN_ENABLE)
         if(FALSE) 
@@ -2702,6 +2702,7 @@ CosaDmlEthInit(
             }
         }
     }
+#endif //WAN_MANAGER_UNIFICATION_ENABLED
 #endif
 
 #else
