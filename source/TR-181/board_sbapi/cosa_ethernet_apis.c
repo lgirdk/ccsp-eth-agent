@@ -2800,7 +2800,7 @@ CosaDmlEthInit(
             CcspTraceError(("CcspHalExtSw_setEthWanEnable failed during bootup\n"));
         }
     }
-
+#ifndef WAN_MANAGER_UNIFICATION_ENABLED
     if(CosaDmlMapWanCPEtoEthInterfaces(WanOEInterface, sizeof(WanOEInterface)) == ANSC_STATUS_SUCCESS) {
 #if defined (INTEL_PUMA7) && !defined (AUTOWAN_ENABLE)
         if(FALSE) 
@@ -2829,6 +2829,7 @@ CosaDmlEthInit(
             }
         }
     }
+#endif //WAN_MANAGER_UNIFICATION_ENABLED
 #endif
 
 #else
