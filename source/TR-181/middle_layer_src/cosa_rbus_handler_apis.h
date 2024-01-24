@@ -22,7 +22,7 @@
 
 #if defined (WAN_FAILOVER_SUPPORTED) ||  defined(RBUS_BUILD_FLAG_ENABLE) || defined (_HUB4_PRODUCT_REQ_) || defined (_PLATFORM_RASPBERRYPI_)
 #include <stdbool.h>
-#include <rbus.h>
+#include <rbus/rbus.h>
 
 #define NUM_OF_RBUS_PARAMS	1
 #define RBUS_COMPONENT_NAME	"RbusEthAgent"
