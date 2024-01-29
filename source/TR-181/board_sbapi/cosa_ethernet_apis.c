@@ -2467,10 +2467,12 @@ EthWanSetLED
         ledMgmt.State    = state;
         ledMgmt.Interval = interval;
 #if defined(_XB6_PRODUCT_REQ_) || defined(_CBR2_PRODUCT_REQ_)
+#ifndef XB10_ONLY_SUPPORT
         if(RETURN_ERR == platform_hal_setLed(&ledMgmt)) {
                 CcspTraceError(("platform_hal_setLed failed\n"));
                 return 1;
         }
+#endif
 #endif
     return 0;
 }
