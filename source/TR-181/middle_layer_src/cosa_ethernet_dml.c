@@ -685,6 +685,7 @@ EthernetWAN_SetParamStringValue
     int wan_mode = 0;
     errno_t rc = -1;
     int            ind = -1;
+
 #if defined (FEATURE_RDKB_WAN_MANAGER)
     int wan_oper_state = WAN_OPER_STATE_NONE;
     PCOSA_DATAMODEL_ETHERNET pMyObject = (PCOSA_DATAMODEL_ETHERNET)g_EthObject;
@@ -721,8 +722,13 @@ EthernetWAN_SetParamStringValue
         ERR_CHK(rc);
         if ((!ind) && (rc == EOK))
         {
+	#if !defined (_XER5_PRODUCT_REQ_)
             bValue = FALSE;
             wan_mode = WAN_MODE_DOCSIS;
+	#else
+	     CcspTraceWarning(("DOCSIS operationalMode is not supported in XER5 platform\n"));
+             return FALSE;
+	#endif
         }
         else if((strcmp_s("Ethernet",strlen("Ethernet"),pString,&ind) == EOK) && (ind == 0))
         {
@@ -739,7 +745,12 @@ EthernetWAN_SetParamStringValue
         }
 	else if((strcmp_s("Auto",strlen("Auto"),pString,&ind) == EOK) && (ind == 0))
 	{
-		wan_mode = WAN_MODE_AUTO;
+	#if !defined (_XER5_PRODUCT_REQ_)
+	    wan_mode = WAN_MODE_AUTO;
+	#else
+	    CcspTraceWarning(("Auto operationalMode is not supported in XER5 platform\n"));
+            return FALSE;
+	#endif
 	}
 	else
 	{

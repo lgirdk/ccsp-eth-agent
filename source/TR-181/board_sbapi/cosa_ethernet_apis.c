@@ -155,6 +155,8 @@ extern  char g_Subsystem[BUFLEN_32];
 #if defined (FEATURE_RDKB_WAN_MANAGER)
 #if defined (_CBR2_PRODUCT_REQ_)
 #define TOTAL_NUMBER_OF_INTERNAL_INTERFACES 6
+#elif defined (_XER5_PRODUCT_REQ_)
+#define TOTAL_NUMBER_OF_INTERNAL_INTERFACES 5
 #else
 #define TOTAL_NUMBER_OF_INTERNAL_INTERFACES 4 
 #endif
@@ -165,6 +167,8 @@ extern  char g_Subsystem[BUFLEN_32];
 #define WANOE_IFACE_DOWN "Down"
 #if defined (_CBR2_PRODUCT_REQ_)
 #define TOTAL_NUMBER_OF_INTERFACES 6 
+#elif defined (_XER5_PRODUCT_REQ_) || defined(_SCER11BEL_PRODUCT_REQ_)
+#define TOTAL_NUMBER_OF_INTERFACES 5
 #else
 #define TOTAL_NUMBER_OF_INTERFACES 4 
 #endif
@@ -582,6 +586,8 @@ typedef enum WanMode
 #define ETHWAN_DEF_INTF_NAME "eth3"
 #elif defined (_CBR2_PRODUCT_REQ_)
 #define ETHWAN_DEF_INTF_NAME "eth5"
+#elif defined (_XER5_PRODUCT_REQ_) || defined(_SCER11BEL_PRODUCT_REQ_)
+#define ETHWAN_DEF_INTF_NAME "eth4"
 #elif defined (INTEL_PUMA7)
 #define ETHWAN_DEF_INTF_NAME "nsgmii0"
 #elif defined (_PLATFORM_TURRIS_)
@@ -1539,8 +1545,8 @@ ANSC_STATUS CosaDmlIfaceFinalize(char *pValue, BOOL isAutoWanMode)
     else
     {
         char acSetParamName[256];
-        char acTmpCableValue[32] = {0};
-        char acTmpEthValue[32] = {0};
+        char acTmpCableValue[64] = {0};
+        char acTmpEthValue[64] = {0};
         if (ethwanEnabled == TRUE)
         {
             snprintf(acTmpCableValue, sizeof(acTmpCableValue), "%s", ETHWAN_DOCSIS_INF_NAME);
