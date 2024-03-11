@@ -4697,6 +4697,61 @@ ANSC_STATUS CosaDmlEthGetPhyStatusForWanManager(char *ifname, char *PhyStatus)
     return ANSC_STATUS_SUCCESS;
 }
 #if defined (FEATURE_RDKB_WAN_MANAGER)
+#ifdef FEATURE_RDKB_AUTO_PORT_SWITCH
+/**
+ * @Note Utility API to get WANOE interface from WanManager PSM.
+ */
+static ANSC_STATUS GetWan_InterfaceName(char *wanoe_ifacename, int length)
+{
+    static char wanmgr_ifname[WANOE_IFACENAME_LENGTH];
+    char paramName[DATAMODEL_PARAM_LENGTH];
+    char paramVal[DATAMODEL_PARAM_LENGTH];
+    int wanIfCount = 0;
+    int retPsmGet = CCSP_SUCCESS;
+
+    /* ASSUMPTION: WanOE name does not change at runtime */
+    if (wanmgr_ifname[0] != 0)
+    {
+        snprintf(wanoe_ifacename, length, "%s", wanmgr_ifname);
+        return ANSC_STATUS_SUCCESS;
+    }
+
+    snprintf(paramName, sizeof(paramName), "dmsb.wanmanager.wan.interfacecount");
+    retPsmGet = Ethagent_GetParamValuesFromPSM(paramName, paramVal, sizeof(paramVal));
+    if ((retPsmGet == CCSP_SUCCESS))
+    {
+        char *endptr = NULL;
+        wanIfCount = strtol(paramVal, &endptr, 10);
+    }
+
+    for (int i = 1; i <= wanIfCount; i++)
+    {
+        snprintf(paramName, sizeof(paramName), "dmsb.wanmanager.if.%d.DisplayName", i);
+        retPsmGet = Ethagent_GetParamValuesFromPSM(paramName, paramVal, sizeof(paramVal));
+        if (retPsmGet == CCSP_SUCCESS)
+        {
+            if (strcmp(paramVal, "WanOE") == 0)
+            {
+                snprintf(paramName, sizeof(paramName), "dmsb.wanmanager.if.%d.Name", i);
+                retPsmGet = Ethagent_GetParamValuesFromPSM(paramName, wanmgr_ifname, sizeof(wanmgr_ifname));
+                if (retPsmGet == CCSP_SUCCESS)
+                {
+                    snprintf(wanoe_ifacename, length, "%s", wanmgr_ifname);
+                    break;
+                }
+            }
+        }
+    }
+
+    if (wanmgr_ifname[0] == 0)
+    {
+        CcspTraceError(("[%s][%d] Error returning wanoe ifname\n", __FUNCTION__, __LINE__));
+        return ANSC_STATUS_SUCCESS;
+    }
+
+    return ANSC_STATUS_SUCCESS;
+}
+#else
 /**
  * @Note Utility API to get WANOE interface from HAL layer.
  */
@@ -4715,6 +4770,7 @@ static ANSC_STATUS  GetWan_InterfaceName (char* wanoe_ifacename, int length) {
     strncpy (wanoe_ifacename,wanoe_ifname,length);
     return ANSC_STATUS_SUCCESS;
 }
+#endif /* FEATURE_RDKB_AUTO_PORT_SWITCH */
 
 /**
  * @Note Callback invoked upon wanoe interface link up from HAL.
