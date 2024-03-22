@@ -155,7 +155,7 @@ extern  char g_Subsystem[BUFLEN_32];
 #if defined (FEATURE_RDKB_WAN_MANAGER)
 #if defined (_CBR2_PRODUCT_REQ_)
 #define TOTAL_NUMBER_OF_INTERNAL_INTERFACES 6
-#elif defined (_XER5_PRODUCT_REQ_)
+#elif defined (_XER5_PRODUCT_REQ_) || defined(_SCER11BEL_PRODUCT_REQ_)
 #define TOTAL_NUMBER_OF_INTERNAL_INTERFACES 5
 #else
 #define TOTAL_NUMBER_OF_INTERNAL_INTERFACES 4 
@@ -890,14 +890,14 @@ int ethGetPHYRate
     CCSP_HAL_ETHSW_LINK_RATE LinkRate       = CCSP_HAL_ETHSW_LINK_NULL;
     CCSP_HAL_ETHSW_DUPLEX_MODE DuplexMode   = CCSP_HAL_ETHSW_DUPLEX_Auto;
     INT PHYRate                             = 0;
-#if defined(_CBR_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_) || ( defined (_XB6_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_))
+#if defined(_CBR_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_) || defined(_SCER11BEL_PRODUCT_REQ_) || ( defined (_XB6_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_))
     CCSP_HAL_ETHSW_LINK_STATUS  LinkStatus  = CCSP_HAL_ETHSW_LINK_Down;
 #endif
     /* For Broadcom platform device, CcspHalEthSwGetPortStatus returns the Linkrate based
      * on the CurrentBitRate and CcspHalEthSwGetPortCfg returns the Linkrate based on the
      * MaximumBitRate. Hence CcspHalEthSwGetPortStatus called for Broadcom platform devices.
      */
-#if defined(_CBR_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_) || ( defined (_XB6_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_))
+#if defined(_CBR_PRODUCT_REQ_) || defined(_COSA_BCM_MIPS_) || defined(_SCER11BEL_PRODUCT_REQ_) || ( defined (_XB6_PRODUCT_REQ_) && defined (_COSA_BCM_ARM_))
     status = CcspHalEthSwGetPortStatus(PortId, &LinkRate, &DuplexMode, &LinkStatus);
     CcspTraceWarning(("CcspHalEthSwGetPortStatus link rate %d\n", LinkRate));
 #else
@@ -2473,7 +2473,7 @@ EthWanSetLED
         ledMgmt.State    = state;
         ledMgmt.Interval = interval;
 #if defined(_XB6_PRODUCT_REQ_) || defined(_CBR2_PRODUCT_REQ_)
-#ifndef XB10_ONLY_SUPPORT
+#if !defined(XB10_ONLY_SUPPORT) && !defined(_SCER11BEL_PRODUCT_REQ_)
         if(RETURN_ERR == platform_hal_setLed(&ledMgmt)) {
                 CcspTraceError(("platform_hal_setLed failed\n"));
                 return 1;
@@ -2607,7 +2607,7 @@ ANSC_STATUS EthWanBridgeInit(PCOSA_DATAMODEL_ETHERNET pEthernet)
 
 #ifdef _COSA_BCM_ARM_
     v_secure_system("ifconfig %s down; ip link set %s name %s", wanPhyName,wanPhyName,ETHWAN_DOCSIS_INF_NAME);
-#else
+#elif !defined(_SCER11BEL_PRODUCT_REQ_)
     v_secure_system("ifconfig %s down; ip link set %s name dummy-rf", wanPhyName,wanPhyName);
 #endif
     v_secure_system("brctl addbr %s; brctl addif %s %s", wanPhyName,wanPhyName,ethwan_ifname);
@@ -2634,11 +2634,10 @@ ANSC_STATUS EthWanBridgeInit(PCOSA_DATAMODEL_ETHERNET pEthernet)
     platform_hal_GetBaseMacAddress(wan_mac);
     v_secure_system("sysevent set eth_wan_mac %s", wan_mac);
     v_secure_system("ifconfig %s up", wanPhyName);
-
 #ifdef INTEL_PUMA7
     v_secure_system("ifconfig %s up",ethwan_ifname);
 #endif
-#if defined (_CBR2_PRODUCT_REQ_)
+#if defined (_CBR2_PRODUCT_REQ_) || defined (_SCER11BEL_PRODUCT_REQ_)
     v_secure_system("ip link set %s up",ethwan_ifname);
 #endif
     CcspTraceError(("Func %s Exited\n",__FUNCTION__));
