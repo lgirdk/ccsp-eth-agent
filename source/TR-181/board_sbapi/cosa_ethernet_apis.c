@@ -1275,8 +1275,6 @@ INT WanBridgeConfigurationBcm(WAN_MODE_BRIDGECFG *pCfg)
                 v_secure_system("brctl addif %s %s", pCfg->wanPhyName,ETHWAN_DOCSIS_INF_NAME);
                 v_secure_system("sysctl -w net.ipv6.conf.%s.disable_ipv6=1",ETHWAN_DOCSIS_INF_NAME);            
 
-                //RDKB-50037: set 0 to /sys/class/net/cm0/netdev_group
-                v_secure_system("ip link set dev %s group 0", ETHWAN_DOCSIS_INF_NAME);
             }
             else
             {
@@ -1302,6 +1300,10 @@ INT WanBridgeConfigurationBcm(WAN_MODE_BRIDGECFG *pCfg)
 
                 v_secure_system("brctl addif %s %s", pCfg->wanPhyName,pCfg->ethwan_ifname);
             }
+            #if defined (_CBR2_PRODUCT_REQ_)
+                // set 0 to /sys/class/net/cm0/netdev_group in ethwan mode
+                v_secure_system("ip link set dev %s group 0", ETHWAN_DOCSIS_INF_NAME);
+            #endif 
         }
         else
         {
@@ -1357,7 +1359,10 @@ INT WanBridgeConfigurationBcm(WAN_MODE_BRIDGECFG *pCfg)
                 v_secure_system("rm /tmp/wanmodechange");
 #endif
             }
-
+            #if defined (_CBR2_PRODUCT_REQ_)
+                // set 2 to /sys/class/net/cm0/netdev_group in docsis mode
+                v_secure_system("ip link set dev %s group 2", ETHWAN_DOCSIS_INF_NAME);
+            #endif 
         }
     }
 
@@ -2628,6 +2633,11 @@ ANSC_STATUS EthWanBridgeInit(PCOSA_DATAMODEL_ETHERNET pEthernet)
     v_secure_system("brctl addbr %s; brctl addif %s %s", wanPhyName,wanPhyName,ETHWAN_DOCSIS_INF_NAME);
     v_secure_system("sysctl -w net.ipv6.conf.%s.disable_ipv6=1",ETHWAN_DOCSIS_INF_NAME);
 #endif
+
+#if defined (_CBR2_PRODUCT_REQ_)
+    // set 0 to /sys/class/net/cm0/netdev_group in ethwan mode
+    v_secure_system("ip link set dev %s group 0", ETHWAN_DOCSIS_INF_NAME);
+#endif 
 
     v_secure_system("ifconfig %s down", wanPhyName);
     v_secure_system("ifconfig %s hw ether %s", wanPhyName,wan_mac);
