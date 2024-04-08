@@ -113,6 +113,14 @@
 #include "ccsp_psm_helper.h"
 #include <platform_hal.h>
 
+#if defined (FEATURE_RDKB_LED_MANAGER_LEGACY_WAN)
+#include <sysevent/sysevent.h>
+#define SYSEVENT_LED_STATE    "led_event"
+#define IPV4_DOWN_EVENT       "rdkb_ipv4_down"
+int sysevent_led_fd = -1;
+token_t sysevent_led_token;
+#endif
+
 #define MAX_STR_LEN 256
 
 extern char g_Subsystem[32];
@@ -206,6 +214,7 @@ token_t sysevent_token;
 #define OPENVSWITCH_LOADED "/sys/module/openvswitch"
 #define WFO_ENABLED     "/etc/WFO_enabled"
 #define BUF_SIZE 100
+
 
 int Get_CommandOutput(char Command[],char *OutputValue)
 {
@@ -2478,7 +2487,7 @@ EthWanSetLED
         ledMgmt.State    = state;
         ledMgmt.Interval = interval;
 #if defined(_XB6_PRODUCT_REQ_) || defined(_CBR2_PRODUCT_REQ_)
-#if !defined(_SCER11BEL_PRODUCT_REQ_)
+#if !defined(_SCER11BEL_PRODUCT_REQ_) && !defined(_XER5_PRODUCT_REQ_)
         if(RETURN_ERR == platform_hal_setLed(&ledMgmt)) {
                 CcspTraceError(("platform_hal_setLed failed\n"));
                 return 1;
@@ -4792,6 +4801,20 @@ void EthWanLinkDown_callback() {
     }
 #endif
     v_secure_system("sysevent set phylink_wan_state down");
+
+#if defined (FEATURE_RDKB_LED_MANAGER_LEGACY_WAN)
+    sysevent_led_fd =  sysevent_open("127.0.0.1", SE_SERVER_WELL_KNOWN_PORT, SE_VERSION, "wanHandler", &sysevent_led_token);
+    if(sysevent_led_fd != -1)
+    {
+	    sysevent_set(sysevent_led_fd, sysevent_led_token, SYSEVENT_LED_STATE, IPV4_DOWN_EVENT, 0);
+	    CcspTraceInfo (("[%s][%d] Successfully sent IPV4_DOWN_EVENT to RdkledManager\n", __FUNCTION__,__LINE__));
+    }
+
+    if (0 <= sysevent_led_fd)
+    {
+	    sysevent_close(sysevent_led_fd, sysevent_led_token);
+    }
+#endif
 	
 #if defined (WAN_FAILOVER_SUPPORTED)
 	publishEWanLinkStatus(false);
