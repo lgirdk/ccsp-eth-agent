@@ -722,11 +722,11 @@ EthernetWAN_SetParamStringValue
         ERR_CHK(rc);
         if ((!ind) && (rc == EOK))
         {
-	#if !defined (_XER5_PRODUCT_REQ_)
+	#if !defined (_XER5_PRODUCT_REQ_) && !defined(_SCER11BEL_PRODUCT_REQ_)
             bValue = FALSE;
             wan_mode = WAN_MODE_DOCSIS;
 	#else
-	     CcspTraceWarning(("DOCSIS operationalMode is not supported in XER5 platform\n"));
+	     CcspTraceWarning(("DOCSIS operationalMode is not supported in XER5/XER10 platform\n"));
              return FALSE;
 	#endif
         }
@@ -745,10 +745,10 @@ EthernetWAN_SetParamStringValue
         }
 	else if((strcmp_s("Auto",strlen("Auto"),pString,&ind) == EOK) && (ind == 0))
 	{
-	#if !defined (_XER5_PRODUCT_REQ_)
+	#if !defined (_XER5_PRODUCT_REQ_) && !defined(_SCER11BEL_PRODUCT_REQ_)
 	    wan_mode = WAN_MODE_AUTO;
 	#else
-	    CcspTraceWarning(("Auto operationalMode is not supported in XER5 platform\n"));
+	    CcspTraceWarning(("Auto operationalMode is not supported in XER5/XER10 platform\n"));
             return FALSE;
 	#endif
 	}
