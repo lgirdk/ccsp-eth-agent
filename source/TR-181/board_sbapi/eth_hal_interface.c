@@ -28,7 +28,7 @@
 #define ARP_CACHE "/tmp/arp.txt"
 #ifndef _SR213_PRODUCT_REQ_
 #define DNSMASQ_CACHE "/tmp/dns.txt"
-#define DNSMASQ_FILE "/nvram/dnsmasq.leases"
+#define DNSMASQ_FILE "/var/lib/misc/dnsmasq.leases"
 #endif /*_SR213_PRODUCT_REQ_*/
 #define ETH_POLLING_PERIOD 20
 #define ETH_NODE_HASH_SIZE 256
