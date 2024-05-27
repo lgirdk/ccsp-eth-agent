@@ -129,9 +129,12 @@ COSA_DML_ETH_PORT_SINFO      g_EthIntSInfoStatic[] =
         /* Downstream (LAN) ports */
         {SWITCH_PORT_0_NAME,                FALSE,  {0,0,0,0,0,0}},
         {SWITCH_PORT_1_NAME,                FALSE,  {0,0,0,0,0,0}},
-#if defined(ETH_4_PORTS) || defined(ETH_6_PORTS) || defined(ETH_8_PORTS)
+#if defined(ETH_4_PORTS) || defined(ETH_6_PORTS) || defined(ETH_8_PORTS) || defined(ETH_5_PORTS)
         {SWITCH_PORT_2_NAME,                FALSE,  {0,0,0,0,0,0}},
         {SWITCH_PORT_3_NAME,                FALSE,  {0,0,0,0,0,0}},
+#endif
+#if defined(ETH_5_PORTS)
+	{SWITCH_PORT_4_NAME,                FALSE,  {0,0,0,0,0,0}},
 #endif
 #if defined(ETH_6_PORTS) || defined(ETH_8_PORTS)
         {SWITCH_PORT_4_NAME,                FALSE,  {0,0,0,0,0,0}},
@@ -191,6 +194,12 @@ static const int g_PortIDs[]={
     CCSP_HAL_ETHSW_EthPort4,
     CCSP_HAL_ETHSW_EthPort5,
     CCSP_HAL_ETHSW_EthPort6
+#elif defined(ETH_5_PORTS)
+    CCSP_HAL_ETHSW_EthPort1,
+    CCSP_HAL_ETHSW_EthPort2,
+    CCSP_HAL_ETHSW_EthPort3,
+    CCSP_HAL_ETHSW_EthPort4,
+    CCSP_HAL_ETHSW_EthPort5
 #elif defined(ETH_8_PORTS) || defined(INTEL_PUMA7)
     CCSP_HAL_ETHSW_EthPort1,
     CCSP_HAL_ETHSW_EthPort2,
@@ -215,6 +224,14 @@ static CosaEthInterfaceInfo g_EthEntriesStatic[] =
         {g_EthIntSInfoStatic + 1, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 1, {0}},
         {g_EthIntSInfoStatic + 2, {'\0'}, 0, 0, &ifFuncs, NULL,          {0}},
         {g_EthIntSInfoStatic + 3, {'\0'}, 0, 0, &ifFuncs, NULL,          {0}}
+#elif defined(ETH_5_PORTS)
+	{g_EthIntSInfoStatic + 0, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 0, {0}},
+        {g_EthIntSInfoStatic + 1, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 1, {0}},
+        {g_EthIntSInfoStatic + 2, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 2, {0}},
+        {g_EthIntSInfoStatic + 3, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 3, {0}},
+        {g_EthIntSInfoStatic + 4, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 4, {0}},
+	{g_EthIntSInfoStatic + 8, {'\0'}, 0, 0, &ifFuncs, NULL,          {0}},
+        {g_EthIntSInfoStatic + 9, {'\0'}, 0, 0, &ifFuncs, NULL,          {0}}
 #elif defined(ETH_6_PORTS)
         {g_EthIntSInfoStatic + 0, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 0, {0}},
         {g_EthIntSInfoStatic + 1, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 1, {0}},
