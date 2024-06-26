@@ -603,7 +603,7 @@ EthernetWAN_GetParamStringValue
     {
 	    if (syscfg_get(NULL, "curr_wan_mode", buf, sizeof(buf)) == 0)
 	    {
-		if (buf != NULL)
+		if (buf[0] != '\0')
 		{
 			if ( _ansc_strlen(buf) >= *pUlSize )
 			{
