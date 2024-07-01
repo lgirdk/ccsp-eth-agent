@@ -99,6 +99,9 @@ static int loadID(char* ifName, char* pAlias, ULONG* ulInstanceNumber);
 COSA_DML_IF_STATUS getIfStatus(const PUCHAR name, struct ifreq *pIfr);
 static int setIfStatus(struct ifreq *pIfr);
 int _getMac(char* ifName, char* mac);
+#ifdef ENABLE_NOT_PRESENT_IF_STATE
+extern BOOLEAN getIfAvailability( const PUCHAR name );
+#endif
 
 /**************************************************************************
                         DATA STRUCTURE DEFINITIONS
@@ -932,6 +935,21 @@ int puma6_getSwitchDInfo(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_DINFO pDi
 
     pDinfo->Status         = COSA_DML_IF_STATUS_Down;
     pDinfo->CurrentBitRate = 0;
+
+    #ifdef ENABLE_NOT_PRESENT_IF_STATE
+   /*
+    * Checking if the interface exists in the system
+    * if not then return COSA_DML_IF_STATUS_NotPresent.
+    * These works only when real physical linux interface names are used for DM mapping
+    */
+    CcspTraceInfo(("Checking if %s exists in the system\n", (PUCHAR)eth->sInfo->Name));
+    if ( FALSE == getIfAvailability( (PUCHAR)eth->sInfo->Name ) )
+    {
+        CcspTraceInfo(("Interface %s doesn't exist in the system, set Status to COSA_DML_IF_STATUS_NotPresent\n", (PUCHAR)eth->sInfo->Name));
+        pDinfo->Status = COSA_DML_IF_STATUS_NotPresent;
+        return ANSC_STATUS_SUCCESS;
+    }
+    #endif
 
     status = CcspHalEthSwGetPortStatus(port, &LinkRate, &DuplexMode, &LinkStatus);
 
