@@ -2487,7 +2487,7 @@ EthWanSetLED
         ledMgmt.State    = state;
         ledMgmt.Interval = interval;
 #if defined(_XB6_PRODUCT_REQ_) || defined(_CBR2_PRODUCT_REQ_)
-#if !defined(_SCER11BEL_PRODUCT_REQ_) && !defined(_XER5_PRODUCT_REQ_)
+#if !defined(_SCER11BEL_PRODUCT_REQ_) && !defined(FEATURE_RDKB_LED_MANAGER_PORT)
         if(RETURN_ERR == platform_hal_setLed(&ledMgmt)) {
                 CcspTraceError(("platform_hal_setLed failed\n"));
                 return 1;
