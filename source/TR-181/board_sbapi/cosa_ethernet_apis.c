@@ -98,12 +98,7 @@
 #include <sys/types.h>
 #include "linux/sockios.h"
 #include <sys/ioctl.h>
-
-#ifdef ARRIS_XB3_PLATFORM_CHANGES
-  #include "rdk_cm_api_arris.h"
-#else
-  #include "linux/if.h"
-#endif
+#include "linux/if.h"
 
 #include "cosa_ethernet_apis.h"
 #include "safec_lib_common.h"
