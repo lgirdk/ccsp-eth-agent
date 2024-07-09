@@ -89,11 +89,7 @@
 #include <utctx/utctx_api.h>
 #include "linux/sockios.h"
 #include <sys/ioctl.h>
-#ifdef ARRIS_XB3_PLATFORM_CHANGES
-  #include "rdk_cm_api_arris.h"
-#else
-  #include "linux/if.h"
-#endif
+#include "linux/if.h"
 
 #define SE_IP_ADDR      "127.0.0.1"
 #define SE_PROG_NAME    "CcspEthAgent"
@@ -103,7 +99,6 @@ static int loadID(char* ifName, char* pAlias, ULONG* ulInstanceNumber);
 COSA_DML_IF_STATUS getIfStatus(const PUCHAR name, struct ifreq *pIfr);
 static int setIfStatus(struct ifreq *pIfr);
 int _getMac(char* ifName, char* mac);
-void rdkb_api_platform_hal_GetLanMacAddr(char* mac);
 
 /**************************************************************************
                         DATA STRUCTURE DEFINITIONS
@@ -337,11 +332,7 @@ CosaDmlEthInterfaceInit
      *  It doesn't make sense to even have a MAC address in Ethernet Interface DM object,
      *  so we are not going to fill the MAC address for Upstream interfaces.
      */
-#ifdef ARRIS_XB3_PLATFORM_CHANGES
-    rdkb_api_platform_hal_GetLanMacAddr(strMac);
-#else
     _getMac("brlan0", strMac);
-#endif
 
 #ifdef FEATURE_RDKB_WAN_UPSTREAM
 
