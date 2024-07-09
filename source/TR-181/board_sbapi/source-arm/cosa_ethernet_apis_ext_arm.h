@@ -49,15 +49,10 @@
 #define SWITCH_PORT_1_NAME "sw_2"
 #define SWITCH_PORT_2_NAME "sw_3"
 #define SWITCH_PORT_3_NAME "sw_4"
-
-#if defined (ETH_5_PORTS) || defined (ETH_6_PORTS) || defined (ETH_8_PORTS) || (defined(INTEL_PUMA7) && !defined(_ARRIS_XB6_PRODUCT_REQ_))
-    #define SWITCH_PORT_4_NAME "sw_5"
-    #define SWITCH_PORT_5_NAME "sw_6"
-    #define SWITCH_PORT_6_NAME "sw_7"
-    #define SWITCH_PORT_7_NAME "sw_8"
-#else
-    #define SWITCH_PORT_MOCA_NAME "sw_5"
-#endif
+#define SWITCH_PORT_4_NAME "sw_5"
+#define SWITCH_PORT_5_NAME "sw_6"
+#define SWITCH_PORT_6_NAME "sw_7"
+#define SWITCH_PORT_7_NAME "sw_8"
 
 #define SWITCH_PORT_EWAN_NAME "ewan"
 #define SWITCH_PORT_CM_NAME "cmwan"
