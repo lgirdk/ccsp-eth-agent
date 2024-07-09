@@ -40,28 +40,18 @@
 #define COSA_ETH_INT_SYSCFG_NAMESPACE "CosaEthInt"
 #define COSA_ETH_INT_ID_SYSCFG_NAMESPACE COSA_ETH_INT_SYSCFG_NAMESPACE"IDs"
 
-//$HL 4/24/2013
+#if ! (defined(ETH_2_PORTS) || defined(ETH_3_PORTS) || defined(ETH_4_PORTS) || defined(ETH_5_PORTS) || defined(ETH_6_PORTS) || defined(ETH_8_PORTS))
+#define ETH_4_PORTS
+#endif
+
 #define SWITCH_PORT_0_NAME "sw_1"
 #define SWITCH_PORT_1_NAME "sw_2"
 #define SWITCH_PORT_2_NAME "sw_3"
 #define SWITCH_PORT_3_NAME "sw_4"
-
-// Original Code Assumed Four Physical Ethernet Ports. Set to that for backwards compatibility.
-#if !(defined (ETH_8_PORTS) || defined (ETH_6_PORTS) || defined (ETH_4_PORTS) || defined (ETH_2_PORTS) || defined (ETH_5_PORTS) )
-    #ifdef DO_WARNINGS
-        #warning "Number of Ethernet Poarts NOT DEFINED. Setting to 4 Ports"
-    #endif /* DO_WARNINGS */
-#define ETH_4_PORTS
-#endif
-
-#if defined (ETH_8_PORTS) || defined (ETH_6_PORTS) ||  defined (ETH_5_PORTS) || ( defined(INTEL_PUMA7) && !defined(_ARRIS_XB6_PRODUCT_REQ_) )
-    #define SWITCH_PORT_4_NAME "sw_5"
-    #define SWITCH_PORT_5_NAME "sw_6"
-    #define SWITCH_PORT_6_NAME "sw_7"
-    #define SWITCH_PORT_7_NAME "sw_8"
-#else
-    #define SWITCH_PORT_MOCA_NAME "sw_5"
-#endif
+#define SWITCH_PORT_4_NAME "sw_5"
+#define SWITCH_PORT_5_NAME "sw_6"
+#define SWITCH_PORT_6_NAME "sw_7"
+#define SWITCH_PORT_7_NAME "sw_8"
 
 #define SWITCH_PORT_EWAN_NAME "ewan"
 #define SWITCH_PORT_CM_NAME "cmwan"
