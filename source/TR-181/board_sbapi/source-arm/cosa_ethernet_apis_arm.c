@@ -124,36 +124,33 @@ COSA_DML_ETH_PORT_SINFO      g_EthIntSInfoStatic[] =
         /* Downstream (LAN) ports */
         {SWITCH_PORT_0_NAME,                FALSE,  {0,0,0,0,0,0}},
         {SWITCH_PORT_1_NAME,                FALSE,  {0,0,0,0,0,0}},
-#if defined(ETH_4_PORTS) || defined(ETH_6_PORTS) || defined(ETH_8_PORTS) || defined(ETH_5_PORTS)
+#if defined(ETH_3_PORTS) || defined(ETH_4_PORTS) || defined(ETH_5_PORTS) || defined(ETH_6_PORTS) || defined(ETH_8_PORTS)
         {SWITCH_PORT_2_NAME,                FALSE,  {0,0,0,0,0,0}},
+#if defined(ETH_4_PORTS) || defined(ETH_5_PORTS) || defined(ETH_6_PORTS) || defined(ETH_8_PORTS)
         {SWITCH_PORT_3_NAME,                FALSE,  {0,0,0,0,0,0}},
-#endif
-#if defined(ETH_5_PORTS)
+#if defined(ETH_5_PORTS) || defined(ETH_6_PORTS) || defined(ETH_8_PORTS)
 	{SWITCH_PORT_4_NAME,                FALSE,  {0,0,0,0,0,0}},
-#endif
 #if defined(ETH_6_PORTS) || defined(ETH_8_PORTS)
-        {SWITCH_PORT_4_NAME,                FALSE,  {0,0,0,0,0,0}},
         {SWITCH_PORT_5_NAME,                FALSE,  {0,0,0,0,0,0}},
-#endif
 #if defined(ETH_8_PORTS)
         {SWITCH_PORT_6_NAME,                FALSE,  {0,0,0,0,0,0}},
         {SWITCH_PORT_7_NAME,                FALSE,  {0,0,0,0,0,0}},
 #endif
-#if defined(_HUB4_PRODUCT_REQ_)
-        /* Upstream (WAN) ports */
-        {DMSB_ETH_IF_NAME_DFT_WanRouting,   TRUE,   {0,0,0,0,0,0}}
-#else
+#endif
+#endif
+#endif
+#endif
+
         /* Upstream (WAN) ports */
         {DMSB_ETH_IF_NAME_DFT_WanRouting,   TRUE,   {0,0,0,0,0,0}},
-#if defined(INTEL_PUMA7) && !defined(_ARRIS_XB6_PRODUCT_REQ_)
         {DMSB_ETH_IF_NAME_DFT_WanBridging,  TRUE,   {0,0,0,0,0,0}},
+
+#if defined(INTEL_PUMA7) && !defined(_ARRIS_XB6_PRODUCT_REQ_)
         {SWITCH_PORT_4_NAME,                FALSE,  {0,0,0,0,0,0}},
-        {SWITCH_PORT_5_NAME,                FALSE,  {0,0,0,0,0,0}}
-#else
-        {DMSB_ETH_IF_NAME_DFT_WanBridging,  TRUE,   {0,0,0,0,0,0}}
-#endif /* defined(INTEL_PUMA7) && !defined(_ARRIS_XB6_PRODUCT_REQ_) */
-#endif /* _HUB4_PRODUCT_REQ_ */
+        {SWITCH_PORT_5_NAME,                FALSE,  {0,0,0,0,0,0}},
+#endif
     };
+
 static PCOSA_DML_ETH_PORT_SINFO g_EthIntSInfo = g_EthIntSInfoStatic;
 
 static ULONG g_EthernetIntNum = sizeof(g_EthIntSInfoStatic)/sizeof(g_EthIntSInfoStatic[0]);
