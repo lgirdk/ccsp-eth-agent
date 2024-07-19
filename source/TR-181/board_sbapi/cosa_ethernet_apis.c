@@ -575,18 +575,7 @@ COSA_DML_IF_STATUS getIfStatus(const PUCHAR name, struct ifreq *pIfr)
 /**************************************************************************
                         DATA STRUCTURE DEFINITIONS
 **************************************************************************/
-typedef struct
-{
-  uint8_t  hw[6];
-} macaddr_t;
 
-typedef enum WanMode
-{
-    WAN_MODE_AUTO = 0,
-    WAN_MODE_ETH,
-    WAN_MODE_DOCSIS,
-    WAN_MODE_UNKNOWN
-}WanMode_t;
 /**************************************************************************
                         GLOBAL VARIABLES
 **************************************************************************/
@@ -651,7 +640,7 @@ typedef struct _CosaETHMSGQWanData
 static pthread_t bootInformThreadId;
 #endif
 #endif
-static PCOSA_DML_ETH_PORT_GLOBAL_CONFIG gpstEthGInfo = NULL;
+STATIC PCOSA_DML_ETH_PORT_GLOBAL_CONFIG gpstEthGInfo = NULL;
 static pthread_mutex_t gmEthGInfo_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static ANSC_STATUS CosDmlEthPortPrepareGlobalInfo();
@@ -1077,13 +1066,6 @@ static void TriggerSysEventMonitorThread(void)
 #endif        
 
 #if defined(INTEL_PUMA7)
-typedef enum
-{
-    NF_ARPTABLE,
-    NF_IPTABLE,
-    NF_IP6TABLE
-} bridge_nf_table_t;
-
 INT BridgeNfDisable( const char* bridgeName, bridge_nf_table_t table, BOOL disable )
 {
     INT ret = 0;
@@ -2454,7 +2436,7 @@ CosaDmlEthGetLogStatus
             rc = strcmp_s("true",strlen("true"),buf,&ind);
             ERR_CHK(rc);
             pMyObject->Log_Enable = (ind) ? FALSE : TRUE;
-            
+	
         }
     }
 

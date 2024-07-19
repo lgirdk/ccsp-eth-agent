@@ -72,6 +72,11 @@
 
 #define PSM_ETHMANAGER_CFG_UPSTREAM      "dmsb.ethagent.if.%d.Upstream"
 #define PSM_ETHMANAGER_CFG_ADDTOBRIDGE   "dmsb.ethagent.if.%d.AddToLanBridge"
+#ifdef UNIT_TEST_DOCKER_SUPPORT
+#define STATIC
+#else
+#define STATIC static
+#endif
 
 /**********************************************************************
                 STRUCTURE AND CONSTANT DEFINITIONS
@@ -185,6 +190,26 @@ _COSA_DML_ETH_PORT_CAP_OPER
 #endif  //FEATURE_RDKB_AUTO_PORT_SWITCH
 #endif
 
+typedef struct
+{
+  uint8_t  hw[6];
+} macaddr_t;
+
+typedef enum WanMode
+{
+    WAN_MODE_AUTO = 0,
+    WAN_MODE_ETH,
+    WAN_MODE_DOCSIS,
+    WAN_MODE_UNKNOWN
+}WanMode_t;
+#if defined(INTEL_PUMA7)
+typedef enum
+{
+    NF_ARPTABLE,
+    NF_IPTABLE,
+    NF_IP6TABLE
+} bridge_nf_table_t;
+#endif
 typedef struct _WAN_PARAM_INFO
 {
     CHAR paramName[256];
@@ -449,6 +474,7 @@ ANSC_STATUS CosaDmlEthPortGetStats ( ANSC_HANDLE hContext, ULONG ulInstanceNumbe
 ANSC_STATUS CosaDmlEthInterfaceInit ( ANSC_HANDLE hDml, PANSC_HANDLE phContext );
 
 ANSC_STATUS CosaDmlEthPortGetNumberOfEntries( ANSC_HANDLE hContext );
+
 
 ANSC_STATUS
 CosaDmlEthInit
