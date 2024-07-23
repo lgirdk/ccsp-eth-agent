@@ -76,6 +76,7 @@
 #include "secure_wrapper.h"
 #include "safec_lib_common.h"
 #include <sysevent/sysevent.h>
+#include <syscfg/syscfg.h>
 
 #ifdef _COSA_SIM_
 /*Removed code for simulator, because this is usg platform*/
@@ -111,58 +112,54 @@ int _getMac(char* ifName, char* mac);
 
 #if defined(_COSA_INTEL_USG_ARM_) || defined(_COSA_BCM_ARM_) || defined(_COSA_BCM_MIPS_)
 
-#include <syscfg/syscfg.h>
+static int getIfCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg);
+static int setIfCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg);
+static int getIfStats(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_STATS pStats);
+static int getIfStats2(const PUCHAR pName, PCOSA_DML_ETH_STATS pStats);
+static int getIfDInfo(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_DINFO pDinfo);
 
-int puma6_getSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg);
-int puma6_setSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg);
-int puma6_getSwitchDInfo(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_DINFO pDinfo);
-int puma6_getSwitchStats(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_STATS pStats);
+static int puma6_getSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg);
+static int puma6_setSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg);
+static int puma6_getSwitchDInfo(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_DINFO pDinfo);
+static int puma6_getSwitchStats(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_STATS pStats);
 
-
-COSA_DML_ETH_PORT_SINFO      g_EthIntSInfoStatic[] =
-    {
-        /* Downstream (LAN) ports */
-        {SWITCH_PORT_0_NAME,                FALSE,  {0,0,0,0,0,0}},
-        {SWITCH_PORT_1_NAME,                FALSE,  {0,0,0,0,0,0}},
+static COSA_DML_ETH_PORT_SINFO g_EthIntSInfoStatic[] =
+{
+    /* Downstream (LAN) ports */
+    {SWITCH_PORT_0_NAME,                FALSE,  {0,0,0,0,0,0}},
+#if defined(ETH_2_PORTS) || defined(ETH_3_PORTS) || defined(ETH_4_PORTS) || defined(ETH_5_PORTS) || defined(ETH_6_PORTS) || defined(ETH_8_PORTS)
+    {SWITCH_PORT_1_NAME,                FALSE,  {0,0,0,0,0,0}},
 #if defined(ETH_3_PORTS) || defined(ETH_4_PORTS) || defined(ETH_5_PORTS) || defined(ETH_6_PORTS) || defined(ETH_8_PORTS)
-        {SWITCH_PORT_2_NAME,                FALSE,  {0,0,0,0,0,0}},
+    {SWITCH_PORT_2_NAME,                FALSE,  {0,0,0,0,0,0}},
 #if defined(ETH_4_PORTS) || defined(ETH_5_PORTS) || defined(ETH_6_PORTS) || defined(ETH_8_PORTS)
-        {SWITCH_PORT_3_NAME,                FALSE,  {0,0,0,0,0,0}},
+    {SWITCH_PORT_3_NAME,                FALSE,  {0,0,0,0,0,0}},
 #if defined(ETH_5_PORTS) || defined(ETH_6_PORTS) || defined(ETH_8_PORTS)
-	{SWITCH_PORT_4_NAME,                FALSE,  {0,0,0,0,0,0}},
+    {SWITCH_PORT_4_NAME,                FALSE,  {0,0,0,0,0,0}},
 #if defined(ETH_6_PORTS) || defined(ETH_8_PORTS)
-        {SWITCH_PORT_5_NAME,                FALSE,  {0,0,0,0,0,0}},
+    {SWITCH_PORT_5_NAME,                FALSE,  {0,0,0,0,0,0}},
 #if defined(ETH_8_PORTS)
-        {SWITCH_PORT_6_NAME,                FALSE,  {0,0,0,0,0,0}},
-        {SWITCH_PORT_7_NAME,                FALSE,  {0,0,0,0,0,0}},
+    {SWITCH_PORT_6_NAME,                FALSE,  {0,0,0,0,0,0}},
+    {SWITCH_PORT_7_NAME,                FALSE,  {0,0,0,0,0,0}},
+#endif
 #endif
 #endif
 #endif
 #endif
 #endif
 
-        /* Upstream (WAN) ports */
-        {DMSB_ETH_IF_NAME_DFT_WanRouting,   TRUE,   {0,0,0,0,0,0}},
-        {DMSB_ETH_IF_NAME_DFT_WanBridging,  TRUE,   {0,0,0,0,0,0}},
+    /* Upstream (WAN) ports */
+    {DMSB_ETH_IF_NAME_DFT_WanRouting,   TRUE,   {0,0,0,0,0,0}},
+    {DMSB_ETH_IF_NAME_DFT_WanBridging,  TRUE,   {0,0,0,0,0,0}},
 
 #if defined(INTEL_PUMA7) && !defined(_ARRIS_XB6_PRODUCT_REQ_)
-        {SWITCH_PORT_4_NAME,                FALSE,  {0,0,0,0,0,0}},
-        {SWITCH_PORT_5_NAME,                FALSE,  {0,0,0,0,0,0}},
+    {SWITCH_PORT_4_NAME,                FALSE,  {0,0,0,0,0,0}},
+    {SWITCH_PORT_5_NAME,                FALSE,  {0,0,0,0,0,0}},
 #endif
-    };
+};
 
 static PCOSA_DML_ETH_PORT_SINFO g_EthIntSInfo = g_EthIntSInfoStatic;
 
 static ULONG g_EthernetIntNum = sizeof(g_EthIntSInfoStatic)/sizeof(g_EthIntSInfoStatic[0]);
-
-#if defined(_COSA_INTEL_USG_ARM_) || defined(_COSA_BCM_ARM_) || defined(_COSA_BCM_MIPS_)
-static int getIfCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg);
-static int setIfCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg);
-static int getIfStats(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_STATS pStats);
-static int getIfDInfo(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_DINFO pDinfo);
-#endif
-
-static int getIfStats2(const PUCHAR pName, PCOSA_DML_ETH_STATS pStats);
 
 static const EthIntControlFuncs ifFuncs = {
     getIfCfg,
@@ -178,21 +175,8 @@ static const EthIntControlFuncs swFuncs = {
     puma6_getSwitchDInfo
 };
 
-static const int g_PortIDs[]={
-#if defined(ETH_6_PORTS)
-    CCSP_HAL_ETHSW_EthPort1,
-    CCSP_HAL_ETHSW_EthPort2,
-    CCSP_HAL_ETHSW_EthPort3,
-    CCSP_HAL_ETHSW_EthPort4,
-    CCSP_HAL_ETHSW_EthPort5,
-    CCSP_HAL_ETHSW_EthPort6
-#elif defined(ETH_5_PORTS)
-    CCSP_HAL_ETHSW_EthPort1,
-    CCSP_HAL_ETHSW_EthPort2,
-    CCSP_HAL_ETHSW_EthPort3,
-    CCSP_HAL_ETHSW_EthPort4,
-    CCSP_HAL_ETHSW_EthPort5
-#elif defined(ETH_8_PORTS) || defined(INTEL_PUMA7)
+static const int g_PortIDs[] =
+{
     CCSP_HAL_ETHSW_EthPort1,
     CCSP_HAL_ETHSW_EthPort2,
     CCSP_HAL_ETHSW_EthPort3,
@@ -201,64 +185,63 @@ static const int g_PortIDs[]={
     CCSP_HAL_ETHSW_EthPort6,
     CCSP_HAL_ETHSW_EthPort7,
     CCSP_HAL_ETHSW_EthPort8
-#else
-    CCSP_HAL_ETHSW_EthPort1,
-    CCSP_HAL_ETHSW_EthPort2,
-    CCSP_HAL_ETHSW_EthPort3,
-    CCSP_HAL_ETHSW_EthPort4
-#endif
 };
 
 static CosaEthInterfaceInfo g_EthEntriesStatic[] =
-    {
+{
 #if defined(ETH_2_PORTS)
-        {g_EthIntSInfoStatic + 0, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 0, {0}},
-        {g_EthIntSInfoStatic + 1, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 1, {0}},
-        {g_EthIntSInfoStatic + 2, {'\0'}, 0, 0, &ifFuncs, NULL,          {0}},
-        {g_EthIntSInfoStatic + 3, {'\0'}, 0, 0, &ifFuncs, NULL,          {0}}
+    {g_EthIntSInfoStatic + 0, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 0, {0}},
+    {g_EthIntSInfoStatic + 1, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 1, {0}},
+    {g_EthIntSInfoStatic + 2, {'\0'}, 0, 0, &ifFuncs, NULL,          {0}},
+    {g_EthIntSInfoStatic + 3, {'\0'}, 0, 0, &ifFuncs, NULL,          {0}},
+#elif defined(ETH_3_PORTS)
+    {g_EthIntSInfoStatic + 0, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 0, {0}},
+    {g_EthIntSInfoStatic + 1, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 1, {0}},
+    {g_EthIntSInfoStatic + 2, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 2, {0}},
+    {g_EthIntSInfoStatic + 3, {'\0'}, 0, 0, &ifFuncs, NULL,          {0}},
+    {g_EthIntSInfoStatic + 4, {'\0'}, 0, 0, &ifFuncs, NULL,          {0}},
 #elif defined(ETH_5_PORTS)
-	{g_EthIntSInfoStatic + 0, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 0, {0}},
-        {g_EthIntSInfoStatic + 1, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 1, {0}},
-        {g_EthIntSInfoStatic + 2, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 2, {0}},
-        {g_EthIntSInfoStatic + 3, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 3, {0}},
-        {g_EthIntSInfoStatic + 4, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 4, {0}},
-	{g_EthIntSInfoStatic + 8, {'\0'}, 0, 0, &ifFuncs, NULL,          {0}},
-        {g_EthIntSInfoStatic + 9, {'\0'}, 0, 0, &ifFuncs, NULL,          {0}}
+    {g_EthIntSInfoStatic + 0, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 0, {0}},
+    {g_EthIntSInfoStatic + 1, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 1, {0}},
+    {g_EthIntSInfoStatic + 2, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 2, {0}},
+    {g_EthIntSInfoStatic + 3, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 3, {0}},
+    {g_EthIntSInfoStatic + 4, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 4, {0}},
+    {g_EthIntSInfoStatic + 8, {'\0'}, 0, 0, &ifFuncs, NULL,          {0}},
+    {g_EthIntSInfoStatic + 9, {'\0'}, 0, 0, &ifFuncs, NULL,          {0}},
 #elif defined(ETH_6_PORTS)
-        {g_EthIntSInfoStatic + 0, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 0, {0}},
-        {g_EthIntSInfoStatic + 1, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 1, {0}},
-        {g_EthIntSInfoStatic + 2, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 2, {0}},
-        {g_EthIntSInfoStatic + 3, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 3, {0}},
-        {g_EthIntSInfoStatic + 4, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 4, {0}},
-        {g_EthIntSInfoStatic + 5, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 5, {0}},
-        {g_EthIntSInfoStatic + 8, {'\0'}, 0, 0, &ifFuncs, NULL,          {0}},
-        {g_EthIntSInfoStatic + 9, {'\0'}, 0, 0, &ifFuncs, NULL,          {0}}
+    {g_EthIntSInfoStatic + 0, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 0, {0}},
+    {g_EthIntSInfoStatic + 1, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 1, {0}},
+    {g_EthIntSInfoStatic + 2, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 2, {0}},
+    {g_EthIntSInfoStatic + 3, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 3, {0}},
+    {g_EthIntSInfoStatic + 4, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 4, {0}},
+    {g_EthIntSInfoStatic + 5, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 5, {0}},
+    {g_EthIntSInfoStatic + 8, {'\0'}, 0, 0, &ifFuncs, NULL,          {0}},
+    {g_EthIntSInfoStatic + 9, {'\0'}, 0, 0, &ifFuncs, NULL,          {0}},
 #elif defined(ETH_8_PORTS)
-        {g_EthIntSInfoStatic + 0, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 0, {0}},
-        {g_EthIntSInfoStatic + 1, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 1, {0}},
-        {g_EthIntSInfoStatic + 2, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 2, {0}},
-        {g_EthIntSInfoStatic + 3, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 3, {0}},
-        {g_EthIntSInfoStatic + 4, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 4, {0}},
-        {g_EthIntSInfoStatic + 5, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 5, {0}},
-        {g_EthIntSInfoStatic + 6, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 6, {0}},
-        {g_EthIntSInfoStatic + 7, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 7, {0}},
-        {g_EthIntSInfoStatic + 8, {'\0'}, 0, 0, &ifFuncs, NULL,          {0}},
-        {g_EthIntSInfoStatic + 9, {'\0'}, 0, 0, &ifFuncs, NULL,          {0}}
+    {g_EthIntSInfoStatic + 0, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 0, {0}},
+    {g_EthIntSInfoStatic + 1, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 1, {0}},
+    {g_EthIntSInfoStatic + 2, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 2, {0}},
+    {g_EthIntSInfoStatic + 3, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 3, {0}},
+    {g_EthIntSInfoStatic + 4, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 4, {0}},
+    {g_EthIntSInfoStatic + 5, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 5, {0}},
+    {g_EthIntSInfoStatic + 6, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 6, {0}},
+    {g_EthIntSInfoStatic + 7, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 7, {0}},
+    {g_EthIntSInfoStatic + 8, {'\0'}, 0, 0, &ifFuncs, NULL,          {0}},
+    {g_EthIntSInfoStatic + 9, {'\0'}, 0, 0, &ifFuncs, NULL,          {0}},
 #else
-        {g_EthIntSInfoStatic + 0, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 0, {0}},
-        {g_EthIntSInfoStatic + 1, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 1, {0}},
-        {g_EthIntSInfoStatic + 2, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 2, {0}},
-        {g_EthIntSInfoStatic + 3, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 3, {0}},
-        {g_EthIntSInfoStatic + 4, {'\0'}, 0, 0, &ifFuncs, NULL,          {0}},
+    {g_EthIntSInfoStatic + 0, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 0, {0}},
+    {g_EthIntSInfoStatic + 1, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 1, {0}},
+    {g_EthIntSInfoStatic + 2, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 2, {0}},
+    {g_EthIntSInfoStatic + 3, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 3, {0}},
+    {g_EthIntSInfoStatic + 4, {'\0'}, 0, 0, &ifFuncs, NULL,          {0}},
+    {g_EthIntSInfoStatic + 5, {'\0'}, 0, 0, &ifFuncs, NULL,          {0}},
 #if defined(INTEL_PUMA7) && !defined(_ARRIS_XB6_PRODUCT_REQ_)
-        {g_EthIntSInfoStatic + 5, {'\0'}, 0, 0, &ifFuncs, NULL,          {0}},
-        {g_EthIntSInfoStatic + 6, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 4, {0}},
-        {g_EthIntSInfoStatic + 7, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 5, {0}}
-#else
-        {g_EthIntSInfoStatic + 5, {'\0'}, 0, 0, &ifFuncs, NULL,          {0}}
+    {g_EthIntSInfoStatic + 6, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 4, {0}},
+    {g_EthIntSInfoStatic + 7, {'\0'}, 0, 0, &swFuncs, g_PortIDs + 5, {0}},
 #endif
 #endif
-    };
+};
+
 static PCosaEthInterfaceInfo g_EthEntries = g_EthEntriesStatic;
 
 #ifndef _PLATFORM_RASPBERRYPI_
@@ -788,7 +771,7 @@ CosaDmlEthPortGetStats
 
 
 #if defined(_COSA_INTEL_USG_ARM_) || defined(_COSA_BCM_ARM_) || defined(_COSA_BCM_MIPS_)
-int puma6_getSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg)
+static int puma6_getSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg)
 {
     CCSP_HAL_ETHSW_PORT         port        = *((PCCSP_HAL_ETHSW_PORT)eth->hwid);
     INT                         status;
@@ -905,7 +888,9 @@ int puma6_getSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg)
     return ANSC_STATUS_SUCCESS;
 
 }
-int puma6_setSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg) {
+
+static int puma6_setSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg)
+{
     CCSP_HAL_ETHSW_PORT         port        = *((PCCSP_HAL_ETHSW_PORT)eth->hwid);
     CCSP_HAL_ETHSW_ADMIN_STATUS AdminStatus;
     if(pcfg->bEnabled == TRUE)
@@ -919,7 +904,9 @@ int puma6_setSwitchCfg(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_CFG pcfg) {
     CcspHalEthSwSetPortAdminStatus(port,AdminStatus);
     return ANSC_STATUS_SUCCESS;
 }
-int puma6_getSwitchDInfo(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_DINFO pDinfo){
+
+static int puma6_getSwitchDInfo(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_DINFO pDinfo)
+{
     CCSP_HAL_ETHSW_PORT         port        = *((PCCSP_HAL_ETHSW_PORT)eth->hwid);
     INT                         status;
     CCSP_HAL_ETHSW_LINK_RATE    LinkRate;
@@ -1011,7 +998,8 @@ int puma6_getSwitchDInfo(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_PORT_DINFO pDi
     return ANSC_STATUS_SUCCESS;
 }
 
-int puma6_getSwitchStats(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_STATS pStats){
+static int puma6_getSwitchStats(PCosaEthInterfaceInfo eth, PCOSA_DML_ETH_STATS pStats)
+{
 #if defined(ETH_STATS_ENABLED)
     CCSP_HAL_ETHSW_PORT   port  = *((PCCSP_HAL_ETHSW_PORT)eth->hwid);
     CcspHalEthSwGetEthPortStats(port, (PCCSP_HAL_ETH_STATS)pStats);
@@ -1220,7 +1208,6 @@ static void loadInterfaceTable()
      * the memory automatically */
 }
 #endif // _PLATFORM_RASPBERRYPI_
-#endif
 
 static int getIfStats2(const PUCHAR pName, PCOSA_DML_ETH_STATS pStats)
 {
@@ -1425,6 +1412,8 @@ static int getIfStats2(const PUCHAR pName, PCOSA_DML_ETH_STATS pStats)
     return 0;
 #endif
 }
+
+#endif
 
 static int setIfStatus(struct ifreq *pIfr)
 {
