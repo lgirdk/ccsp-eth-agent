@@ -2598,11 +2598,15 @@ ANSC_STATUS EthWanBridgeInit(PCOSA_DATAMODEL_ETHERNET pEthernet)
         }
     }
 
+
+#ifdef _SCER11BEL_PRODUCT_REQ_
+	Get_CommandOutput("cat /tmp/factory_nvram.data | grep RG_WAN | awk '{print $NF}'",wan_mac);
+#else
     memset(&macAddr,0,sizeof(macaddr_t));
     getInterfaceMacAddress(&macAddr,wanPhyName);
     memset(wan_mac,0,sizeof(wan_mac));
     sprintf(wan_mac, "%02x:%02x:%02x:%02x:%02x:%02x",macAddr.hw[0],macAddr.hw[1],macAddr.hw[2],macAddr.hw[3],macAddr.hw[4],macAddr.hw[5]);
-
+#endif
     v_secure_system("ifconfig %s down", ethwan_ifname);
 
 #if !defined(INTEL_PUMA7)
