@@ -2625,7 +2625,7 @@ ANSC_STATUS EthWanBridgeInit(PCOSA_DATAMODEL_ETHERNET pEthernet)
 
 #ifdef _COSA_BCM_ARM_
     v_secure_system("ifconfig %s down; ip link set %s name %s", wanPhyName,wanPhyName,ETHWAN_DOCSIS_INF_NAME);
-#elif !defined(_SCER11BEL_PRODUCT_REQ_)
+#elif !defined(_SCER11BEL_PRODUCT_REQ_) && !defined(_XER5_PRODUCT_REQ_)
     v_secure_system("ifconfig %s down; ip link set %s name dummy-rf", wanPhyName,wanPhyName);
 #endif
     v_secure_system("brctl addbr %s; brctl addif %s %s", wanPhyName,wanPhyName,ethwan_ifname);
