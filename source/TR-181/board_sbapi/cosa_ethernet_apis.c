@@ -1517,13 +1517,6 @@ ANSC_STATUS CosaDmlIfaceFinalize(char *pValue, BOOL isAutoWanMode)
     }
 
 
-   if (TRUE == configureBridge)
-   {
-       CcspTraceInfo(("Wanmode is Changing restarting Mta agent"));
-       v_secure_system ("killall CcspMtaAgentSsp");		
-
-   }
-
     if (TRUE == isAutoWanMode)
     {
         v_secure_system("sysevent set phylink_wan_state up");
