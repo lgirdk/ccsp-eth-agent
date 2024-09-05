@@ -128,7 +128,7 @@ COSA_DML_ETH_PORT_SINFO      g_EthIntSInfoStatic[] =
         {SWITCH_PORT_2_NAME,                FALSE,  {0,0,0,0,0,0}},
 #if defined(ETH_4_PORTS) || defined(ETH_5_PORTS) || defined(ETH_6_PORTS) || defined(ETH_8_PORTS)
         {SWITCH_PORT_3_NAME,                FALSE,  {0,0,0,0,0,0}},
-#if defined(ETH_5_PORTS) || defined(ETH_6_PORTS) || defined(ETH_8_PORTS)
+#if (defined(ETH_5_PORTS) || defined(ETH_6_PORTS) || defined(ETH_8_PORTS)) && !defined(_SCER11BEL_PRODUCT_REQ_)
 	{SWITCH_PORT_4_NAME,                FALSE,  {0,0,0,0,0,0}},
 #if defined(ETH_6_PORTS) || defined(ETH_8_PORTS)
         {SWITCH_PORT_5_NAME,                FALSE,  {0,0,0,0,0,0}},
@@ -148,6 +148,10 @@ COSA_DML_ETH_PORT_SINFO      g_EthIntSInfoStatic[] =
 #if defined(INTEL_PUMA7) && !defined(_ARRIS_XB6_PRODUCT_REQ_)
         {SWITCH_PORT_4_NAME,                FALSE,  {0,0,0,0,0,0}},
         {SWITCH_PORT_5_NAME,                FALSE,  {0,0,0,0,0,0}},
+#endif
+
+#if defined(ETH_5_PORTS) && defined(_SCER11BEL_PRODUCT_REQ_)
+	{SWITCH_PORT_4_NAME,                TRUE,  {0,0,0,0,0,0}},
 #endif
     };
 
