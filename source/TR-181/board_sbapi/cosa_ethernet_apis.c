@@ -4191,8 +4191,8 @@ ANSC_STATUS CosaDmlEthSetWanStatusForWanAgent(char *ifname, char *WanStatus)
 ANSC_STATUS CosaDmlEthSetWanLinkStatusForWanManager(char *ifname, char *WanStatus)
 {
     COSA_DML_ETH_PORT_GLOBAL_CONFIG stGlobalInfo = {0};
-    char *acSetParamName = NULL;
-    char *acSetParamValue = NULL;
+    char acSetParamName[DATAMODEL_PARAM_LENGTH] = {0};
+    char acSetParamValue[DATAMODEL_PARAM_LENGTH] = {0};
     INT iWANInstance = -1;
     //Validate buffer
     if ((NULL == ifname) || (NULL == WanStatus))
@@ -4211,39 +4211,11 @@ ANSC_STATUS CosaDmlEthSetWanLinkStatusForWanManager(char *ifname, char *WanStatu
         return ANSC_STATUS_FAILURE;
     }
 
-    /* CID 187279 fix and CID 187365 fix */
-    acSetParamName = (char *) malloc(sizeof(char) * DATAMODEL_PARAM_LENGTH);
-    if(acSetParamName == NULL)
-    {
-        CcspTraceError(("%s Memory allocation failure acSetParamName \n", __FUNCTION__));
-        return ANSC_STATUS_FAILURE;
-    }
-
-    acSetParamValue = (char *) malloc(sizeof(char) * DATAMODEL_PARAM_LENGTH);
-    if(acSetParamValue == NULL)
-    {
-        if(acSetParamName)
-            free(acSetParamName);
-        
-	CcspTraceError(("%s Memory allocation failure acSetParamValue \n", __FUNCTION__));
-        return ANSC_STATUS_FAILURE;
-    }
- 
-    memset(acSetParamName, 0, DATAMODEL_PARAM_LENGTH);
-    memset(acSetParamValue, 0, DATAMODEL_PARAM_LENGTH);
     CcspTraceInfo(("%s %d WAN Instance:%d\n", __FUNCTION__, __LINE__, iWANInstance));
     //Set WAN Status
     snprintf(acSetParamName, DATAMODEL_PARAM_LENGTH, WAN_LINK_STATUS_PARAM_NAME, iWANInstance);
     snprintf(acSetParamValue, DATAMODEL_PARAM_LENGTH, "%s", WanStatus);
     CosaDmlEthSetParamValues(WAN_COMPONENT_NAME, WAN_DBUS_PATH, acSetParamName, acSetParamValue, ccsp_string, TRUE);
-    if(acSetParamName != NULL)
-    {
-       free(acSetParamName);
-    }
-    if(acSetParamValue != NULL)
-    {
-       free(acSetParamValue);
-    }
     CcspTraceInfo(("%s %d Successfully notified %s event to WANMANAGER for %s interface\n", __FUNCTION__, __LINE__, WanStatus, ifname));
     return ANSC_STATUS_SUCCESS;
 }
@@ -4252,8 +4224,8 @@ ANSC_STATUS CosaDmlEthSetWanLinkStatusForWanManager(char *ifname, char *WanStatu
 ANSC_STATUS CosaDmlEthSetWanInterfaceNameForWanManager(char *ifname, char *WanIfName)
 {
     COSA_DML_ETH_PORT_GLOBAL_CONFIG stGlobalInfo = {0};
-    char acSetParamName[256];
-    char acSetParamValue[256];
+    char acSetParamName[DATAMODEL_PARAM_LENGTH] = {0};
+    char acSetParamValue[DATAMODEL_PARAM_LENGTH] = {0};
     INT iWANInstance = -1;
     //Validate buffer
     if ((NULL == ifname) || (NULL == WanIfName))
